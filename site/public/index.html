@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tornei Fragmarathon</title>
+<meta name="description" content="Il gestore di tornei della LAN party Fragmarathon: cinque formati, schermo per il proiettore leggibile da oltre 5 metri, offline. Per Windows e come app web.">
+<meta name="theme-color" content="#0A0A0A">
+<meta property="og:title" content="Tornei Fragmarathon">
+<meta property="og:description" content="Dal sorteggio al podio, sul maxischermo. Il gestore di tornei della LAN party Fragmarathon.">
+<meta property="og:image" content="https://tornei.bais.info/img/wall-ffa.webp">
+<meta property="og:url" content="https://tornei.bais.info/">
+<link rel="icon" href="favicon.png">
+<style>
+@font-face{font-family:"FragDisplay";src:url(fonts/frag.woff) format("woff");font-display:swap}
+:root{
+  --night:#0A0A0A;--slab:#171717;--rule:#2B2B2B;--chalk:#F3F3F3;--ash:#A3A3A3;--frag:#FF5A1F;--steel:#8F8F8F;
+  --body:Bahnschrift,"DIN Alternate","Roboto Condensed","Arial Narrow",system-ui,sans-serif;
+  --display:"FragDisplay","Arial Black",Impact,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--night);color:var(--chalk);font:400 1.125rem/1.6 var(--body)}
+a{color:var(--chalk)}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--frag);outline-offset:3px}
+img{max-width:100%;height:auto;display:block}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.05;margin:0}
+h2{font-size:clamp(1.7rem,4vw,2.6rem);margin-bottom:14px}
+p{margin:0 0 14px;max-width:64ch}
+
+/* barra in alto */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0}
+.top .id{display:flex;align-items:center;gap:12px;text-decoration:none;font-family:var(--display);font-size:1.15rem;letter-spacing:.02em}
+.top .id img{width:44px;height:44px}
+.top nav{display:flex;gap:18px;font-size:1rem}
+.top nav a{text-decoration:none;color:var(--ash)}
+.top nav a:hover{color:var(--chalk)}
+
+/* apertura: lo stesso pannello tagliato in diagonale dell'intestazione dell'app */
+.hero{position:relative;margin:10px 0 0;padding:44px 40px 48px;border-bottom:8px solid var(--frag);
+  background:radial-gradient(circle at 12% 30%,rgba(255,90,31,.28),transparent 360px),repeating-linear-gradient(135deg,#111 0,#111 15px,#181818 17px,#181818 31px,#111 33px);
+  clip-path:polygon(0 0,calc(100% - 44px) 0,100% 44px,100% 100%,44px 100%,0 calc(100% - 44px))}
+.hero::before,.hero::after{content:"";position:absolute;top:0;bottom:0;pointer-events:none}
+.hero::before{right:96px;width:70px;background:var(--frag);clip-path:polygon(52px 0,70px 0,18px 100%,0 100%)}
+.hero::after{right:40px;width:62px;background:var(--steel);clip-path:polygon(52px 0,62px 0,10px 100%,0 100%)}
+.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:center;padding-right:120px}
+.hero h1{font-size:clamp(2rem,3.4vw,3rem);overflow-wrap:break-word;text-transform:uppercase;color:#fff;-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:4px 4px 0 var(--frag)}
+.hero .lede{margin:22px 0 26px;font-size:1.3rem;color:#E2E2E2}
+.ctas{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border:3px solid #000;border-radius:6px;font:600 1.1rem var(--body);text-decoration:none;box-shadow:4px 4px 0 #000}
+.btn.main{background:var(--frag);color:#000}
+.btn.alt{background:#fff;color:#000}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 #000}
+@media (prefers-reduced-motion:reduce){.btn:hover{transform:none}}
+.btn svg{width:22px;height:22px;flex:none}
+.meta{margin-top:14px;font-size:.95rem;color:var(--ash)}
+
+/* schermo del proiettore: cornice 16:9 */
+.screen{position:relative;border:10px solid #000;border-radius:6px;background:#000;box-shadow:0 0 0 2px #333,10px 10px 0 rgba(0,0,0,.6)}
+.screen img{width:100%;aspect-ratio:16/9;object-fit:cover}
+.screen figcaption{position:absolute;left:12px;bottom:-34px;font-size:.9rem;color:var(--ash)}
+
+section{padding:76px 0 0}
+.intro{font-size:1.2rem;color:#D8D8D8}
+
+/* formati: come una classifica */
+.board{margin-top:20px;border-top:3px solid var(--frag)}
+.board li{display:grid;grid-template-columns:4.5rem minmax(0,1.1fr) minmax(0,2fr);gap:20px;align-items:baseline;padding:20px 0;border-bottom:2px solid var(--rule)}
+.board{list-style:none;margin-left:0;padding:0}
+.board .n{font:400 2.2rem var(--display);color:var(--frag)}
+.board h3{font-size:1.35rem}
+.board p{margin:0;color:#D0D0D0}
+.board .ex{display:block;margin-top:6px;font-size:.95rem;color:var(--ash)}
+
+/* proiettore */
+.split{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:48px;align-items:center}
+.facts{list-style:none;margin:18px 0 0;padding:0}
+.facts li{padding:12px 0 12px 18px;border-left:4px solid var(--frag);margin-bottom:10px;background:linear-gradient(90deg,rgba(255,90,31,.08),transparent 60%)}
+.facts b{color:#fff}
+
+/* funzioni */
+.feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:22px;border-top:2px solid var(--rule)}
+.feats div{padding:22px 24px 22px 0;border-bottom:2px solid var(--rule)}
+.feats div:nth-child(3n+2),.feats div:nth-child(3n+3){padding-left:24px;border-left:2px solid var(--rule)}
+.feats h3{font-size:1.15rem;margin-bottom:8px;color:#fff}
+.feats p{margin:0;font-size:1.02rem;color:#C8C8C8}
+
+/* schermate */
+.shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;margin-top:22px}
+.shots figure{margin:0}
+.shots img{border:2px solid var(--rule);border-radius:6px}
+.shots figcaption{margin-top:10px;font-size:1rem;color:var(--ash)}
+
+/* installazione: è una sequenza */
+.steps{counter-reset:s;list-style:none;margin:22px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.steps li{counter-increment:s;padding-top:14px;border-top:3px solid var(--steel)}
+.steps li::before{content:counter(s);display:block;font:400 3rem/1 var(--display);color:var(--frag);margin-bottom:10px}
+.steps h3{font-size:1.2rem;margin-bottom:8px}
+.steps p{font-size:1.02rem;color:#C8C8C8}
+.note{margin-top:26px;padding:16px 20px;border:2px dashed var(--rule);border-radius:6px;font-size:1rem;color:#C8C8C8;max-width:none}
+.note b{color:#fff}
+
+footer{margin-top:90px;padding:28px 0 40px;border-top:8px solid var(--frag);background:#111}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:16px 40px}
+footer p{margin:0;font-size:1rem;color:var(--ash)}
+footer .who{font-size:1.15rem;color:var(--chalk)}
+
+@media (max-width:900px){
+  .hero{padding:30px 20px 36px;clip-path:polygon(0 0,calc(100% - 24px) 0,100% 24px,100% 100%,24px 100%,0 calc(100% - 24px))}
+  .hero::before,.hero::after{display:none}
+  .hero-grid,.split{grid-template-columns:1fr;padding-right:0;gap:40px}
+  .feats{grid-template-columns:1fr}
+  .feats div,.feats div:nth-child(3n+2),.feats div:nth-child(3n+3){padding:18px 0;border-left:0}
+  .shots,.steps{grid-template-columns:1fr}
+  .board li{grid-template-columns:3rem minmax(0,1fr)}
+  .board li p{grid-column:2}
+  .top nav{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="id" href="./"><img src="img/emblem.webp" alt="" width="44" height="44">Tornei Fragmarathon</a>
+    <nav aria-label="Sezioni"><a href="#formati">Formati</a><a href="#proiettore">Proiettore</a><a href="#installa">Installa</a><a href="https://github.com/bdbais/tornei-fragmarathon">GitHub</a></nav>
+  </header>
+
+  <div class="hero">
+    <div class="hero-grid">
+      <div>
+        <h1>Dal sorteggio al podio, sul maxischermo</h1>
+        <p class="lede">Il gestore di tornei della LAN party Fragmarathon. Cinque formati, uno schermo per il proiettore che si legge da più di 5 metri, tutto offline.</p>
+        <div class="ctas">
+          <a class="btn main" data-dl href="https://github.com/bdbais/tornei-fragmarathon/releases/latest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6.5 10l5.5 5.5 5.5-5.5M4 20h16"/></svg>Scarica per Windows</a>
+          <a class="btn alt" href="app/">Apri la versione web</a>
+        </div>
+        <p class="meta"><span data-ver hidden></span><br>Windows 10 e 11. La versione web si installa dal browser e funziona offline.</p>
+      </div>
+      <figure class="screen">
+        <img src="img/wall-ffa.webp" width="1600" height="900" alt="Schermo proiettore: tre gironi di Quake Live con posizione, nome e punti in caratteri grandi; i qualificati sono evidenziati in arancio.">
+      </figure>
+    </div>
+  </div>
+
+  <section id="formati" aria-labelledby="h-formati">
+    <h2 id="h-formati">Cinque formati, quelli dei tornei veri</h2>
+    <p class="intro">Scegli il formato per ogni gioco. Il programma fa il sorteggio, calcola classifiche e qualificati e ti chiama solo quando serve una decisione.</p>
+    <ol class="board">
+      <li><span class="n">1</span><h3>Free for all a punti</h3><p>Tutto il girone gioca nella stessa partita e passano i migliori, turno dopo turno fino alla finale. Gironi di qualsiasi dimensione, bilanciati da soli.<span class="ex">Per Quake, giochi di corse, battle royale.</span></p></li>
+      <li><span class="n">2</span><h3>Eliminazione diretta</h3><p>Chi perde esce. Bye automatici quando i partecipanti non bastano e finale per il terzo posto.<span class="ex">Per i playoff e i tornei veloci.</span></p></li>
+      <li><span class="n">3</span><h3>Doppia eliminazione</h3><p>Si esce alla seconda sconfitta: tabellone vincenti, tabellone perdenti, finale e "bella" se vince chi risale dai perdenti.<span class="ex">Il formato di EVO e dei picchiaduro.</span></p></li>
+      <li><span class="n">4</span><h3>Sistema svizzero</h3><p>Ogni turno mette di fronte chi ha un punteggio simile, senza rivincite. Spareggio Buchholz e playoff tra i primi 2, 4, 8 o 16.<span class="ex">La fase a gruppi dei Major di Counter-Strike.</span></p></li>
+      <li><span class="n">5</span><h3>Gironi all'italiana</h3><p>Tutti contro tutti, a giornate. Vittoria 3 punti, pareggio 1, poi playoff facoltativi tra i migliori di ogni girone.<span class="ex">Per FIFA e i campionati.</span></p></li>
+    </ol>
+  </section>
+
+  <section id="proiettore" aria-labelledby="h-proiettore">
+    <div class="split">
+      <figure class="screen">
+        <img src="img/wall-swiss.webp" width="1600" height="900" loading="lazy" alt="Schermo proiettore: classifica di Counter-Strike 2 con le squadre, le loro icone e i punti; le prime quattro, qualificate ai playoff, sono in arancio.">
+      </figure>
+      <div>
+        <h2 id="h-proiettore">Si legge dal fondo della sala</h2>
+        <p>Il proiettore ha una finestra tutta sua. Con un secondo schermo collegato si apre lì, già a tutto schermo, mentre tu continui a inserire i risultati sul portatile.</p>
+        <ul class="facts">
+          <li><b>Righe alte fino a 104 pixel</b> su 1080p, testo bianco su nero, qualificati in arancio pieno.</li>
+          <li><b>Si aggiorna da solo</b> appena inserisci un punteggio.</li>
+          <li><b>Le pagine scorrono da sole</b> quando i gironi non stanno in una schermata.</li>
+          <li><b>A fine torneo</b> mostra il podio.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-sala">
+    <h2 id="h-sala">Pensato per la sera della LAN</h2>
+    <div class="feats">
+      <div><h3>Trascina i giocatori</h3><p>Sposta giocatori e squadre tra gironi e partite con il mouse, finché non ci sono risultati.</p></div>
+      <div><h3>Tornei in una cartella</h3><p>Ogni torneo si salva in Documenti e si riprende da un elenco. Il file si aggiorna da solo.</p></div>
+      <div><h3>Backup a ogni turno</h3><p>Quando cambia il turno o il girone parte un backup automatico. Ripristini con due clic.</p></div>
+      <div><h3>Guida in ogni finestra</h3><p>Il pulsante ? e il tasto F1 aprono la spiegazione della finestra in cui sei.</p></div>
+      <div><h3>Hall of Fame</h3><p>La classifica dell'evento con i punti di ogni gioco, per giocatori e squadre.</p></div>
+      <div><h3>Si aggiorna da solo</h3><p>La versione installata scarica le nuove versioni e le installa alla chiusura.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-schermate">
+    <h2 id="h-schermate">Dove inserisci i risultati</h2>
+    <div class="shots">
+      <figure><img src="img/app-bracket.webp" width="1440" height="900" loading="lazy" alt="Tabellone vincenti di una doppia eliminazione a 16 giocatori, con i punteggi e i vincitori evidenziati."><figcaption>Doppia eliminazione: scrivi i punteggi, i vincitori avanzano e i perdenti scendono nel tabellone perdenti.</figcaption></figure>
+      <figure><img src="img/app-hof.webp" width="1440" height="900" loading="lazy" alt="Hall of Fame: per ogni giocatore i punti totali e un'icona per ogni gioco con i punti fatti."><figcaption>Hall of Fame: i punti di ogni gioco accanto all'icona del gioco.</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="installa" aria-labelledby="h-installa">
+    <h2 id="h-installa">Installalo in un minuto</h2>
+    <ol class="steps">
+      <li><h3>Scarica l'installer</h3><p>Dal pulsante qui sopra o dalla <a href="https://github.com/bdbais/tornei-fragmarathon/releases/latest">pagina delle versioni</a>.</p></li>
+      <li><h3>Doppio clic</h3><p>Si installa da solo, crea l'icona sul desktop e si apre. Non chiede la password da amministratore.</p></li>
+      <li><h3>Inizia</h3><p>Le cartelle per tornei e backup si creano al primo avvio. Scrivi i partecipanti e premi START.</p></li>
+    </ol>
+    <p class="note">L'installer non ha ancora una firma digitale. Se Windows mostra <b>Windows ha protetto il PC</b>, scegli <b>Ulteriori informazioni</b> e poi <b>Esegui comunque</b>.</p>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <p class="who">Creato da <a href="https://fragmarathon.net">fragmarathon.net</a> e Lazarus.</p>
+    <p>Codice aperto con licenza MIT su <a href="https://github.com/bdbais/tornei-fragmarathon">GitHub</a>. Ospitato da <a href="https://bais.info">bais.info</a>.</p>
+  </div>
+</footer>
+<script src="version.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Pagina di presentazione: un solo script esterno (version.js) che legge
+# l'ultima release da api.github.com.
+/
+  Content-Security-Policy: default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src https://api.github.com; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
+
+# PWA: stili inline nelle tabelle, immagini e font incorporati (data:),
+# file scaricati come blob:. Nessun accesso a server esterni.
+/app/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+
+/app/sw.js
+  Cache-Control: no-cache

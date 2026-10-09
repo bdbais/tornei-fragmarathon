@@ -1,0 +1,14 @@
+// Pagina di Tornei Fragmarathon su tornei.bais.info, con la PWA in /app/.
+// Servita da Cloudflare Workers come gli altri progetti di bais.info.
+// Deploy: node build.mjs && npx wrangler deploy   (da questa cartella)
+{
+  "name": "tornei-site",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "routes": [{ "pattern": "tornei.bais.info", "custom_domain": true }]
+}

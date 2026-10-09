@@ -1,0 +1,80 @@
+{
+  "name": "tornei-fragmarathon",
+  "version": "3.1.0",
+  "description": "Gestore tornei per LAN party del Fragmarathon: free for all, eliminazione diretta e doppia, svizzero, gironi all'italiana, schermo proiettore. Offline.",
+  "main": "main.js",
+  "author": {
+    "name": "fragmarathon.net",
+    "url": "https://fragmarathon.net"
+  },
+  "contributors": [
+    {
+      "name": "fragmarathon.net",
+      "url": "https://fragmarathon.net"
+    },
+    {
+      "name": "Lazarus"
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/bdbais/tornei-fragmarathon",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bdbais/tornei-fragmarathon.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/formats.test.js",
+    "dist": "electron-builder --win nsis --publish never",
+    "dist:portable": "electron-builder --win portable --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.7.0",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "net.fragmarathon.tornei",
+    "productName": "Tornei Fragmarathon",
+    "copyright": "fragmarathon.net & Lazarus",
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "js/**",
+      "css/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png",
+      "artifactName": "Tornei-Fragmarathon-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Tornei-Fragmarathon-Portable-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Tornei Fragmarathon",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "bdbais",
+        "repo": "tornei-fragmarathon",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
+}

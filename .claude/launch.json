@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "tornei-web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5173",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "tornei-site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5174",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "site/public"
+      ],
+      "port": 5174
+    }
+  ]
+}

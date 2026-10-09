@@ -1,0 +1,22 @@
+{
+  "name": "Tornei Fragmarathon",
+  "short_name": "Tornei",
+  "description": "Gestore di tornei per LAN party: free for all, eliminazione diretta e doppia, svizzero, gironi all'italiana. Funziona offline.",
+  "lang": "it",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#121212",
+  "theme_color": "#111111",
+  "categories": ["games", "sports", "utilities"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Schermo proiettore", "url": "./index.html?wall=1", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}
