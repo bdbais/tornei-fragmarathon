@@ -74,7 +74,7 @@
     return thumb(S.ui && S.ui.logo).then(function (lg) {
       var acc = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim(), ev = S.ev || {};
       return {
-        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", lang: ev.lang || "it", place: ev.place || "",
+        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", discord: ev.discord || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", lang: ev.lang || "it", place: ev.place || "",
         color: ev.color || "", accent: acc, logo: lg, games: A.games(JSON.parse(JSON.stringify(S))),
         players: (S.roster || []).length, bot: ev.bot || "", pinned: !!ev.pinned, draft: !!ev.draft, created: ev.created || Date.now(), updated: Date.now()
       };
@@ -110,12 +110,20 @@
       })).then(function () { Object.keys(vmCache).forEach(function (k) { if (!keep[k]) delete vmCache[k]; }); sendAll(); });
     });
   }
-  function laterOthers() { clearTimeout(othT); othT = setTimeout(refreshOthers, 300); }
-  /* iscrizione dal bot a un torneo che non è quello aperto: si scrive nel suo file */
-  function joinOther(id, k, name) {
+  /* modifica di un torneo che non è quello aperto: fn(stato) restituisce true se ha cambiato qualcosa */
+  function editOther(id, fn) {
     return store.read(id).then(function (t) {
       var j = JSON.parse(t), st = j.state || j;
-      A.applyJoin(st, k, name);
+      if (!fn(st)) return;
+      return store.write(id, wrap(st, j.meta || {})).then(function () { laterOthers(); });
+    }).catch(function () {});
+  }
+  function laterOthers() { clearTimeout(othT); othT = setTimeout(refreshOthers, 300); }
+  /* iscrizione dal bot a un torneo che non è quello aperto: si scrive nel suo file */
+  function joinOther(id, k, name, dc) {
+    return store.read(id).then(function (t) {
+      var j = JSON.parse(t), st = j.state || j;
+      A.applyJoin(st, k, name, dc);
       var m = j.meta || {}; m.players = (st.roster || []).length;
       return store.write(id, wrap(st, m)).then(function () { A.toast("Iscritto dal bot Telegram: " + name + " (" + (m.title || "altro torneo") + ")."); laterOthers(); if (root && !root.hidden) render(); });
     }).catch(function (e) { A.toast("Iscrizione dal bot non salvata: " + ((e && e.message) || e)); });
@@ -153,7 +161,7 @@
         if (!keep) { st.roster = []; st.teams = []; }
       } else st = { cur: "quake", roster: [], games: {}, ui: {} };
       st.ui = st.ui || {}; st.ui.title = f.title; st.ui.sub = f.sub;
-      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), lang: f.lang || (window.I18N ? I18N.ui() : "it"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
+      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), discord: linkOk(f.discord, "discord"), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), lang: f.lang || (window.I18N ? I18N.ui() : "it"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
       A.load(st); useBot(st); creating = false; laterOthers();
       return flush().then(function () { close(); A.toast("Torneo creato: " + f.title + ". Aggiungi giochi e giocatori."); });
     }).catch(function (e) { A.toast("Non riesco a creare il torneo: " + ((e && e.message) || e)); });
@@ -161,7 +169,7 @@
   function editEv(id, f) {
     function apply(st) {
       st.ui = st.ui || {}; st.ev = st.ev || {};
-      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); st.ev.lang = f.lang || "it"; }
+      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.discord = linkOk(f.discord, "discord"); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); st.ev.lang = f.lang || "it"; }
       if (f.bot !== undefined) st.ev.bot = f.bot;
       if (f.pinned !== undefined) st.ev.pinned = f.pinned;
     }
@@ -172,7 +180,7 @@
     return store.read(id).then(function (t) {
       var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
       apply(st);
-      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
+      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.discord = st.ev.discord || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
       m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
       return store.write(id, wrap(st, m));
     }).then(render).catch(function (e) { A.toast("Modifica non salvata: " + ((e && e.message) || e)); });
@@ -268,7 +276,7 @@
     u = String(u || "").trim(); if (!u) return "";
     if (!/^https?:\/\//i.test(u)) u = "https://" + u;
     if (kind === "maps") return /^https:\/\/((www\.)?google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)[\/?]/i.test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
-    return (kind === "wa" ? /^https:\/\/(chat\.whatsapp\.com|wa\.me|whatsapp\.com\/channel)\/[\w\/-]+$/i : /^https:\/\/(t\.me|telegram\.me)\/[\w+\/-]+$/i).test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
+    return (kind === "wa" ? /^https:\/\/(chat\.whatsapp\.com|wa\.me|whatsapp\.com\/channel)\/[\w\/-]+$/i : kind === "discord" ? /^https:\/\/(discord\.gg|(www\.)?discord(app)?\.com\/invite)\/[\w-]+\/?$/i : /^https:\/\/(t\.me|telegram\.me)\/[\w+\/-]+$/i).test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
   }
   /* link della mappa: quello incollato, oppure una ricerca di Google Maps con l'indirizzo */
   function mapsUrl(m) { return m.maps || (m.addr && m.mode !== "online" ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(m.addr) : ""); }
@@ -280,6 +288,7 @@
     if (m.mode === "online") a.push('<span class="ev-link loc">Online' + (m.addr ? ": " + esc(m.addr) : "") + '</span>');
     else if (mp) a.push('<a class="ev-link loc" href="' + esc(mp) + '" target="_blank" rel="noopener" title="Apri in Google Maps">' + (m.mode === "ibrido" ? "In presenza e online: " : "") + esc(m.addr || "Mappa") + '</a>');
     if (m.wa) a.push('<a class="ev-link wa" href="' + esc(m.wa) + '" target="_blank" rel="noopener">Gruppo WhatsApp</a>');
+    if (m.discord) a.push('<a class="ev-link dc" href="' + esc(m.discord) + '" target="_blank" rel="noopener">Server Discord</a>');
     return a.length ? '<p class="ev-links">' + a.join("") + '</p>' : "";
   }
   function whenHtml(m) {
@@ -309,6 +318,7 @@
       '<label class="wide">Link Google Maps<input type="text" inputmode="url" name="maps" value="' + esc(m.maps || "") + '" placeholder="https://maps.app.goo.gl/… (vuoto: lo creo dall\'indirizzo)"><small>In Google Maps cerca il posto, tocca <b>Condividi</b> e poi <b>Copia link</b>, e incollalo qui.</small></label>' +
       '<label class="wide">Gruppo WhatsApp (link di invito)<input type="text" inputmode="url" name="wa" value="' + esc(m.wa || "") + '" placeholder="https://chat.whatsapp.com/…"></label>' +
       '<label class="wide">Canale o gruppo Telegram (facoltativo)<input type="text" inputmode="url" name="tg" value="' + esc(m.tg || "") + '" placeholder="https://t.me/…"></label>' +
+      '<label class="wide">Server Discord (link di invito, facoltativo)<input type="text" inputmode="url" name="discord" value="' + esc(m.discord || "") + '" placeholder="https://discord.gg/…"><small>In Discord: tasto destro sul server, Invita persone, imposta che non scada e copia il link. I canali per partita si attivano in Impostazioni, Discord.</small></label>' +
       '<label class="wide chk"><span><input type="checkbox" name="draft"' + (m.draft ? " checked" : "") + '> In lavorazione</span><small>Nel bot lo vedono solo amministratori e organizzatori; nessun avviso ai partecipanti finché non lo togli.</small></label>' +
       (id ? "" : '<label class="wide">Parti da<select name="from"><option value="vuoto">Un torneo vuoto</option>' +
         list.map(function (e) { var t = esc(e.meta.title || "Torneo"); return '<option value="modello:' + esc(e.id) + '">Impostazioni di ' + t + ' (giochi, formule, tema, logo)</option><option value="tutto:' + esc(e.id) + '">' + t + ' con gli stessi giocatori, senza risultati</option>'; }).join("") + '</select></label>') +
@@ -504,7 +514,7 @@
       return { n: n, rep: rep };
     });
   }
-  window.HOME = { open: open, close: close, flush: flush, undo: undoDel, readState: readState, joinOther: joinOther, exportAll: exportAll, importAll: importAll, isOpen: function () { return !!root && !root.hidden; } };
+  window.HOME = { open: open, close: close, flush: flush, undo: undoDel, readState: readState, joinOther: joinOther, editOther: editOther, exportAll: exportAll, importAll: importAll, isOpen: function () { return !!root && !root.hidden; } };
 
   /* avvio: il torneo aperto si salva nel suo file (anche per chi arriva da una versione senza elenco), poi l'elenco */
   ensureEv();

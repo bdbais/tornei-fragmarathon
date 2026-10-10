@@ -30,6 +30,7 @@ const HELP = [
   "/miepartite – le tue partite e posizioni",
   "/server – il server dove giochi la prossima partita: indirizzo e password",
   "/mappa – la mappa della sala con la tua postazione",
+  "/discord <i>account</i> – il tuo account Discord: entri nei canali delle tue partite",
   "/segui <i>nome</i> o /segui tutti – ricevi gli avvisi",
   "/nonseguire <i>nome</i> o /nonseguire tutti",
   "/seguiti – i tornei che segui",
@@ -41,7 +42,7 @@ const HELP = [
 const COMMANDS = [
   ["tornei", "I tornei e come stanno andando"], ["torneo", "Dettagli di un torneo"], ["classifica", "Classifica o tabellone"],
   ["partite", "Partite da giocare adesso"], ["risultati", "Podi dei tornei conclusi"], ["hof", "Hall of Fame"],
-  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"], ["server", "Il server della tua prossima partita"], ["mappa", "Mappa della sala e la tua postazione"],
+  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"], ["server", "Il server della tua prossima partita"], ["mappa", "Mappa della sala e la tua postazione"], ["discord", "Il tuo account Discord"],
   ["segui", "Ricevi gli avvisi di un torneo"], ["nonseguire", "Smetti di seguire"], ["seguiti", "Tornei che segui"],
   ["iscrivimi", "Iscriviti a un torneo"], ["immagine", "Immagine del torneo"], ["diretta", "Dove guardare la diretta"], ["aiuto", "Elenco dei comandi"], ["stop", "Non ricevere più nulla"]
 ];
@@ -300,6 +301,7 @@ module.exports = function createBot(opts) {
     else if (L.addr || L.maps) a.push("📍 " + (L.mode === "ibrido" ? "In presenza e online – " : "") + esc(L.addr || "Mappa") + (L.maps ? "\n🗺 " + esc(L.maps) : ""));
     if (L.wa) a.push("💬 Gruppo WhatsApp: " + esc(L.wa));
     if (L.tg) a.push("📣 Canale Telegram: " + esc(L.tg));
+    if (L.discord) a.push("🎧 Server Discord: " + esc(L.discord));
     return a.length ? "\n\n" + a.join("\n") : "";
   }
   function tTitle(t) { return "<b>" + esc(t.l) + "</b>" + (t.name ? " – " + esc(t.name) : "") + (t.draft || (vm && vm.draft) ? " 🛠 <i>in lavorazione</i>" : ""); }
@@ -476,7 +478,9 @@ module.exports = function createBot(opts) {
     c.follow.games = (c.follow.games || []).filter((k) => k !== t.k); if (on) c.follow.games.push(t.k); persist();
     return send(chatId, on ? "Segui " + tTitle(t) + ": ti avviso a ogni cambio di turno e alla fine." : "Non segui più " + tTitle(t) + ".");
   }
-  async function joinStart(chatId, from, t, name) {
+  /* account Discord: nome utente (es. fede_73), vecchio formato nome#1234 oppure id numerico */
+  function dcOk(s) { s = String(s || "").trim().replace(/^@/, ""); return /^[\w.]{2,32}$/.test(s) || /^[^#<>@:]{2,32}#\d{4}$/.test(s) || /^\d{16,21}$/.test(s) ? s : ""; }
+  async function joinStart(chatId, from, t, name, dc) {
     if (!t) return send(chatId, "A quale torneo vuoi iscriverti? Usa /tornei e poi «Iscriviti».");
     if (cfg.join === "off") return send(chatId, "Le iscrizioni dal bot sono chiuse: chiedi all'organizzatore.");
     if (!t.open) return send(chatId, "Le iscrizioni a " + tTitle(t) + " sono chiuse: il torneo è già iniziato.");
@@ -486,13 +490,25 @@ module.exports = function createBot(opts) {
     const taken = (t.team ? (vm.roster || []) : t.players).some((p) => norm(p) === norm(name));
     if (taken && !t.team) return send(chatId, "«" + esc(name) + "» è già iscritto a " + tTitle(t) + ".");
     if (cfg.pending.some((p) => p.k === t.k && norm(p.name) === norm(name))) return send(chatId, "C'è già una richiesta per «" + esc(name) + "»: aspetta la conferma dell'organizzatore.");
-    const req = { id: Math.random().toString(36).slice(2, 10), chatId, user: (from && (from.username ? "@" + from.username : from.first_name)) || "", name, k: t.k, l: t.l, team: !!t.team, ts: Date.now() };
+    /* torneo con Discord: si chiede anche l'account, per il canale delle partite */
+    if (t.discord && dc === undefined) { waits[chatId] = { type: "joindc", k: t.k, name }; return send(chatId, "Qual è il tuo account Discord? Scrivi il nome utente (es. fede_73): ti aggiungo ai canali delle tue partite.\nSe non ce l'hai, /salta."); }
+    if (dc && !dcOk(dc)) { waits[chatId] = { type: "joindc", k: t.k, name }; return send(chatId, "Account Discord non valido: scrivi il nome utente (es. fede_73), oppure /salta."); }
+    dc = dcOk(dc);
+    const req = { id: Math.random().toString(36).slice(2, 10), chatId, user: (from && (from.username ? "@" + from.username : from.first_name)) || "", name, discord: dc, k: t.k, l: t.l, team: !!t.team, ts: Date.now() };
     cfg.chats[chatId].player = name;
     const f = cfg.chats[chatId].follow; if (!hasK(f.games, t.k)) f.games.push(t.k);
-    if (cfg.join === "auto") { opts.onJoin(req); persist(); return send(chatId, "✅ Sei iscritto a " + tTitle(t) + " come <b>" + esc(name) + "</b>." + (t.team ? " L'organizzatore ti metterà in una squadra." : "") + "\nRiceverai gli avvisi del torneo."); }
+    if (cfg.join === "auto") { opts.onJoin(req); persist(); return send(chatId, "✅ Sei iscritto a " + tTitle(t) + " come <b>" + esc(name) + "</b>." + (dc ? "\nDiscord: <b>" + esc(dc) + "</b>" : "") + (t.team ? " L'organizzatore ti metterà in una squadra." : "") + "\nRiceverai gli avvisi del torneo."); }
     cfg.pending.push(req); persist(); opts.onChange && opts.onChange();
-    managers(t.k).forEach((a) => send(a, "📝 Richiesta di iscrizione a " + tTitle(t) + ": <b>" + esc(name) + "</b>" + (req.user ? " (" + esc(req.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + req.id }, { text: "Rifiuta", callback_data: "X:" + req.id }]]));
+    managers(t.k).forEach((a) => send(a, "📝 Richiesta di iscrizione a " + tTitle(t) + ": <b>" + esc(name) + "</b>" + (req.user ? " (" + esc(req.user) + ")" : "") + (dc ? "\nDiscord: " + esc(dc) : ""), [[{ text: "Accetta", callback_data: "A:" + req.id }, { text: "Rifiuta", callback_data: "X:" + req.id }]]));
     return send(chatId, "📝 Richiesta inviata: l'organizzatore deve confermare l'iscrizione di <b>" + esc(name) + "</b> a " + tTitle(t) + ".");
+  }
+  function setDiscord(chatId, text) {
+    const c = cfg.chats[chatId] || {}, dc = dcOk(text);
+    if (!c.player) return send(chatId, "Prima dimmi chi sei: /io <i>il tuo nome</i>.");
+    if (!dc) { waits[chatId] = { type: "dc" }; return send(chatId, "Account Discord non valido: scrivi il nome utente (es. fede_73)."); }
+    const evs = [...new Set(((vm && vm.tournaments) || []).map((t) => t.ev).filter(Boolean))];
+    opts.onDiscord && opts.onDiscord({ name: c.player, account: dc, evs });
+    return send(chatId, "🎧 Account Discord di <b>" + esc(c.player) + "</b>: <b>" + esc(dc) + "</b>. Entrerai nei canali delle tue partite.");
   }
   function decide(id, ok, byChat) {
     const i = cfg.pending.findIndex((p) => p.id === id); if (i < 0) { if (byChat) send(byChat, "Richiesta già gestita."); return false; }
@@ -560,7 +576,8 @@ module.exports = function createBot(opts) {
       if (a === "V" && isAdmin && streamer) { if (k === "stop") return liveCmd(chatId, "ferma", true); if (k === "avvia") return liveCmd(chatId, "avvia", true); return liveCmd(chatId, "scena " + k, true); }
       return;
     }
-    if (waits[chatId] && !text.startsWith("/")) { const w = waits[chatId]; delete waits[chatId]; if (w.type === "join") return joinStart(chatId, from, find(w.k), text); if (w.type === "me") return linkPlayer(chatId, text, false); }
+    if (waits[chatId] && waits[chatId].type === "joindc" && /^\/(salta|skip)\b/i.test(text)) { const w = waits[chatId]; delete waits[chatId]; return joinStart(chatId, from, find(w.k), w.name, ""); }
+    if (waits[chatId] && !text.startsWith("/")) { const w = waits[chatId]; delete waits[chatId]; if (w.type === "join") return joinStart(chatId, from, find(w.k), text); if (w.type === "joindc") return joinStart(chatId, from, find(w.k), w.name, text); if (w.type === "me") return linkPlayer(chatId, text, false); if (w.type === "dc") return setDiscord(chatId, text); }
     if (!text.startsWith("/")) return send(chatId, "Scrivi /tornei per vedere i tornei, oppure /aiuto per tutti i comandi.");
     const sp = text.slice(1).split(/\s+/), cmd = sp[0].split("@")[0].toLowerCase(), arg = text.slice(1 + sp[0].length).trim();
     return command(chatId, from, cmd, arg, isAdmin, isOrg);
@@ -588,6 +605,13 @@ module.exports = function createBot(opts) {
         if (arg) return linkPlayer(chatId, arg, false);
         if (c.player) return send(chatId, "Sei collegato come <b>" + esc(c.player) + "</b>.", [[{ text: "Cambia nome", callback_data: "ME" }]]);
         waits[chatId] = { type: "me" }; return send(chatId, "Scrivi il nome con cui giochi ai tornei.");
+      }
+      case "discord": {
+        if (!c.player) return send(chatId, "Prima dimmi chi sei: /io <i>il tuo nome</i>. Poi /discord <i>il tuo account Discord</i>.");
+        if (arg) return setDiscord(chatId, arg);
+        const inv = (vm && vm.links && vm.links.discord) || "";
+        waits[chatId] = { type: "dc" };
+        return send(chatId, "Scrivi il tuo account Discord (nome utente, es. fede_73): ti aggiungo ai canali delle tue partite." + (inv ? "\nServer del torneo: " + esc(inv) : ""));
       }
       case "scollega": c.player = ""; persist(); opts.onChange && opts.onChange(); return send(chatId, "Collegamento tolto: non ricevi più gli avvisi personali.");
       case "miepartite": return c.player ? send(chatId, playerMsg(c.player)) : send(chatId, "Prima dimmi chi sei: /io <i>il tuo nome</i>.");

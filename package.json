@@ -1,6 +1,6 @@
 {
   "name": "tornei-fragmarathon",
-  "version": "3.7.2",
+  "version": "3.8.0",
   "description": "Gestore tornei per LAN party del Fragmarathon: free for all, eliminazione diretta e doppia, svizzero, gironi all'italiana, schermo proiettore. Offline.",
   "main": "main.js",
   "author": {
@@ -24,7 +24,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/formats.test.js tests/version.test.js",
+    "test": "node --test tests/formats.test.js tests/version.test.js tests/discord.test.js",
     "dist": "electron-builder --win nsis --publish never",
     "dist:portable": "electron-builder --win portable --publish never"
   },
@@ -44,6 +44,7 @@
       "main.js",
       "preload.js",
       "bot.js",
+      "discord.js",
       "streamer.js",
       "stream.html",
       "icon.png",

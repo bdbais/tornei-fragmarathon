@@ -4,6 +4,11 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.8.0", d: "2026-10-10", t: "Discord: invito, account dei giocatori e un canale per ogni partita", items: [
+      "Nelle informazioni del torneo c'è il link di invito al server Discord: compare sulle schede e nel bot Telegram, e l'app lo può creare da sola.",
+      "Con un bot Discord l'app crea un canale per ogni partita pronta, visibile solo ai suoi giocatori, con il server su cui giocare; a partita finita diventa di sola lettura con il risultato. Si attiva in Impostazioni, Discord.",
+      "Account Discord dei giocatori: si scrivono in Partecipanti, arrivano dalla colonna Discord di Excel o Google Sheets, oppure li chiede il bot Telegram all'iscrizione (e con /discord)."
+    ] },
     { v: "3.7.2", d: "2026-10-10", t: "Ripristino dei backup con migrazione e riepilogo", items: [
       "Un backup di una versione precedente viene portato al formato attuale: i dati che mancavano prendono il valore predefinito e il riepilogo dice quali sono.",
       "Dopo il ripristino un riepilogo per ogni torneo e per ogni bot mostra cosa è cambiato rispetto a prima (titolo, giocatori, giochi, formato, sala, server, impostazioni del bot); resta anche nel registro errori.log.",

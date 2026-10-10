@@ -358,3 +358,15 @@ html.set-on body{overflow:hidden}
 .brep-b ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 13px; }
 .brep-b p { margin: 8px 0 2px; font-size: 13px; color: var(--mut); }
 .brep-ar { color: var(--acc); }
+
+/* Discord */
+.ev-link.dc{border-color:#5865F2}
+.dctab{width:100%;border-collapse:collapse;font-size:14px}
+.dctab th{text-align:left;font-weight:600;color:var(--mut);font-size:12px;padding:4px 6px;border-bottom:1px solid var(--line)}
+.dctab td{padding:4px 6px;border-bottom:1px solid var(--line)}
+.dctab input{width:100%;min-width:140px}
+.dcs{white-space:nowrap;font-size:13px}
+.dcs.ok{color:var(--mut)}
+.dcs.no{color:#e5484d;font-weight:600}
+.dcok{color:#5865F2;font-weight:600}
+.dcguide ol{margin:6px 0;padding-left:20px}

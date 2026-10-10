@@ -121,7 +121,7 @@
     el.scrollIntoView({ block: "start", behavior: "smooth" });
     el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1600);
   }
-  var SETTINGS = ["Generale", "Nomi dei giochi", "Archivio tornei e backup", "Logo dell'evento", "Genera un logo con l'AI", "CSS personalizzato", "Bot Telegram", "Diretta su YouTube e Twitch"];
+  var SETTINGS = ["Generale", "Nomi dei giochi", "Archivio tornei e backup", "Logo dell'evento", "Genera un logo con l'AI", "CSS personalizzato", "Bot Telegram", "Discord", "Diretta su YouTube e Twitch"];
   function collect() {
     var out = [], seen = {};
     function add(o) { var k = o.g + "|" + norm(o.t); if (seen[k]) return; seen[k] = 1; out.push(o); }

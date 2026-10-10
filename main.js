@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const AI = require("./js/ai.js");
 const createBot = require("./bot.js");
+const createDiscord = require("./discord.js");
 const createStreamer = require("./streamer.js");
 
 /* Un solo programma aperto. Dopo un aggiornamento il nuovo programma parte mentre il vecchio si sta
@@ -247,7 +248,8 @@ const botPath = (e) => path.join(app.getPath("userData"), path.basename(e.file))
 function makeBot(entry) {
   const b = createBot({
     file: botPath(entry),
-    onJoin: (req) => toPage({ type: "join", name: req.name, k: req.k }),
+    onJoin: (req) => toPage({ type: "join", name: req.name, k: req.k, discord: req.discord || "" }),
+    onDiscord: (r) => toPage({ type: "discord", name: r.name, account: r.account, evs: r.evs }),
     onPng: (r) => { pngOwner[r.id] = entry.id; toPage({ type: "png", id: r.id, k: r.k }); },
     onChange: () => {
       toPage({ type: "status", bot: entry.id });
@@ -325,6 +327,16 @@ ipcMain.handle("bots:export", () => {
   L.list.forEach((e) => { try { files[e.id] = fs.readFileSync(botPath(e), "utf8"); } catch {} });
   return { list: L.list, files };
 });
+/* Discord: un solo bot per tutta l'app (token in userData/discord.json); il torneo sceglie il server */
+let discord = null;
+function DC() { return discord || (discord = createDiscord({ dir: app.getPath("userData"), fetch: (u, o) => require("electron").net.fetch(u, o), log: logErr })); }
+ipcMain.handle("discord:status", () => DC().status());
+ipcMain.handle("discord:config", (_e, c) => DC().configure(c || {}));
+ipcMain.handle("discord:check", () => DC().check());
+ipcMain.handle("discord:sync", (_e, d) => DC().sync(d));
+ipcMain.handle("discord:lookup", (_e, g, a) => DC().lookup(String(g || ""), Array.isArray(a) ? a.slice(0, 500).map(String) : []));
+ipcMain.handle("discord:clear", (_e, id) => DC().clear(String(id || "")));
+ipcMain.handle("discord:invite", (_e, g) => DC().invite(String(g || "")));
 /* ripristino dei bot da un backup: quelli sostituiti vanno in bot-rimossi; il riepilogo dice cosa mancava
    (valore predefinito) e cosa cambia rispetto alla configurazione di prima */
 ipcMain.handle("bots:import", (_e, p) => {

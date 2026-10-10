@@ -11,7 +11,7 @@ var UI0={title:"Tornei Fragmarathon",sub:"Gestione dei tornei del 27° Lanparty"
 function fresh(k){return{name:"",mode:DEF[k].m,ng:2,players:[],members:{},phase:"setup",groups:null,rounds:null}}
 var S={cur:"quake",roster:[],games:{}};
 try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);if(p&&p.games)S=p;}}catch(e){}
-function initS(){S.v=2;if(!S.roster)S.roster=[];if(!S.teams)S.teams=[];if(!S.ui)S.ui={};if(!S.names)S.names={};if(!S.custom)S.custom=[]}
+function initS(){S.v=2;if(!S.roster)S.roster=[];if(!S.teams)S.teams=[];if(!S.ui)S.ui={};if(!S.names)S.names={};if(!S.custom)S.custom=[];if(!S.disc||typeof S.disc!=="object")S.disc={}}
 function registerCustom(){
   Object.keys(DEF).forEach(function(k){delete DEF[k]});
   var off=S.off||[];BUILTIN.forEach(function(k){if(off.indexOf(k)<0)DEF[k]=JSON.parse(JSON.stringify(ORIGD[k]))});
@@ -71,6 +71,7 @@ function renameName(kind,a,b){
   if(kind==="team")S.teams.forEach(function(t){if(t.n===a)t.n=b});
   else{S.roster=S.roster.map(function(p){return p===a?b:p});S.teams.forEach(function(t){t.m=t.m.map(function(x){return x===a?b:x})})}
   Object.keys(S.games).forEach(function(k){renameDeep(S.games[k],a,b)});if(S.sala)renameDeep(S.sala,a,b);
+  if(kind!=="team"&&S.disc&&Object.prototype.hasOwnProperty.call(S.disc,a)){S.disc[b]=S.disc[a];delete S.disc[a]}
   if(kind!=="team"&&DESK&&DESK.botConfig)DESK.botConfig({renamePlayer:{from:a,to:b}}).catch(function(){});
   save();renderRoster();render();toast((kind==="team"?"Squadra":"Giocatore")+" rinominato: "+a+" → "+b+".");return true;
 }
@@ -432,12 +433,14 @@ function importRows(rows){
   rows=(rows||[]).filter(function(r){return r&&r.some(Boolean)});
   if(!rows.length){toast("Nel foglio non ci sono nomi.");return}
   var H=rows[0].map(function(x){return String(x).toLowerCase()}),NAME=/^(nome|nick|nickname|giocatore|giocatori|player|players|name|partecipante|gamertag|nombre|jugador|jugadores|nom|joueur|joueurs|pseudo|spieler|spielername|teilnehmer|nume|jucător|jucator|participant|имя|игрок|ник|участник|姓名|名字|选手|玩家|名前|プレイヤー|選手|zogador|zogadori)(?![\p{L}\p{N}])/u,TEAM=/^(squadra|team|clan|gruppo|equipo|équipe|equipe|mannschaft|teamname|echipă|echipa|команда|клан|队伍|战队|チーム|squadra)(?![\p{L}\p{N}])/u;
-  var head=H.some(function(x){return NAME.test(x)||TEAM.test(x)}),ni=head?Math.max(0,H.findIndex(function(x){return NAME.test(x)})):0,ti=head?H.findIndex(function(x){return TEAM.test(x)}):-1;
+  var DISC=/^(discord|account discord|utente discord|nome discord|discord id|discord username|discord user)$/;
+  var head=H.some(function(x){return NAME.test(x)||TEAM.test(x)||DISC.test(x.trim())}),ni=head?Math.max(0,H.findIndex(function(x){return NAME.test(x)})):0,ti=head?H.findIndex(function(x){return TEAM.test(x)}):-1,di=head?H.findIndex(function(x){return DISC.test(x.trim())}):-1;
   var added=0,teamsNew=0,inTeam=0,seen={};
   rows.slice(head?1:0).forEach(function(r){
     var n=String(r[ni]||"").replace(/\s+/g," ").trim().slice(0,40);if(!n||seen[n.toLowerCase()])return;seen[n.toLowerCase()]=1;
     var ex=S.roster.filter(function(p){return p.toLowerCase()===n.toLowerCase()})[0];
     if(!ex){S.roster.push(n);added++;ex=n}
+    var dv=di>=0?dcOk(r[di]):"";if(dv){S.disc=S.disc||{};S.disc[ex]=dv}
     var tn=ti>=0?String(r[ti]||"").replace(/\s+/g," ").trim().slice(0,40):"";
     if(tn){var t=S.teams.filter(function(x){return x.n.toLowerCase()===tn.toLowerCase()})[0];if(!t){t={n:tn,m:[]};S.teams.push(t);teamsNew++}
       if(!S.teams.some(function(x){return x.m.some(function(m){return m.toLowerCase()===ex.toLowerCase()})})){t.m.push(ex);inTeam++}}
@@ -453,11 +456,11 @@ function sheetFromLink(link){
 }
 function exportRoster(xlsx){
   if(!S.roster.length){toast("L'elenco dei partecipanti è vuoto.");return}
-  var rows=[[T_("Giocatore"),T_("Squadra"),T_("Giochi")]];
+  var rows=[[T_("Giocatore"),T_("Squadra"),T_("Giochi"),"Discord"]];
   S.roster.forEach(function(n){
     var t=S.teams.filter(function(x){return x.m.indexOf(n)>=0})[0],tn=t?t.n:"";
     var g=Object.keys(DEF).filter(function(k){var gg=S.games[k];return gg&&(gg.players.indexOf(n)>=0||(tn&&gg.players.indexOf(tn)>=0)||Object.keys(gg.members||{}).some(function(m){return(gg.members[m]||[]).indexOf(n)>=0}))}).map(function(k){return DEF[k].l});
-    rows.push([n,tn,g.join(", ")]);
+    rows.push([n,tn,g.join(", "),(S.disc&&S.disc[n])||""]);
   });
   var base="giocatori-"+String(S.ui.title||UI0.title).replace(/[^\w-]+/g,"-").replace(/^-|-$/g,"").slice(0,40);
   if(xlsx)dlBlob(SHEETS.toXlsx(rows,T_("Giocatori")),base+".xlsx");else dlBlob(new Blob([SHEETS.toCsv(rows)],{type:"text/csv;charset=utf-8"}),base+".csv");
@@ -894,8 +897,8 @@ function renderEdit(){
    +renderAi()
    +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row"><button id="ecssimp">Importa file .css…</button><button id="ecssexp">Scarica il modello</button>'+(S.ui.css?'<button id="ecssdel">Rimuovi il CSS</button>':'')+'<input type="file" id="ecf" accept=".css,text/css" hidden></div>'
    +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
-   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings()+renderStreamSettings();
-  $("editform").innerHTML=h;botRefresh();strFill();
+   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings()+renderDiscordSettings()+renderStreamSettings();
+  $("editform").innerHTML=h;botRefresh();dcRefresh();strFill();
 }
 
 /* ---------- logo con l'AI (impostazioni per questo PC, fuori dai backup perché possono contenere una chiave) ---------- */
@@ -1034,8 +1037,8 @@ function botResults(g,k){
 function botVM(){
   var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
   function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
-  return{sala:window.SALA?SALA.vm():null,title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,lang:(S.ev&&S.ev.lang)||"it",draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",when:evWhen(),place:(S.ev&&S.ev.place)||"",mode:(S.ev&&S.ev.mode)||"lan",addr:(S.ev&&S.ev.addr)||"",maps:(S.ev&&(S.ev.maps||(S.ev.addr&&S.ev.mode!=="online"?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(S.ev.addr):"")))||""},roster:S.roster.slice(),
-    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,draft:!!g.draft,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
+  return{sala:window.SALA?SALA.vm():null,title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,lang:(S.ev&&S.ev.lang)||"it",draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",discord:(S.ev&&S.ev.discord)||"",when:evWhen(),place:(S.ev&&S.ev.place)||"",mode:(S.ev&&S.ev.mode)||"lan",addr:(S.ev&&S.ev.addr)||"",maps:(S.ev&&(S.ev.maps||(S.ev.addr&&S.ev.mode!=="online"?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(S.ev.addr):"")))||""},roster:S.roster.slice(),
+    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,discord:!!(S.ev&&(S.ev.discord||(S.ev.dguild&&S.ev.dchan))),draft:!!g.draft,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
     hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
 }
 var botT=null;
@@ -1074,19 +1077,21 @@ async function pngFor(key){
   var st=await window.HOME.readState(ev);
   return withState(st,async function(){if(!/^sala~/.test(k)&&!S.games[k])throw new Error("gioco non trovato");return watermark(await mk())});
 }
-function joinInto(k,name){
+function joinInto(k,name,dc){
   var g=S.games[k],nm=String(name||"").trim();if(!nm)return false;
+  if(dcOk(dc)){S.disc=S.disc||{};S.disc[nm]=dcOk(dc)}
   if(!S.roster.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))S.roster.push(nm);
   if(g&&g.phase==="setup"&&!isTeam(g,k)&&!g.players.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))g.players.push(nm);
   return true;
 }
 function botJoin(m){
   var p=String(m.k||"").split(":"),k=p.pop(),ev=p.join(":"),nm=String(m.name||"").trim();if(!nm)return;
-  if(ev&&!(S.ev&&S.ev.id===ev)&&window.HOME){window.HOME.joinOther(ev,k,nm);return}
-  joinInto(k,nm);save();renderRoster();render();toast("Iscritto dal bot Telegram: "+nm+(DEF[k]?" ("+DEF[k].l+")":"")+".");
+  if(ev&&!(S.ev&&S.ev.id===ev)&&window.HOME){window.HOME.joinOther(ev,k,nm,m.discord);return}
+  joinInto(k,nm,m.discord);save();renderRoster();render();toast("Iscritto dal bot Telegram: "+nm+(DEF[k]?" ("+DEF[k].l+")":"")+".");
 }
 if(window.desk&&window.desk.onBot)window.desk.onBot(function(m){
   if(m.type==="join")botJoin(m);
+  else if(m.type==="discord")botDiscord(m);
   else if(m.type==="png"){pngFor(m.k).then(function(cv){window.desk.botPng(m.id,cv.toDataURL("image/png"))}).catch(function(){window.desk.botPng(m.id,null)})}
   else if(m.type==="status"&&$("botbox"))botRefresh();
 });
@@ -1576,6 +1581,7 @@ function migrateState(st){
   if(!st.ui||typeof st.ui!=="object")st.ui={};
   if(!st.ui.title)d("Titolo",UI0.title,1);
   if(!st.ev||typeof st.ev!=="object")st.ev={};
+  if(!st.disc||typeof st.disc!=="object"){st.disc={};d("Account Discord dei giocatori","nessuno")}
   if(!langName(st.ev.lang)){d("Lingua del torneo",langName("it")||"Italiano",1);st.ev.lang="it"}
   if(!st.ev.mode){d("Tipo di evento","LAN party");st.ev.mode="lan"}
   if(!st.games||typeof st.games!=="object")st.games={};
@@ -1607,7 +1613,8 @@ function diffState(a,b){
   q("Titolo",au.title||UI0.title,bu.title||UI0.title,1);q("Sottotitolo",au.sub,bu.sub,1);
   q("Data",ae.date,be.date,1);q("Ora",ae.time,be.time,1);q("Luogo",ae.place,be.place,1);q("Indirizzo",ae.addr,be.addr,1);q("Link Google Maps",ae.maps,be.maps,1);
   q("Lingua del torneo",langName(ae.lang||"it"),langName(be.lang||"it"),1);q("Tipo di evento",EVM[ae.mode||"lan"]||ae.mode,EVM[be.mode||"lan"]||be.mode);
-  q("Gruppo WhatsApp",ae.wa,be.wa,1);q("Gruppo o canale Telegram",ae.tg,be.tg,1);
+  q("Gruppo WhatsApp",ae.wa,be.wa,1);q("Gruppo o canale Telegram",ae.tg,be.tg,1);q("Server Discord (invito)",ae.discord,be.discord,1);
+  q("Account Discord dei giocatori",Object.keys(a.disc||{}).length,Object.keys(b.disc||{}).length);q("Canali Discord per partita",yn(ae.dchan),yn(be.dchan));
   q("In lavorazione, visibile solo agli admin",yn(ae.draft),yn(be.draft));q("Bot del torneo",bot(ae.bot),bot(be.bot),1);
   var ar=a.roster||[],br=b.roster||[],pa=br.filter(function(x){return ar.indexOf(x)<0}),pr=ar.filter(function(x){return br.indexOf(x)<0});
   q("Giocatori",ar.length,br.length);if(pa.length)R.push(["Giocatori in più","",list(pa),1]);if(pr.length)R.push(["Giocatori in meno",list(pr),"",1]);
@@ -1981,7 +1988,7 @@ function autoBackup(label){
   try{var L=JSON.parse(localStorage.getItem(KEY+"-auto")||"[]");L.unshift({t:Date.now(),label:label,data:data});localStorage.setItem(KEY+"-auto",JSON.stringify(L.slice(0,3)));toast("Backup automatico salvato nel browser ("+label+").");renderArch()}catch(e){}
 }
 function afterSave(){
-  botPush();if(window.__app&&window.__app.onSave)window.__app.onSave();
+  botPush();discordPush();if(window.__app&&window.__app.onSave)window.__app.onSave();
   saveAt=new Date();var se=$("savest");if(se)se.textContent="Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
   if(WALL)return;
   var now=statusMap();
@@ -2366,6 +2373,136 @@ window.openHelp=function(k){openHelp(k)};
     em.addEventListener("click",function(){fi.click()});em.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click()}});
   }
 })();
+
+/* ======================================================================
+   Discord: invito al server, account dei giocatori e, nell'app per Windows, un canale
+   per ogni partita visibile solo ai suoi giocatori (lo crea il bot Discord in discord.js)
+   ====================================================================== */
+function evT(s){return window.I18N&&S.ev&&S.ev.lang&&S.ev.lang!=="it"?I18N.tr(s,S.ev.lang):s}
+function dcOk(s){s=String(s||"").trim().replace(/^@/,"");return/^[\w.]{2,32}$/.test(s)||/^[^#<>@:]{2,32}#\d{4}$/.test(s)||/^\d{16,21}$/.test(s)?s:""}
+function dcInvOk(u){u=String(u||"").trim();if(!u)return"";if(!/^https?:\/\//i.test(u))u="https://"+u;u=u.replace(/^http:/i,"https:");return/^https:\/\/(discord\.gg|(www\.)?discord(app)?\.com\/invite)\/[\w-]+\/?$/i.test(u)?u:null}
+/* tutte le partite di un gioco: chiave (la stessa dei server), giocatori, stato ("ready" da giocare, "done" finita,
+   "" non ancora pronta) e risultato. all = chiavi di tutte le partite che esistono, anche non pronte. */
+function dcMatches(g,k){
+  var M=[],ALL=[],team=isTeam(g,k);
+  function add(key,lab,ps,state,res){
+    ALL.push(key);if(!state)return;
+    var acc=[];ps.forEach(function(p){(team?((g.members||{})[p]||[]):[p]).forEach(function(x){var d=dcOk(S.disc&&S.disc[x]);if(d&&acc.indexOf(d)<0)acc.push(d)})});
+    var sv=srvOf(g,key),two=ps.length===2;
+    M.push({key:key,label:evT(lab),players:ps.slice(),sig:ps.join("|"),name:two?ps[0]+" vs "+ps[1]:evT(lab),accounts:acc,state:state,result:res||"",server:sv?{name:sv.name,addr:sv.addr,pass:sv.pass}:null});
+  }
+  if(!g||g.phase==="setup")return{matches:M,all:ALL};
+  if(g.ffa){var F=g.ffa;F.rounds.forEach(function(rd,ri){var fin=rd.groups.length===1,last=ri===F.rounds.length-1;rd.groups.forEach(function(gr,gi){var e=gEval(gr,fin,F.adv);
+    add("f"+ri+"-"+gi,fin?"Finale":"Turno "+(ri+1)+", girone "+letter(gi),gr.p,e.full?"done":(last?"ready":""),e.full?e.sorted.slice(0,3).map(function(x){return x.pos+"º "+x.n+" ("+gr.s[x.n]+")"}).join(", "):"")})});return{matches:M,all:ALL}}
+  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(!m.ready||!m.a||!m.b){ALL.push("d"+id);return}var dn=m.w!==undefined;
+    add("d"+id,id==="GF"?"Finale":id==="GF2"?"Bella":id.charAt(0)==="W"?"Vincenti":"Perdenti",[m.a,m.b],dn?"done":"ready",dn?mres(m):"")});return{matches:M,all:ALL}}
+  if(g.groups)g.groups.forEach(function(x,gi){var op=x.matches.filter(function(m){return m.sa==null||m.sb==null}),d=op.length?op[0].day:null;
+    x.matches.forEach(function(m,mi){var dn=m.sa!=null&&m.sb!=null;add("g"+gi+"-"+mi,(g.groups.length>1?"Girone "+letter(gi)+", ":"")+"giornata "+m.day,[m.a,m.b],dn?"done":(m.day===d?"ready":""),dn?m.a+" "+m.sa+"–"+m.sb+" "+m.b:"")})});
+  if(g.sw)g.sw.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(!m.b){ALL.push("s"+ri+"-"+mi);return}var dn=m.w!=null;
+    add("s"+ri+"-"+mi,"Turno "+(ri+1),[m.a,m.b],dn?"done":"ready",dn?(m.sa!=null&&m.sb!=null?m.a+" "+m.sa+"–"+m.sb+" "+m.b:(m.w==="="?m.a+" = "+m.b:mres(m))):"")})});
+  if(g.rounds){g.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(!m.a||!m.b){ALL.push("e"+ri+"-"+mi);return}add("e"+ri+"-"+mi,roundName(ri,g.rounds.length),[m.a,m.b],m.w?"done":"ready",m.w?mres(m):"")})});
+    var t=g.third;if(t&&t.match){if(t.a&&t.b)add("e3","Finale 3º posto",[t.a,t.b],t.w?"done":"ready",t.w?mres(t):"");else ALL.push("e3")}}
+  return{matches:M,all:ALL};
+}
+function dcAccounts(){var o={};S.roster.forEach(function(n){var a=dcOk(S.disc&&S.disc[n]);if(a)o[a]=1});return Object.keys(o)}
+function discordVM(){
+  var ev=S.ev||{},games=[];
+  Object.keys(DEF).forEach(function(k){var g=S.games[k];if(!g)return;var r=dcMatches(g,k);games.push({key:k,label:DEF[k].l,matches:g.draft?[]:r.matches,all:r.all})});
+  return{ev:ev.id,guild:ev.dguild,voice:!!ev.dvoice,title:S.ui.title||UI0.title,accounts:dcAccounts(),games:games,
+    t:{only:evT("Questo canale lo vedono solo i giocatori della partita e gli organizzatori."),server:evT("Server"),pass:evT("password"),players:evT("Giocatori")}};
+}
+var dcT=null,dcErr="",dcLast=null;
+function discordPush(now){
+  if(!DESK||!DESK.discordSync||WALL||SWAP)return;var ev=S.ev||{};if(!ev.id||!ev.dguild||!ev.dchan||ev.draft)return;
+  clearTimeout(dcT);dcT=setTimeout(function(){if(SWAP)return discordPush();var vm;try{vm=discordVM()}catch(e){if(DESK.logError)DESK.logError("discord",String(e&&e.stack||e));return}
+    DESK.discordSync(vm).then(function(r){dcLast=r||{};if(r&&r.err){if(r.err!==dcErr)toast(r.err);dcErr=r.err}else dcErr="";dcStat()}).catch(function(){})},now?50:2500);
+}
+function dcStat(){
+  var el=$("dcstat");if(!el||!dcLast)return;var r=dcLast,h="";
+  if(r.err)h='<span class="cres err">'+esc(r.err)+'</span>';
+  else if(!r.skipped)h='<span>Canali delle partite</span>: <b>'+(r.channels||0)+'</b>'+(r.created?' <span>(nuovi</span> <b>'+r.created+'</b>)':'')+
+    (r.missing&&r.missing.length?'<br><span>Account non trovati nel server Discord</span>: <b data-noi18n>'+esc(r.missing.join(", "))+'</b>':'');
+  el.innerHTML=h;
+}
+function renderDiscordSettings(){
+  var ev=S.ev||{};
+  return'<h3 style="margin-top:20px">Discord</h3><p class="hint">L&#39;invito al server Discord del torneo compare nelle informazioni del torneo e nel bot Telegram. Con un bot Discord, l&#39;app crea anche un canale per ogni partita visibile solo ai suoi giocatori. Gli account Discord dei giocatori si scrivono in Partecipanti, oppure li danno loro iscrivendosi dal bot Telegram.</p>'
+   +'<div class="row"><input type="text" inputmode="url" id="dcinv" value="'+esc(ev.discord||"")+'" placeholder="https://discord.gg/…" aria-label="Invito al server Discord" style="flex:1 1 280px">'+(DESK&&DESK.discordInvite?'<button id="dcmk">Crea un invito</button>':'')+'</div>'
+   +(DESK&&DESK.discordStatus?'<div id="dcbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">I canali per partita si creano solo dall&#39;app installata per Windows.</p>');
+}
+function dcHtml(st){
+  var ev=S.ev||{},h='';
+  if(st.user)h+='<p><span class="dcok">Collegato come</span> <b data-noi18n>'+esc(st.user.name)+'</b></p>';
+  else if(st.err)h+='<p class="cres err">'+esc(st.err)+'</p>';
+  h+='<div class="row"><input type="password" id="dctok" autocomplete="off" placeholder="'+(st.hasToken?'Token salvato: incollane uno nuovo per cambiarlo':'Token del bot Discord')+'" aria-label="Token del bot Discord" style="flex:1 1 280px"><button class="p" id="dctoks">Collega</button>'+(st.hasToken?'<button id="dctokdel">Togli il token</button>':'')+'</div>';
+  if(st.user){
+    h+='<p class="hint"><a href="'+esc(st.invite)+'" target="_blank" rel="noopener">Aggiungi il bot al tuo server Discord</a>: servono i permessi Gestisci canali e Gestisci permessi.</p>';
+    h+='<div class="row"><label for="dcguild">Server Discord del torneo</label><select id="dcguild"><option value="">Scegli il server</option>'+(st.guilds||[]).map(function(g){return'<option value="'+esc(g.id)+'"'+(g.id===ev.dguild?' selected':'')+' data-noi18n>'+esc(g.name)+'</option>'}).join("")+'</select></div>';
+    if(!(st.guilds||[]).length)h+='<p class="hint">Il bot non è ancora in nessun server: usa il link qui sopra.</p>';
+    h+='<label class="row chk"><input type="checkbox" id="dcchan"'+(ev.dchan?' checked':'')+'>Crea un canale per ogni partita, visibile solo ai giocatori</label>';
+    h+='<label class="row chk"><input type="checkbox" id="dcvoice"'+(ev.dvoice?' checked':'')+'>Anche un canale vocale per ogni partita</label>';
+    h+='<div class="row"><button id="dcsync">Aggiorna i canali adesso</button><button id="dcclear">Elimina i canali di questo torneo</button></div><p class="hint" id="dcstat"></p>';
+  }
+  h+='<details class="hint dcguide"><summary>Come creare il bot Discord</summary><ol><li>Apri discord.com/developers/applications e premi New Application.</li><li>Nella sezione Bot premi Reset Token, copia il token e incollalo qui sopra, poi premi Collega.</li><li>Premi Aggiungi il bot al tuo server e scegli il server del torneo.</li><li>Torna qui, scegli il server e attiva i canali per partita.</li></ol><p>Il bot crea una categoria per ogni gioco e, quando una partita è pronta, un canale con i due giocatori o le due squadre e il server su cui giocare. A partita finita il canale diventa di sola lettura con il risultato.</p></details>';
+  return h;
+}
+function dcRefresh(){
+  var b=$("dcbox");if(!b||!DESK||!DESK.discordStatus)return;
+  DESK.discordStatus().then(function(st){if(!st.hasToken)return st;return DESK.discordCheck().then(function(c){return Object.assign({hasToken:true},c,{err:c.ok?"":c.err})})})
+    .then(function(st){var x=$("dcbox");if(x){x.innerHTML=dcHtml(st);dcStat()}}).catch(function(){});
+}
+var dcArm=false;
+$("editbox").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||!/^dc/.test(b.id))return;
+  if(b.id==="dctoks"){var t=$("dctok").value.trim();if(!t){toast("Incolla il token del bot Discord.");return}
+    b.disabled=true;DESK.discordConfig({token:t}).then(function(r){var x=$("dcbox");if(x){x.innerHTML=dcHtml(Object.assign({hasToken:true},r,{err:r.ok?"":r.err}));dcStat()}if(r.ok){toast("Bot Discord collegato.");discordPush(1)}}).catch(function(){b.disabled=false})}
+  else if(b.id==="dctokdel")DESK.discordConfig({removeToken:true}).then(function(){dcRefresh();toast("Token Discord tolto.")});
+  else if(b.id==="dcmk"){if(!S.ev||!S.ev.dguild){toast("Collega il bot Discord e scegli il server del torneo, poi crea l'invito.");return}
+    DESK.discordInvite(S.ev.dguild).then(function(r){if(r.err){toast(r.err);return}S.ev.discord=r.url;$("dcinv").value=r.url;save();toast("Invito al server Discord creato.")})}
+  else if(b.id==="dcsync"){if(!S.ev.dguild){toast("Scegli prima il server Discord del torneo.");return}if(!S.ev.dchan){S.ev.dchan=true;var c=$("dcchan");if(c)c.checked=true;save()}discordPush(1);toast("Aggiorno i canali Discord…")}
+  else if(b.id==="dcclear"){
+    if(!dcArm){dcArm=true;b.textContent="Conferma: elimina i canali";b.classList.add("p");setTimeout(function(){dcArm=false;if(b.isConnected){b.textContent="Elimina i canali di questo torneo";b.classList.remove("p")}},5000);return}
+    dcArm=false;S.ev.dchan=false;save();var c2=$("dcchan");if(c2)c2.checked=false;
+    DESK.discordClear(S.ev.id).then(function(n){if(n&&n.err){toast(n.err);return}toast("Canali Discord eliminati: "+(n||0)+".");dcLast={channels:0};dcStat();b.textContent="Elimina i canali di questo torneo";b.classList.remove("p")})}
+});
+$("editbox").addEventListener("change",function(e){
+  var t=e.target;if(!t.id||!/^dc/.test(t.id))return;S.ev=S.ev||{};
+  if(t.id==="dcinv"){var u=dcInvOk(t.value);if(u===null){toast("Link di invito Discord non valido: deve essere tipo https://discord.gg/…");return}S.ev.discord=u;t.value=u;save()}
+  else if(t.id==="dcguild"){S.ev.dguild=t.value;save();discordPush(1)}
+  else if(t.id==="dcchan"){S.ev.dchan=t.checked;save();if(t.checked){if(!S.ev.dguild)toast("Scegli anche il server Discord del torneo.");discordPush(1)}}
+  else if(t.id==="dcvoice"){S.ev.dvoice=t.checked;save();discordPush(1)}
+});
+/* account Discord dei giocatori, nel pannello Partecipanti */
+function renderDcRoster(){
+  var box=$("rdcbox");if(!box)return;S.disc=S.disc||{};
+  if(!S.roster.length){box.innerHTML='<p class="hint">Aggiungi prima i partecipanti.</p>';return}
+  box.innerHTML='<table class="dctab"><thead><tr><th>Giocatore</th><th>Account Discord</th><th>Sul server</th></tr></thead><tbody>'+S.roster.map(function(n){
+    return'<tr><td data-noi18n>'+esc(n)+'</td><td><input type="text" data-dcp="'+esc(n)+'" value="'+esc(S.disc[n]||"")+'" placeholder="nome utente" aria-label="Account Discord di '+esc(n)+'" autocomplete="off" spellcheck="false"></td><td class="dcs" data-dcs="'+esc(n)+'"></td></tr>'}).join("")+'</tbody></table>'
+    +'<div class="row" style="margin-top:8px">'+(DESK&&DESK.discordLookup?'<button id="rdccheck">Controlla sul server Discord</button>':'')+'<span class="hint" style="margin:0">Nome utente Discord (es. fede_73), non il nome visualizzato.</span></div>';
+}
+$("rosterBox").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.id==="rdc"){var x=$("rdcbox");x.hidden=!x.hidden;b.setAttribute("aria-expanded",String(!x.hidden));if(!x.hidden)renderDcRoster()}
+  else if(b.id==="rdccheck"){
+    if(!S.ev||!S.ev.dguild){toast("Scegli prima il server Discord in Impostazioni, Discord.");return}
+    var acc=dcAccounts();if(!acc.length){toast("Nessun account Discord da controllare.");return}
+    b.disabled=true;DESK.discordLookup(S.ev.dguild,acc).then(function(r){b.disabled=false;if(r&&r.err){toast(r.err);return}
+      var miss=0;document.querySelectorAll("#rdcbox [data-dcs]").forEach(function(td){var a=dcOk(S.disc[td.getAttribute("data-dcs")]);if(!a){td.textContent="";return}var ok=!!(r&&r[a]);if(!ok)miss++;td.textContent=ok?"✓ "+T_("trovato"):"✗ "+T_("non trovato");td.className="dcs "+(ok?"ok":"no")});
+      toast(miss?"Account non trovati nel server: "+miss+". Controlla il nome utente o invita i giocatori.":"Tutti gli account sono nel server Discord.")}).catch(function(){b.disabled=false})}
+});
+$("rosterBox").addEventListener("change",function(e){
+  var t=e.target,n=t.getAttribute&&t.getAttribute("data-dcp");if(n===null||n===undefined)return;
+  var v=String(t.value||"").trim();if(v&&!dcOk(v)){toast("Account Discord non valido: usa il nome utente, es. fede_73.");return}
+  S.disc=S.disc||{};if(v)S.disc[n]=dcOk(v);else delete S.disc[n];t.value=v?dcOk(v):"";save();
+});
+function botDiscord(m){
+  var nm=String(m.name||"").trim(),acc=dcOk(m.account);if(!nm||!acc)return;
+  var evs=(m.evs||[]).filter(Boolean),here=S.ev&&S.ev.id&&(!evs.length||evs.indexOf(S.ev.id)>=0),n=0;
+  if(here&&S.roster.indexOf(nm)>=0){S.disc=S.disc||{};S.disc[nm]=acc;save();n++;if($("rdcbox")&&!$("rdcbox").hidden)renderDcRoster()}
+  if(window.HOME&&window.HOME.editOther)evs.filter(function(id){return!(S.ev&&S.ev.id===id)}).forEach(function(id){window.HOME.editOther(id,function(st){if((st.roster||[]).indexOf(nm)<0)return false;st.disc=st.disc||{};st.disc[nm]=acc;return true})});
+  toast("Account Discord di "+nm+" dal bot Telegram: "+acc+".");
+}
+
 window.__app={
   S:function(){return S},
   WALL:WALL,DESK:DESK,esc:esc,toast:toast,dl:dlBlob,fresh:fresh,
@@ -2374,7 +2511,7 @@ window.__app={
   DEF:function(){return DEF},makePdf:makePdf,delSnap:function(l){delSnap(l)},evWhen:function(){return evWhen()},
   botLink:function(){return window.__botUser?"https://t.me/"+window.__botUser:""},
   vmOf:function(st){return withSync(st,function(){return botVM()})},
-  applyJoin:function(st,k,name){return withSync(st,function(){return joinInto(k,name)})},
+  applyJoin:function(st,k,name,dc){return withSync(st,function(){return joinInto(k,name,dc)})},
   migrateState:migrateState,diffState:diffState,restore:restoreDecoded,
   ui0:UI0,
   games:function(st){
