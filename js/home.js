@@ -380,7 +380,7 @@
   }
   function render() {
     return Promise.all([store.list(), D && D.botsList ? D.botsList().catch(function () { return null; }) : Promise.resolve(null)]).then(function (r) {
-      list = (r[0] || []).filter(function (e) { return !e.broken || e.meta; }); bots = r[1] && r[1].length ? r[1] : null; paint(); laterOthers();
+      list = (r[0] || []).filter(function (e) { return !e.broken || e.meta; }); bots = r[1] && r[1].length ? r[1] : null; window.__bots = bots || []; paint(); laterOthers();
       if (bots) { var mine = bots.filter(function (b) { return b.id === ((cur().ev && cur().ev.bot) || bots[0].id); })[0] || bots[0]; window.__botUser = mine.username || ""; }
     });
   }
@@ -472,22 +472,36 @@
       return Promise.all(L.map(function (e) { return store.read(e.id).then(function (t) { var j = JSON.parse(t); return { id: e.id, meta: j.meta || e.meta || {}, state: j.state || j }; }).catch(function () { return null; }); }));
     }).then(function (a) { return a.filter(Boolean); });
   }
+  /* ripristino: ogni torneo viene migrato al formato attuale; rep dice per ognuno se è nuovo o sostituito,
+     quali valori predefiniti sono stati messi e cosa cambia rispetto a quello di prima */
   function importAll(evs) {
-    var id0 = curId(), n = 0;
-    return store.list().then(function (L) {
+    var id0 = curId(), n = 0, rep = [];
+    return flush().then(function () { return store.list(); }).then(function (L) {
       var have = {}; L.forEach(function (e) { have[e.id] = 1; });
       return evs.reduce(function (p, e) {
         return p.then(function () {
-          if (!e || !/^[a-z0-9-]{4,40}$/.test(String(e.id)) || !e.state || typeof e.state.games !== "object") return;
-          e.state.ev = e.state.ev || {}; e.state.ev.id = e.id;
-          return (have[e.id] ? store.trash(e.id) : Promise.resolve()).then(function () { n++; return store.write(e.id, wrap(e.state, e.meta || {})); });
+          var name = (e && e.state && e.state.ui && e.state.ui.title) || (e && e.meta && e.meta.title) || String((e && e.id) || "?");
+          if (!e || !/^[a-z0-9-]{4,40}$/.test(String(e.id)) || !e.state || typeof e.state.games !== "object" || Array.isArray(e.state.games)) { rep.push({ kind: "Torneo", name: name, status: "saltato", why: "Dati del torneo non validi nel backup." }); return; }
+          var old = have[e.id] ? (e.id === id0 ? Promise.resolve(JSON.parse(JSON.stringify(cur()))) : store.read(e.id).then(function (t) { var j = JSON.parse(t); return j.state || j; }).catch(function () { return null; })) : Promise.resolve(null);
+          return old.then(function (prev) {
+            var D = [], F = [];
+            try { D = A.migrateState(e.state); } catch (err) { D = []; }
+            e.state.ev = e.state.ev || {}; e.state.ev.id = e.id;
+            try { if (prev) F = A.diffState(prev, e.state); } catch (err) { F = []; }
+            rep.push({ kind: "Torneo", name: (e.state.ui && e.state.ui.title) || name, status: have[e.id] ? "sostituito" : "nuovo", defaults: D, diffs: F });
+            /* scheda dell'elenco ricalcolata dallo stato migrato; il colore resta quello del backup */
+            return metaOf(e.state).catch(function () { return {}; }).then(function (m) {
+              if (e.meta && e.meta.accent) m.accent = e.meta.accent;
+              return (have[e.id] ? store.trash(e.id) : Promise.resolve()).then(function () { n++; return store.write(e.id, wrap(e.state, Object.assign({}, e.meta || {}, m))); });
+            });
+          });
         });
       }, Promise.resolve());
     }).then(function () {
-      var mine = evs.filter(function (e) { return e && e.id === id0; })[0];
+      var mine = evs.filter(function (e) { return e && e.id === id0 && e.state && typeof e.state.games === "object"; })[0];
       if (mine) { A.load(mine.state); useBot(mine.state); }
       laterOthers(); if (root && !root.hidden) render();
-      return n;
+      return { n: n, rep: rep };
     });
   }
   window.HOME = { open: open, close: close, flush: flush, undo: undoDel, readState: readState, joinOther: joinOther, exportAll: exportAll, importAll: importAll, isOpen: function () { return !!root && !root.hidden; } };

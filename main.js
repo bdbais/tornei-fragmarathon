@@ -325,20 +325,34 @@ ipcMain.handle("bots:export", () => {
   L.list.forEach((e) => { try { files[e.id] = fs.readFileSync(botPath(e), "utf8"); } catch {} });
   return { list: L.list, files };
 });
+/* ripristino dei bot da un backup: quelli sostituiti vanno in bot-rimossi; il riepilogo dice cosa mancava
+   (valore predefinito) e cosa cambia rispetto alla configurazione di prima */
 ipcMain.handle("bots:import", (_e, p) => {
-  if (!p || !Array.isArray(p.list)) return botsInfo();
+  const report = [];
+  if (!p || !Array.isArray(p.list)) return { list: botsInfo(), report };
   const L = botsLoad(), dir = path.join(app.getPath("userData"), "bot-rimossi");
   p.list.forEach((e) => {
-    if (!e || !/^b[a-z0-9]{0,20}$/.test(String(e.id)) || !/^telegram(-[a-z0-9]+)?\.json$/.test(String(e.file))) return;
-    const txt = p.files && p.files[e.id]; if (typeof txt !== "string") return;
-    try { JSON.parse(txt); } catch { return; }
+    const name = String((e && e.label) || "Bot").slice(0, 60);
+    if (!e || !/^b[a-z0-9]{0,20}$/.test(String(e.id)) || !/^telegram(-[a-z0-9]+)?\.json$/.test(String(e.file))) { report.push({ label: name, status: "saltato", why: "voce non valida" }); return; }
+    const txt = p.files && p.files[e.id]; if (typeof txt !== "string") { report.push({ label: name, status: "saltato", why: "configurazione mancante" }); return; }
+    try { JSON.parse(txt); } catch { report.push({ label: name, status: "saltato", why: "configurazione illeggibile" }); return; }
     if (bots[e.id]) { bots[e.id].stop(); delete bots[e.id]; }
-    const entry = { id: e.id, label: String(e.label || "Bot").slice(0, 60), file: e.file, color: e.color || "", username: e.username || "" };
-    if (fs.existsSync(botPath(entry))) { fs.mkdirSync(dir, { recursive: true }); try { fs.renameSync(botPath(entry), path.join(dir, stamp() + "_" + entry.file)); } catch {} }
+    const entry = { id: e.id, label: name, file: e.file, color: e.color || "", username: e.username || "" };
+    let prev = null;
+    if (fs.existsSync(botPath(entry))) {
+      try { prev = fs.readFileSync(botPath(entry), "utf8"); } catch {}
+      fs.mkdirSync(dir, { recursive: true }); try { fs.renameSync(botPath(entry), path.join(dir, stamp() + "_" + entry.file)); } catch {}
+    }
     writeAtomic(botPath(entry), txt);
+    const old = L.list.find((x) => x.id === entry.id);
+    let r = { defaults: [], diffs: [] }; try { r = createBot.cfgReport(txt, prev); } catch (err) { logErr("ripristino bot", err); }
+    if (old && old.label !== entry.label) r.diffs.unshift(["Nome", old.label, entry.label]);
+    report.push({ label: name, status: old || prev ? "sostituito" : "nuovo", defaults: r.defaults, diffs: r.diffs });
     const i = L.list.findIndex((x) => x.id === entry.id); if (i >= 0) L.list[i] = entry; else L.list.push(entry);
   });
-  botsSave(L); L.list.forEach(botStart); distribute(); return botsInfo();
+  botsSave(L); L.list.forEach(botStart); distribute();
+  logErr("ripristino bot", report.map((x) => x.label + ": " + x.status + (x.why ? " (" + x.why + ")" : "") + (x.defaults && x.defaults.length ? ", " + x.defaults.length + " valori predefiniti" : "")).join("; ") || "nessuno");
+  return { list: botsInfo(), report };
 });
 ipcMain.handle("bots:remove", (_e, id) => {
   const L = botsLoad(); if (L.list.length < 2) return botsInfo();

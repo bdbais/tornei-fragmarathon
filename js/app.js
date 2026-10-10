@@ -1561,20 +1561,120 @@ function backupExport(){
     });
   }).catch(function(e){bmsg("Backup non riuscito: "+((e&&e.message)||e))});
 }
+/* Ripristino di un backup: lo stato viene portato al formato attuale e si prepara il riepilogo.
+   migrateState → [etichetta, valore, utente] per i dati che mancavano e hanno preso il valore predefinito;
+   diffState → [etichetta, prima, dopo, utente] rispetto al torneo sostituito. "utente" = testo scritto
+   dall'organizzatore (nomi, titoli), che non si traduce. Un'etichetta [gioco, campo] ha il gioco come testo utente. */
+function gameLabel(st,k){var c=(st.custom||[]).filter(function(x){return x&&x.k===k})[0];return(st.names&&st.names[k])||(c&&c.l)||(ORIGD[k]&&ORIGD[k].l)||k}
+function gamesOf(st){var off=st.off||[];return BUILTIN.filter(function(k){return off.indexOf(k)<0}).concat((st.custom||[]).filter(function(c){return c&&c.k}).map(function(c){return c.k}))}
+function langName(c){var l=((window.I18N&&I18N.LANGS)||[]).filter(function(x){return x[0]===c})[0];return l?l[1]:""}
+function migrateState(st){
+  var D=[],d=function(l,v,u){D.push([l,String(v),u?1:0])};
+  if(st.v!==2)d("Formato dei dati","aggiornato");
+  if(!Array.isArray(st.roster))d("Elenco giocatori","vuoto");
+  if(!Array.isArray(st.teams))d("Squadre","nessuna");
+  if(!st.ui||typeof st.ui!=="object")st.ui={};
+  if(!st.ui.title)d("Titolo",UI0.title,1);
+  if(!st.ev||typeof st.ev!=="object")st.ev={};
+  if(!langName(st.ev.lang)){d("Lingua del torneo",langName("it")||"Italiano",1);st.ev.lang="it"}
+  if(!st.ev.mode){d("Tipo di evento","LAN party");st.ev.mode="lan"}
+  if(!st.games||typeof st.games!=="object")st.games={};
+  if(!Array.isArray(st.custom))st.custom=[];
+  gamesOf(st).forEach(function(k){if(!st.games[k])d("Gioco aggiunto vuoto",gameLabel(st,k),1)});
+  Object.keys(st.games).forEach(function(k){var g=st.games[k];if(g&&(g.mode==="gironi"||g.mode==="solo"))d(g.phase&&g.phase!=="setup"?"Formato vecchio convertito in free for all, tabellone da rifare":"Formato vecchio convertito in free for all",gameLabel(st,k),1)});
+  if(st.sala&&typeof st.sala==="object"){
+    var x=st.sala;
+    if(!Array.isArray(x.items)){x.items=[];d("Mappa della sala","nessun oggetto")}
+    if(!x.st||typeof x.st!=="object"){x.st={};d("Mappa della sala","nessuna postazione assegnata")}
+    if(!x.wifi||typeof x.wifi!=="object"){x.wifi={ssid:"",pass:"",sec:"WPA"};d("Mappa della sala","Wi-Fi da impostare")}
+    if(!Array.isArray(x.servers)){x.servers=[];d("Mappa della sala","nessun server")}
+    if(!x.w)x.w=24;if(!x.h)x.h=16;if(!x.seq)x.seq=1;
+  }
+  /* server sugli incontri che non esistono più nella sala */
+  var sv={};((st.sala&&st.sala.servers)||[]).forEach(function(s){if(s)sv[s.id]=1});
+  Object.keys(st.games).forEach(function(k){var g=st.games[k];if(!g||!g.srv||typeof g.srv!=="object")return;var n=0;
+    Object.keys(g.srv).forEach(function(m){if(!sv[g.srv[m]]){delete g.srv[m];n++}});
+    if(n)D.push([[gameLabel(st,k),"Server tolti dagli incontri perché non sono più nella sala"],String(n),0])});
+  var keep=swapIn(st);try{if(!DEF[S.cur])S.cur=Object.keys(DEF)[0]}finally{swapOut(keep)}
+  return D;
+}
+function diffState(a,b){
+  var R=[],yn=function(v){return v?"sì":"no"},EVM={lan:"LAN party",online:"Online"},
+    q=function(l,x,y,u){x=x==null?"":String(x);y=y==null?"":String(y);if(x!==y)R.push([l,x||"—",y||"—",u?1:0])},
+    bot=function(id){var b=(window.__bots||[]).filter(function(x){return x.id===id})[0];return id?(b?b.label:id):""},
+    list=function(v){return v.slice(0,12).join(", ")+(v.length>12?" (+"+(v.length-12)+")":"")};
+  var au=a.ui||{},bu=b.ui||{},ae=a.ev||{},be=b.ev||{};
+  q("Titolo",au.title||UI0.title,bu.title||UI0.title,1);q("Sottotitolo",au.sub,bu.sub,1);
+  q("Data",ae.date,be.date,1);q("Ora",ae.time,be.time,1);q("Luogo",ae.place,be.place,1);q("Indirizzo",ae.addr,be.addr,1);q("Link Google Maps",ae.maps,be.maps,1);
+  q("Lingua del torneo",langName(ae.lang||"it"),langName(be.lang||"it"),1);q("Tipo di evento",EVM[ae.mode||"lan"]||ae.mode,EVM[be.mode||"lan"]||be.mode);
+  q("Gruppo WhatsApp",ae.wa,be.wa,1);q("Gruppo o canale Telegram",ae.tg,be.tg,1);
+  q("In lavorazione, visibile solo agli admin",yn(ae.draft),yn(be.draft));q("Bot del torneo",bot(ae.bot),bot(be.bot),1);
+  var ar=a.roster||[],br=b.roster||[],pa=br.filter(function(x){return ar.indexOf(x)<0}),pr=ar.filter(function(x){return br.indexOf(x)<0});
+  q("Giocatori",ar.length,br.length);if(pa.length)R.push(["Giocatori in più","",list(pa),1]);if(pr.length)R.push(["Giocatori in meno",list(pr),"",1]);
+  q("Squadre",(a.teams||[]).length,(b.teams||[]).length);
+  var ag=gamesOf(a),bg=gamesOf(b),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
+  bg.forEach(function(k){if(ag.indexOf(k)<0)R.push(["Gioco in più","",gameLabel(b,k),1])});
+  ag.forEach(function(k){if(bg.indexOf(k)<0)R.push(["Gioco in meno",gameLabel(a,k),"",1])});
+  bg.forEach(function(k){var ga=(a.games||{})[k],gb=(b.games||{})[k];if(ag.indexOf(k)<0||!ga||!gb)return;var L=gameLabel(b,k);
+    q([L,"Formato"],ML[ga.mode]||ga.mode,ML[gb.mode]||gb.mode);q([L,"Stato"],ga.phase==="setup"?"in preparazione":"avviato",gb.phase==="setup"?"in preparazione":"avviato");
+    q([L,"Partecipanti"],(ga.players||[]).length,(gb.players||[]).length);q([L,"A squadre"],yn(ga.team),yn(gb.team));
+    q([L,"Server assegnati agli incontri"],Object.keys(ga.srv||{}).length,Object.keys(gb.srv||{}).length)});
+  var sa=a.sala||{},sb=b.sala||{},seats=function(x){return Object.keys(x.st||{}).filter(function(k){return x.st[k]&&x.st[k].player}).length};
+  if(a.sala||b.sala){q("Oggetti nella mappa della sala",(sa.items||[]).length,(sb.items||[]).length);q("Postazioni assegnate",seats(sa),seats(sb));
+    q("Server di gioco",(sa.servers||[]).map(function(s){return s.name}).join(", "),(sb.servers||[]).map(function(s){return s.name}).join(", "),1);q("Wi-Fi della sala",(sa.wifi||{}).ssid,(sb.wifi||{}).ssid,1)}
+  return R;
+}
+/* riepilogo del ripristino: blocchi {name, kind, status, why, defaults, diffs} */
+function restoreReport(o,blocks){
+  var el=$("brep");if(!el)return;var e=function(s){return esc(String(s))},
+    sp=function(t,u){return'<span'+(u?' data-noi18n':'')+'>'+e(t)+'</span>'},
+    lab=function(l){return Array.isArray(l)?'<b data-noi18n>'+e(l[0])+'</b> › '+sp(l[1]):sp(l)},
+    ST={nuovo:"nuovo",sostituito:"sostituito",saltato:"saltato"},h="";
+  var bv=(o&&o.version)||"",nv=(window.VERSION||{}).v||"";
+  h+='<p class="brep-v">'+sp("Versione del backup")+' <b data-noi18n>'+e(bv||"?")+'</b>, '+sp("versione attuale")+' <b data-noi18n>'+e(nv)+'</b>'+(o&&o.savedAt?', '+sp("salvato il")+' <b data-noi18n>'+e(String(o.savedAt).slice(0,16).replace("T"," "))+'</b>':'')+'</p>';
+  if(bv&&nv&&bv!==nv)h+='<p class="brep-v">'+sp("Il backup è di un'altra versione: i dati sono stati controllati e portati al formato attuale.")+'</p>';
+  var nd=0,nf=0;
+  blocks.forEach(function(b){
+    var D=b.defaults||[],F=b.diffs||[];nd+=D.length;nf+=F.length;
+    h+='<details class="brep-b"'+(D.length||F.length||b.why?' open':'')+'><summary>'+sp(b.kind)+' <b data-noi18n>'+e(b.name)+'</b> <span class="brep-s brep-'+b.status+'">'+e(ST[b.status]||b.status)+'</span>'+
+      (D.length?' <span class="brep-c">'+D.length+'</span> '+sp(D.length>1?"valori predefiniti":"valore predefinito"):'')+(F.length?' <span class="brep-c">'+F.length+'</span> '+sp(F.length>1?"differenze":"differenza"):'')+'</summary>';
+    if(b.why)h+='<p>'+sp(b.why)+'</p>';
+    if(D.length)h+='<h5>'+sp("Mancavano nel backup: messo il valore predefinito")+'</h5><ul>'+D.map(function(x){return'<li>'+lab(x[0])+': '+sp(x[1],x[2])+'</li>'}).join("")+'</ul>';
+    if(F.length)h+='<h5>'+sp("Differenze rispetto a prima del ripristino")+'</h5><ul>'+F.map(function(x){return'<li>'+lab(x[0])+': '+(x[1]?sp(x[1],x[3]):'')+(x[1]&&x[2]?' <span class="brep-ar">→</span> ':'')+(x[2]?sp(x[2],x[3]):'')+'</li>'}).join("")+'</ul>';
+    if(!D.length&&!F.length&&!b.why)h+='<p>'+sp(b.status==="nuovo"?"Non c'era prima: aggiunto così com'è nel backup.":"Nessuna differenza e nessun valore mancante.")+'</p>';
+    h+='</details>';
+  });
+  el.innerHTML=h;el.hidden=false;
+  if(DESK&&DESK.logError)DESK.logError("ripristino",blocks.map(function(b){return b.kind+" "+b.name+": "+b.status+", "+(b.defaults||[]).length+" valori predefiniti, "+(b.diffs||[]).length+" differenze"}).join("; "));
+  return{nd:nd,nf:nf};
+}
+function botsRestored(o){
+  if(!(o&&o.bots&&DESK&&DESK.botsImport))return Promise.resolve([]);
+  return DESK.botsImport(o.bots).then(function(r){return((r&&r.report)||[]).map(function(x){return{kind:"Bot",name:x.label,status:x.status,why:x.why,defaults:x.defaults,diffs:x.diffs}})}).catch(function(){return[]});
+}
 function restoreDecoded(o){
   if(o&&o.kind==="tutti"&&Array.isArray(o.events)){
     if(!window.HOME){bmsg("Questo backup contiene più tornei: aprilo dall'app.");return}
-    return window.HOME.importAll(o.events).then(function(n){
-      var bp=o.bots&&DESK&&DESK.botsImport?DESK.botsImport(o.bots):null;
-      return Promise.resolve(bp).then(function(){bmsg("Ripristinati "+n+" tornei"+(o.bots?" e "+o.bots.list.length+" bot":"")+". Quelli sostituiti sono nel cestino.");toast("Backup ripristinato.")});
+    return window.HOME.importAll(o.events).then(function(r){
+      return botsRestored(o).then(function(br){
+        if(!$("editbox").hidden)renderEdit();var t=restoreReport(o,r.rep.concat(br));
+        bmsg("Ripristinati "+r.n+" tornei"+(o.bots?" e "+o.bots.list.length+" bot":"")+". Quelli sostituiti sono nel cestino. Sotto trovi cosa è cambiato.");
+        toast(t.nd||t.nf?"Backup ripristinato: il riepilogo è sotto il pulsante Ripristina.":"Backup ripristinato.");
+      });
     });
   }
   var p=o&&o.kind==="torneo"?o.state:o;
   if(!p||typeof p.games!=="object"||Array.isArray(p.games)||(p.roster&&!Array.isArray(p.roster))||(p.teams&&!Array.isArray(p.teams)))throw new Error("file non valido");
-  delSnap("dati prima del ripristino");var id=S.ev&&S.ev.id;
+  delSnap("dati prima del ripristino");var id=S.ev&&S.ev.id,old=JSON.parse(JSON.stringify(S));
+  var D=migrateState(p),F=diffState(old,p);
   S=p;initS();if(id){S.ev=S.ev||{};S.ev.id=id}registerCustom();normGames();applyUi();
-  if(!DEF[S.cur])S.cur=Object.keys(DEF)[0];save();render();renderRoster();bmsg("Backup ripristinato nel torneo aperto.");
-  if(o&&o.bots&&DESK&&DESK.botsImport)DESK.botsImport(o.bots);
+  if(!DEF[S.cur])S.cur=Object.keys(DEF)[0];save();render();renderRoster();
+  /* il modulo delle Impostazioni mostrava i dati di prima: si ricarica, così Salva non li riscrive */
+  if(!$("editbox").hidden)renderEdit();
+  return botsRestored(o&&o.kind?o:null).then(function(br){
+    var t=restoreReport(o&&o.kind?o:{},[{kind:"Torneo",name:S.ui.title||UI0.title,status:"sostituito",defaults:D,diffs:F}].concat(br));
+    bmsg("Backup ripristinato nel torneo aperto. Sotto trovi cosa è cambiato.");toast(t.nd||t.nf?"Backup ripristinato: il riepilogo è sotto il pulsante Ripristina.":"Backup ripristinato.");
+  });
 }
 $("bf").onchange=function(){
   var f=this.files[0];if(!f)return;var rd=new FileReader();
@@ -1583,13 +1683,11 @@ $("bf").onchange=function(){
     if(CRYPT.isEnc(txt)){
       var pw=$("bpw").value;if(!pw){bmsg("Il backup è cifrato: scrivi la password qui sopra e premi di nuovo Ripristina.");$("bpw").focus();return}
       bmsg("Apro il backup…");
-      CRYPT.decrypt(txt,pw).then(restoreDecoded).catch(function(e){bmsg((e&&e.message)||"Backup non leggibile.")});
+      CRYPT.decrypt(txt,pw).then(restoreDecoded).catch(function(e){bmsg((e&&e.message)||"Backup non leggibile.");if(DESK&&DESK.logError)DESK.logError("ripristino",String(e&&e.stack||e))});
       return;
     }
     try{
-      var p=JSON.parse(txt);if(p&&(p.kind==="tutti"||p.kind==="torneo")){restoreDecoded(p);return}if(!p||typeof p.games!=="object"||Array.isArray(p.games)||(p.roster&&!Array.isArray(p.roster))||(p.teams&&!Array.isArray(p.teams)))throw 0;
-      S=p;initS();registerCustom();normGames();applyUi();
-      if(!DEF[S.cur])S.cur="quake";save();render();renderRoster();bmsg("Backup importato.");
+      var p=JSON.parse(txt),r=restoreDecoded(p);if(r&&r.catch)r.catch(function(e){bmsg((e&&e.message)||"Backup non leggibile.")});
     }catch(e){bmsg("File non valido: scegli un backup esportato da questa pagina.")}
   };
   rd.readAsText(f);this.value="";
@@ -2277,6 +2375,7 @@ window.__app={
   botLink:function(){return window.__botUser?"https://t.me/"+window.__botUser:""},
   vmOf:function(st){return withSync(st,function(){return botVM()})},
   applyJoin:function(st,k,name){return withSync(st,function(){return joinInto(k,name)})},
+  migrateState:migrateState,diffState:diffState,restore:restoreDecoded,
   ui0:UI0,
   games:function(st){
     var keep=S;S=st;initS();registerCustom();normGames();var out=[];

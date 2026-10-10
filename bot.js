@@ -65,6 +65,42 @@ function friendly(e) {
   return e;
 }
 function newCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
+/* Ripristino di un backup: impostazioni del bot che mancavano (prendono il valore predefinito)
+   e differenze rispetto alla configurazione sostituita. Il token non compare mai, si dice solo se cambia. */
+const JOIN_L = { off: "chiuse", approve: "con approvazione", auto: "automatiche" };
+const NOTIFY_L = { stage: "Avvisi di fase", final: "Avviso della finale", results: "Avviso dei risultati", player: "Avvisi personali ai giocatori" };
+function cfgReport(txt, prevTxt) {
+  let c = {}, p = null;
+  try { c = JSON.parse(txt) || {}; } catch {}
+  try { p = prevTxt ? JSON.parse(prevTxt) : null; } catch {}
+  const defaults = [], diffs = [], yn = (v) => (v ? "sì" : "no");
+  if (c.join === undefined) defaults.push(["Iscrizioni dal bot", JOIN_L.approve]);
+  const nd = { stage: true, final: true, results: false, player: true }, n = c.notify || {};
+  Object.keys(nd).forEach((k) => { if (n[k] === undefined) defaults.push([NOTIFY_L[k], yn(nd[k])]); });
+  if (c.welcome === undefined) defaults.push(["Messaggio di benvenuto", "quello standard"]);
+  if (c.groups === undefined) defaults.push(["Gruppi e canali abilitati", "nessuno"]);
+  if (c.blocked === undefined) defaults.push(["Gruppi bloccati", "nessuno"]);
+  if (c.code === undefined) defaults.push(["Codice amministratore", "nuovo"]);
+  const oldAdm = (c.admins || []).length + (c.adminUsers || []).length;
+  if (oldAdm) defaults.push(["Amministratori del formato vecchio convertiti in ruoli", String(oldAdm)]);
+  if (p) {
+    const q = (l, a, b) => { if (String(a) !== String(b)) diffs.push([l, String(a), String(b)]); };
+    const adm = (x) => Object.values(x.chats || {}).filter((h) => h && h.role === "admin").length + Object.values(x.userRoles || {}).filter((r) => r && r.role === "admin").length + (x.admins || []).length + (x.adminUsers || []).length;
+    const grp = (x) => Object.values(x.groups || {}).filter((g) => g && g.status === "on").length;
+    if ((p.token || "") !== (c.token || "")) diffs.push(["Token", c.token ? "cambiato" : "tolto", ""]);
+    q("Bot acceso", yn(p.enabled), yn(c.enabled));
+    q("Iscrizioni dal bot", JOIN_L[p.join || "approve"], JOIN_L[c.join || "approve"]);
+    const pn = Object.assign({}, nd, p.notify), cn = Object.assign({}, nd, c.notify);
+    Object.keys(nd).forEach((k) => q(NOTIFY_L[k], yn(pn[k]), yn(cn[k])));
+    if ((p.welcome || "") !== (c.welcome || "")) diffs.push(["Messaggio di benvenuto", "cambiato", ""]);
+    q("Persone collegate", Object.keys(p.chats || {}).length, Object.keys(c.chats || {}).length);
+    q("Amministratori", adm(p), adm(c));
+    q("Richieste in attesa", (p.pending || []).length, (c.pending || []).length);
+    q("Gruppi e canali abilitati", grp(p), grp(c));
+    q("Gruppi bloccati", Object.keys(p.blocked || {}).length, Object.keys(c.blocked || {}).length);
+  }
+  return { defaults, diffs };
+}
 function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim(); }
 function chunks(text, max) {
   const out = []; let cur = "";
@@ -717,3 +753,4 @@ module.exports = function createBot(opts) {
     pngReply(id, data) { if (pngWait[id]) { const f = pngWait[id]; delete pngWait[id]; f(data); } }
   };
 };
+module.exports.cfgReport = cfgReport;

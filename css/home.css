@@ -342,3 +342,19 @@ html.set-on body{overflow:hidden}
 .salamap img{display:block;width:100%;max-width:1100px;border-radius:8px;border:1px solid var(--line)}
 .wall .salamap img{max-width:none;border:0}
 @media (max-width:860px){.sl-wrap{grid-template-columns:1fr}}
+
+/* riepilogo del ripristino di un backup */
+.brep { margin-top: 12px; display: grid; gap: 8px; }
+.brep-v { margin: 0; color: var(--mut); font-size: 13px; }
+.brep-v b { color: var(--ink); }
+.brep-b { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 8px 12px; }
+.brep-b > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 14px; }
+.brep-b > summary > span:first-child { color: var(--mut); }
+.brep-s { font-size: 12px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--mut); }
+.brep-s.brep-nuovo { border-color: var(--acc); color: var(--acc); }
+.brep-s.brep-saltato { border-color: #d9534f; color: #d9534f; }
+.brep-c { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: 6px; }
+.brep-b h5 { margin: 10px 0 4px; font-size: 12px; font-weight: 600; color: var(--mut); }
+.brep-b ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 13px; }
+.brep-b p { margin: 8px 0 2px; font-size: 13px; color: var(--mut); }
+.brep-ar { color: var(--acc); }

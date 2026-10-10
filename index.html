@@ -206,6 +206,7 @@ body.proj::before{display:none}
     <div class="row" style="margin-top:8px"><label class="row chk"><input type="radio" name="bwhat" value="tutti" checked>Tutti i tornei</label><label class="row chk"><input type="radio" name="bwhat" value="uno">Solo il torneo aperto</label><label class="row chk" id="bbotsl"><input type="checkbox" id="bbots" checked>Con i bot Telegram (token, iscritti, ruoli)</label></div>
     <div class="row" style="margin-top:8px"><button class="p" id="exp">Esporta backup cifrato</button><button id="imp">Ripristina backup…</button><input type="file" id="bf" accept=".tfbak,.json,application/json" hidden></div>
     <p class="hint" id="bmsg">Il backup è cifrato con la password (AES-256): senza la password non si apre, quindi conservala. Ripristina chiede la stessa password e accetta anche i vecchi backup .json non cifrati.</p>
+    <div id="brep" class="brep" hidden aria-live="polite"></div>
     <textarea id="bta" hidden readonly aria-label="Testo del backup" style="width:100%;height:120px;margin-top:8px;padding:8px;border:2px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:12px monospace"></textarea>
   </section>
 <section class="panel" id="editbox" hidden>

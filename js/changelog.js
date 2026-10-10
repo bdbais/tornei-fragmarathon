@@ -4,6 +4,11 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.7.2", d: "2026-10-10", t: "Ripristino dei backup con migrazione e riepilogo", items: [
+      "Un backup di una versione precedente viene portato al formato attuale: i dati che mancavano prendono il valore predefinito e il riepilogo dice quali sono.",
+      "Dopo il ripristino un riepilogo per ogni torneo e per ogni bot mostra cosa è cambiato rispetto a prima (titolo, giocatori, giochi, formato, sala, server, impostazioni del bot); resta anche nel registro errori.log.",
+      "Corretto: dopo un ripristino fatto dalle Impostazioni, Salva riscriveva il titolo e i nomi dei giochi di prima."
+    ] },
     { v: "3.7.1", d: "2026-10-10", t: "Aggiornamenti più sicuri", items: [
       "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.",
       "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola."
