@@ -196,7 +196,9 @@ app.whenReady().then(() => {
     file: path.join(app.getPath("userData"), "telegram.json"),
     onJoin: (req) => toPage({ type: "join", name: req.name, k: req.k }),
     onPng: (r) => toPage({ type: "png", id: r.id, k: r.k }),
-    onChange: () => toPage({ type: "status" })
+    onChange: () => toPage({ type: "status" }),
+    /* rete di Chromium: rispetta proxy e certificati di sistema (il fetch di Node no) */
+    fetch: (url, o) => require("electron").net.fetch(url, o)
   });
   bot.start().catch(() => {});
   /* telecamere, microfono e cattura di finestre: solo per le pagine del programma */

@@ -38,6 +38,21 @@ const COMMANDS = [
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]); }
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 function num(x) { return Number(x || 0).toLocaleString("it-IT", { maximumFractionDigits: 2 }); }
+/* Il token si incolla spesso con spazi, con "bot" davanti o con tutto il messaggio di BotFather:
+   se ne estrae la parte valida (numero:segreto). */
+function cleanToken(t) {
+  const re = /(\d{5,}:[A-Za-z0-9_-]{20,})/, raw = String(t || "");
+  const m = re.exec(raw) || re.exec(raw.replace(/\s+/g, ""));
+  return m ? m[1] : "";
+}
+/* errori di Telegram e di rete spiegati in italiano */
+function friendly(e) {
+  e = String(e || ""); if (!e) return "";
+  if (/Unauthorized|Not Found/i.test(e)) return "Token non valido o revocato: copialo di nuovo da @BotFather (comando /mybots, poi API Token). Formato: 123456789:AA…";
+  if (/Conflict/i.test(e)) return "Un altro programma sta usando questo bot (Conflict): chiudilo, oppure usa un bot diverso per i tornei.";
+  if (/fetch failed|ENOTFOUND|ECONN|ETIMEDOUT|EAI_AGAIN|tempo scaduto|network|ERR_/i.test(e)) return "Telegram non è raggiungibile da questo PC: controlla la connessione a internet, il firewall o il proxy. (" + e.slice(0, 80) + ")";
+  return e;
+}
 function newCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
 function norm(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim(); }
 function chunks(text, max) {
@@ -53,7 +68,7 @@ function chunks(text, max) {
 module.exports = function createBot(opts) {
   const file = opts.file;
   let streamer = null, liveLinks = null;
-  let cfg = load(), vm = null, prev = null, running = false, ctrl = null, me = null, lastErr = "", lastOk = 0;
+  let cfg = load(), vm = null, prev = null, running = false, ctrl = null, me = null, lastErr = "", tokErr = "", lastOk = 0;
   const waits = {}, pngWait = {};
   let queue = Promise.resolve();
 
@@ -77,7 +92,7 @@ module.exports = function createBot(opts) {
     const c = new AbortController(); if (method === "getUpdates") ctrl = c;
     const t = setTimeout(() => c.abort(), method === "getUpdates" ? 70000 : 40000);
     try {
-      const r = await fetch(base + "/bot" + cfg.token + "/" + method, form ? { method: "POST", body: form, signal: c.signal }
+      const r = await (opts.fetch || fetch)(base + "/bot" + cfg.token + "/" + method, form ? { method: "POST", body: form, signal: c.signal }
         : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}), signal: c.signal });
       const j = await r.json().catch(() => ({ ok: false, description: "risposta non valida (HTTP " + r.status + ")" }));
       if (!j.ok) throw new Error(j.description || "errore " + r.status);
@@ -437,7 +452,7 @@ module.exports = function createBot(opts) {
   function status() {
     const chats = Object.keys(cfg.chats);
     return {
-      enabled: cfg.enabled, hasToken: !!cfg.token, running, username: me && me.username, lastErr, lastOk,
+      enabled: cfg.enabled, hasToken: !!cfg.token, tokenHint: cfg.token ? cfg.token.split(":")[0] + ":…" + cfg.token.slice(-4) : "", running, username: me && me.username, lastErr: tokErr || friendly(lastErr), lastOk,
       join: cfg.join, notify: cfg.notify, code: cfg.code,
       userRoles: Object.keys(cfg.userRoles).map((u) => ({ u: "@" + u, role: cfg.userRoles[u].role, games: cfg.userRoles[u].games || [] })),
       people: chats.map((id) => { const c = cfg.chats[id], f = c.follow || {}; return { id, name: c.name || c.first || String(id), role: roleOf(id), games: c.games || [], player: c.player || "", follow: f.all ? "tutti" : (f.games || []).length, seen: c.seen || 0 }; })
@@ -451,8 +466,17 @@ module.exports = function createBot(opts) {
     setVM(v) { prev = vm; vm = v; try { notifyDiff(); } catch {} },
     async configure(c) {
       c = c || {};
-      if (typeof c.token === "string" && c.token.trim() && c.token.trim() !== cfg.token) { cfg.token = c.token.trim(); cfg.offset = 0; me = null; }
-      if (c.removeToken) { cfg.token = ""; cfg.enabled = false; me = null; }
+      if (typeof c.token === "string" && c.token.trim()) {
+        const tk = cleanToken(c.token);
+        if (!tk) {
+          const got = String(c.token).trim();
+          tokErr = "Token non valido: " + (/^\d+:?$/.test(got) ? "sono arrivate solo le cifre iniziali (" + got.length + " caratteri). Il token completo è lungo circa 46 caratteri, tipo 123456789:AAH…, copialo di nuovo intero." : "deve essere nel formato 123456789:AAH… (lo trovi in @BotFather, /mybots, API Token).");
+          return status();
+        }
+        tokErr = "";
+        if (tk !== cfg.token) { cfg.token = tk; cfg.offset = 0; me = null; }
+      }
+      if (c.removeToken) { tokErr = ""; cfg.token = ""; cfg.enabled = false; me = null; }
       if (typeof c.enabled === "boolean") cfg.enabled = c.enabled;
       if (["off", "approve", "auto"].includes(c.join)) cfg.join = c.join;
       if (c.notify) cfg.notify = Object.assign(cfg.notify, c.notify);

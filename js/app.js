@@ -910,7 +910,8 @@ function botHtml(st){
   if(!st)return'<p class="hint">Il bot non è disponibile.</p>';
   var state=st.running?'<span class="ok">Attivo come <b>@'+esc(st.username||"")+'</b></span>':(st.enabled&&st.hasToken?'<span class="cres err">Non collegato'+(st.lastErr?': '+esc(st.lastErr):'')+'</span>':'Spento');
   var h='<p style="margin:6px 0 10px">Stato: '+state+'</p>'
-   +'<div class="row"><input type="password" id="bottok" autocomplete="off" placeholder="'+(st.hasToken?"Token salvato: lascialo vuoto per non cambiarlo":"Token del bot (da @BotFather)")+'" aria-label="Token del bot Telegram"><button class="p" id="botsave">Salva e collega</button>'+(st.hasToken?'<button id="botdel">Rimuovi token</button>':'')+'</div>'
+   +'<div class="row"><input type="password" id="bottok" autocomplete="off" spellcheck="false" placeholder="'+(st.hasToken?"Token salvato "+esc(st.tokenHint)+": lascialo vuoto per non cambiarlo":"Token del bot, tipo 123456789:AAH… (da @BotFather)")+'" aria-label="Token del bot Telegram"><button id="bottokshow" aria-pressed="false">Mostra</button><button class="p" id="botsave">Salva e collega</button>'+(st.hasToken?'<button id="botdel">Rimuovi token</button>':'')+'</div>'
+   +(st.hasToken?'<p class="hint" style="margin:6px 0 0">Token salvato: <code>'+esc(st.tokenHint)+'</code></p>':'')
    +'<div class="row" style="margin-top:10px"><label class="row chk"><input type="checkbox" id="boton"'+(st.enabled?" checked":"")+'>Bot attivo</label>'
    +'<label class="row" style="gap:6px">Iscrizioni dal bot <select id="botjoin"><option value="approve"'+(st.join==="approve"?" selected":"")+'>Con conferma dell&#39;organizzatore</option><option value="auto"'+(st.join==="auto"?" selected":"")+'>Automatiche</option><option value="off"'+(st.join==="off"?" selected":"")+'>Chiuse</option></select></label></div>'
    +'<div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Avvisi a chi segue un torneo:</span><label class="row chk"><input type="checkbox" class="botn" data-n="stage"'+(st.notify.stage?" checked":"")+'>cambio di turno o fase</label><label class="row chk"><input type="checkbox" class="botn" data-n="final"'+(st.notify.final?" checked":"")+'>podio finale</label><label class="row chk"><input type="checkbox" class="botn" data-n="results"'+(st.notify.results?" checked":"")+'>ogni risultato</label></div>'
@@ -1044,6 +1045,13 @@ function readLogo(file){
   };
   rd.readAsDataURL(file);
 }
+/* token incollato: si prende tutto il testo degli appunti (anche su più righe) e se ne estrae il token */
+$("editbox").addEventListener("paste",function(e){
+  if(e.target.id!=="bottok")return;
+  var t=(e.clipboardData||window.clipboardData).getData("text")||"",m=/(\d{5,}:[A-Za-z0-9_-]{20,})/.exec(t)||/(\d{5,}:[A-Za-z0-9_-]{20,})/.exec(t.replace(/\s+/g,""));
+  e.preventDefault();e.target.value=m?m[1]:t.replace(/\s+/g,"");
+  if(!m)toast("Il testo incollato non sembra un token completo: deve essere tipo 123456789:AAH… (circa 46 caratteri).");
+});
 $("editbox").addEventListener("change",function(e){
   if(/^ai(target|style|prov|url|model|key)$/.test(e.target.id)){
     var c=aiReadForm(),autoP=!c.prompt||c.prompt===aiPrompt(aiCfg());
@@ -1074,6 +1082,7 @@ $("editbox").onclick=function(e){
   if(b.id==="aigo"){if(!aiBusy)aiRun();return}
   if(b.id==="s_ok"){strSave();return}
   if(b.id==="s_open"){var lb=$("livebox");lb.hidden=false;renderLive();lb.scrollIntoView({block:"start"});return}
+  if(b.id==="bottokshow"){var ti=$("bottok"),sh=ti.type==="password";ti.type=sh?"text":"password";b.textContent=sh?"Nascondi":"Mostra";b.setAttribute("aria-pressed",String(sh));return}
   if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
   if(b.id==="botdel"){botCfg({removeToken:true});return}
   if(b.id==="botcode"){botCfg({newCode:true});return}

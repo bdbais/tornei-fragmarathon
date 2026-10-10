@@ -1,8 +1,8 @@
-TORNEI FRAGMARATHON 3.4.1
+TORNEI FRAGMARATHON 3.4.2
 Creato da fragmarathon.net e Lazarus.
 
 INSTALLARE (consigliato)
-1. Scarica "Tornei-Fragmarathon-Setup-3.4.1.exe" da
+1. Scarica "Tornei-Fragmarathon-Setup-3.4.2.exe" da
    https://github.com/bdbais/tornei-fragmarathon/releases/latest
 2. Doppio clic. Il programma si installa, crea l'icona sul desktop e si apre da solo.
    Se Windows mostra "Windows ha protetto il PC": Ulteriori informazioni > Esegui comunque.
@@ -63,3 +63,7 @@ NOVITA 3.4.0
 NOVITA 3.4.1
 - Bot: ruoli (amministratore, organizzatore tornei anche per singolo torneo, partecipante) gestibili dalle impostazioni, anche per username.
 - Bot: collegamento account Telegram - giocatore, con avvisi personali (tocca a te, risultati, posizione finale).
+
+NOVITA 3.4.2
+- Bot: incollando il token si prende quello completo anche dal messaggio intero di BotFather o se va a capo; pulsante Mostra; si vede quale token e salvato.
+- Bot: errori chiari (token troncato, revocato, Telegram non raggiungibile) e uso del proxy di sistema.
