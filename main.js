@@ -71,13 +71,13 @@ function loadBounds() {
 let win = null, wall = null;
 function hardenNav(w) {
   w.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    if (/^https?:\/\//i.test(url) || /^ts3server:\/\/[\w.\-\[\]:]+(\?[\w=&%.\-]*)?$/i.test(url)) shell.openExternal(url);
     return { action: "deny" };
   });
   w.webContents.on("will-navigate", (e, url) => {
     if (!url.startsWith("file://")) {
       e.preventDefault();
-      if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+      if (/^https?:\/\//i.test(url) || /^ts3server:\/\/[\w.\-\[\]:]+(\?[\w=&%.\-]*)?$/i.test(url)) shell.openExternal(url);
     }
   });
 }
@@ -326,6 +326,117 @@ ipcMain.handle("bots:export", () => {
   const L = botsLoad(), files = {};
   L.list.forEach((e) => { try { files[e.id] = fs.readFileSync(botPath(e), "utf8"); } catch {} });
   return { list: L.list, files };
+});
+/* Stile da un sito: la pagina si apre in una finestra nascosta e isolata (sessione solo in memoria, nessun permesso,
+   niente download né finestre), si leggono colori e caratteri calcolati, poi la finestra si chiude. I file dei caratteri
+   si scaricano qui (niente CORS) e tornano alla pagina come data: con limiti di dimensione. */
+const PROBE_JS = `(() => {
+  const cs = (el) => getComputedStyle(el);
+  const clear = (c) => !c || c === "transparent" || /rgba\\(\\s*0,\\s*0,\\s*0,\\s*0\\s*\\)/.test(c);
+  const vis = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 4 && r.height > 4 && r.bottom > 0 && r.top < innerHeight * 3; };
+  const first = (sel) => { try { return [...document.querySelectorAll(sel)].find(vis) || null; } catch (e) { return null; } };
+  const bgOf = (el) => { for (let e = el; e && e.nodeType === 1; e = e.parentElement) { const c = cs(e).backgroundColor; if (!clear(c)) return c; } return "rgb(255, 255, 255)"; };
+  const body = document.body || document.documentElement, main = first("main, [role=main], article, #content, .content") || body;
+  const header = first("header, [role=banner], .navbar, nav, #header, .header");
+  const h = first("h1") || first("h2") || first("h3"), p = first("main p, article p, p") || main;
+  const link = [...document.querySelectorAll("main a, article a, a")].filter(vis).find((a) => a.textContent.trim().length > 2 && !a.querySelector("img"));
+  const btn = [...document.querySelectorAll("button, .btn, .button, a[class*=btn], a[class*=button], input[type=submit], [role=button]")].filter(vis).find((b) => !clear(cs(b).backgroundColor));
+  const freq = {}; let n = 0;
+  for (const el of document.querySelectorAll("body *")) {
+    if (++n > 1500) break; if (!vis(el)) continue; const s = cs(el);
+    if (!clear(s.backgroundColor)) freq[s.backgroundColor] = (freq[s.backgroundColor] || 0) + 3;
+    if (parseFloat(s.borderTopWidth) > 0 && !clear(s.borderTopColor)) freq[s.borderTopColor] = (freq[s.borderTopColor] || 0) + 2;
+    if (!clear(s.color)) freq[s.color] = (freq[s.color] || 0) + 1;
+  }
+  const rs = cs(document.documentElement), vars = {}, faces = [];
+  for (const sh of document.styleSheets) {
+    let rules; try { rules = sh.cssRules; } catch (e) { continue; }
+    for (const r of rules || []) {
+      if (r.type === 5) faces.push({ family: r.style.getPropertyValue("font-family"), src: r.style.getPropertyValue("src"), weight: r.style.getPropertyValue("font-weight"), style: r.style.getPropertyValue("font-style"), base: sh.href || location.href });
+      else if (r.selectorText && /(^|,)\\s*(:root|html)\\s*(,|$)/.test(r.selectorText)) for (const k of r.style) if (k.startsWith("--") && Object.keys(vars).length < 120) vars[k] = rs.getPropertyValue(k).trim().slice(0, 80);
+    }
+  }
+  const sheets = [...document.querySelectorAll('link[rel~="stylesheet"]')].map((l) => l.href).filter((u) => /^https?:/.test(u)).slice(0, 12);
+  return { title: (document.title || "").slice(0, 120), url: location.href, page: bgOf(body), bg: bgOf(main), ink: cs(p).color, font: cs(p).fontFamily,
+    header: header ? { bg: bgOf(header), ink: cs(header).color } : null, heading: h ? { ink: cs(h).color, font: cs(h).fontFamily, weight: cs(h).fontWeight } : null,
+    link: link ? cs(link).color : null, button: btn ? { bg: cs(btn).backgroundColor, ink: cs(btn).color } : null,
+    freq: Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 24), vars, sheets, faces: faces.slice(0, 60) };
+})()`;
+const GENERIC_FONTS = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-sans-serif|ui-serif|ui-monospace|ui-rounded|-apple-system|blinkmacsystemfont|segoe ui|arial|helvetica|helvetica neue|roboto|georgia|times|times new roman|verdana|tahoma|trebuchet ms|courier new|calibri|cambria|consolas|inter|noto sans|ubuntu|cantarell|open sans|apple color emoji|segoe ui emoji|segoe ui symbol|noto color emoji)$/i;
+function famName(f) { return String(f || "").split(",")[0].trim().replace(/^["']|["']$/g, "").trim(); }
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+function withTimeout(p, ms, msg) { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(msg)), ms); })]).finally(() => clearTimeout(t)); }
+/* @font-face dai fogli di stile (anche di altri domini, letti qui) per i caratteri usati da titoli e testo */
+async function siteFonts(r, ses) {
+  const want = [famName(r.heading && r.heading.font), famName(r.font)].filter((f, i, a) => f && !GENERIC_FONTS.test(f) && a.indexOf(f) === i);
+  if (!want.length) return [];
+  let faces = (r.faces || []).slice();
+  for (const href of r.sheets || []) {
+    if (faces.some((f) => want.includes(famName(f.family)))) break;
+    try {
+      const res = await withTimeout(ses.fetch(href), 8000, "css"); if (!res.ok) continue;
+      const txt = (await res.text()).slice(0, 2000000);
+      (txt.match(/@font-face\s*{[^}]*}/gi) || []).forEach((b) => {
+        const g = (k) => { const m = new RegExp(k + "\\s*:\\s*([^;}]+)", "i").exec(b); return m ? m[1].trim() : ""; };
+        faces.push({ family: g("font-family"), src: g("src"), weight: g("font-weight"), style: g("font-style"), base: href });
+      });
+    } catch {}
+  }
+  const out = []; let total = 0;
+  for (const fam of want) {
+    const mine = faces.filter((f) => famName(f.family).toLowerCase() === fam.toLowerCase() && !/italic/i.test(f.style || ""));
+    const target = fam === famName(r.heading && r.heading.font) ? parseInt((r.heading && r.heading.weight) || "700", 10) : 400;
+    mine.sort((a, b) => Math.abs((parseInt(a.weight, 10) || 400) - target) - Math.abs((parseInt(b.weight, 10) || 400) - target));
+    for (const f of mine.slice(0, 1)) {
+      const urls = []; String(f.src || "").replace(/url\(\s*["']?([^"')]+)["']?\s*\)\s*(?:format\(\s*["']?([\w-]+)["']?\s*\))?/gi, (_, u, fmt) => { urls.push({ u, fmt: (fmt || "").toLowerCase() }); return ""; });
+      const rank = (x) => (/woff2/.test(x.fmt) || /\.woff2(\?|$)/i.test(x.u) ? 0 : /woff/.test(x.fmt) || /\.woff(\?|$)/i.test(x.u) ? 1 : /truetype|opentype/.test(x.fmt) || /\.(ttf|otf)(\?|$)/i.test(x.u) ? 2 : 9);
+      urls.sort((a, b) => rank(a) - rank(b));
+      const pick = urls.find((x) => rank(x) < 9); if (!pick) continue;
+      try {
+        const abs = new URL(pick.u, f.base).href; if (!/^https?:/i.test(abs)) continue;
+        const res = await withTimeout(ses.fetch(abs), 10000, "font"); if (!res.ok) continue;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length > 110 * 1024 || total + buf.length > 200 * 1024) continue;
+        total += buf.length;
+        const fmt = ["woff2", "woff", "truetype"][rank(pick)] || "truetype", mime = { woff2: "font/woff2", woff: "font/woff", truetype: "font/ttf" }[fmt];
+        out.push({ family: fam, weight: String(f.weight || "400").split(" ")[0], fmt, data: "data:" + mime + ";base64," + buf.toString("base64") });
+      } catch {}
+    }
+  }
+  return out;
+}
+let probing = false;
+ipcMain.handle("css:probe", async (_e, raw) => {
+  let url = String(raw || "").trim().slice(0, 500); if (!url) return { err: "Scrivi l'indirizzo del sito." };
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  let u; try { u = new URL(url); } catch { return { err: "Indirizzo del sito non valido." }; }
+  if (!/^https?:$/.test(u.protocol)) return { err: "Indirizzo del sito non valido." };
+  if (probing) return { err: "Sto già leggendo un sito: aspetta qualche secondo." };
+  probing = true;
+  const part = "probe-" + Date.now(), ses = session.fromPartition(part, { cache: false });
+  ses.setPermissionRequestHandler((_wc, _p, cb) => cb(false)); ses.setPermissionCheckHandler(() => false);
+  ses.on("will-download", (ev, item) => { try { item.cancel(); } catch {} ev.preventDefault(); });
+  const w = new BrowserWindow({ show: false, width: 1366, height: 900, webPreferences: { partition: part, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, webgl: false, spellcheck: false } });
+  try {
+    w.webContents.setAudioMuted(true);
+    w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    w.webContents.on("will-navigate", (ev, nu) => { if (!/^https?:/i.test(nu)) ev.preventDefault(); });
+    try { await withTimeout(w.loadURL(u.href), 20000, "Il sito non risponde (20 secondi)."); }
+    catch (e) { if (!/ERR_ABORTED|-3\b/.test(String(e && e.message)) || !w.webContents.getURL()) throw e; }
+    await wait(1500);
+    const r = await withTimeout(w.webContents.executeJavaScript(PROBE_JS, true), 8000, "Il sito non si lascia leggere.");
+    if (!r || typeof r !== "object") throw new Error("Il sito non si lascia leggere.");
+    r.fonts = await siteFonts(r, ses).catch(() => []);
+    delete r.faces; delete r.sheets;
+    return r;
+  } catch (e) {
+    const m = String((e && e.message) || e);
+    logErr("stile da un sito", u.href + ": " + m);
+    return { err: /ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION|ERR_ADDRESS/.test(m) ? "Non raggiungo " + u.hostname + ": controlla l'indirizzo e la connessione." : /ERR_CERT/.test(m) ? "Il certificato di " + u.hostname + " non è valido." : /secondi|leggere/.test(m) ? m : "Non riesco a leggere lo stile di " + u.hostname + "." };
+  } finally {
+    try { w.destroy(); } catch {}
+    ses.clearStorageData().catch(() => {}); probing = false;
+  }
 });
 /* Discord: un solo bot per tutta l'app (token in userData/discord.json); il torneo sceglie il server */
 let discord = null;

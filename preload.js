@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("desk", {
   sheetFetch: (url) => ipcRenderer.invoke("sheets:fetch", url),
   salaPing: (hosts) => ipcRenderer.invoke("sala:ping", hosts),
   migration: () => ipcRenderer.invoke("app:migration"),
+  cssProbe: (url) => ipcRenderer.invoke("css:probe", url),
   discordStatus: () => ipcRenderer.invoke("discord:status"),
   discordConfig: (c) => ipcRenderer.invoke("discord:config", c),
   discordCheck: () => ipcRenderer.invoke("discord:check"),

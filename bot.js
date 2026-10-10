@@ -31,6 +31,8 @@ const HELP = [
   "/server – il server dove giochi la prossima partita: indirizzo e password",
   "/mappa – la mappa della sala con la tua postazione",
   "/discord <i>account</i> – il tuo account Discord: entri nei canali delle tue partite",
+  "/info – data, luogo e link del torneo (WhatsApp, Telegram, Discord, TeamSpeak)",
+  "/teamspeak – indirizzo e password del server TeamSpeak",
   "/segui <i>nome</i> o /segui tutti – ricevi gli avvisi",
   "/nonseguire <i>nome</i> o /nonseguire tutti",
   "/seguiti – i tornei che segui",
@@ -42,7 +44,7 @@ const HELP = [
 const COMMANDS = [
   ["tornei", "I tornei e come stanno andando"], ["torneo", "Dettagli di un torneo"], ["classifica", "Classifica o tabellone"],
   ["partite", "Partite da giocare adesso"], ["risultati", "Podi dei tornei conclusi"], ["hof", "Hall of Fame"],
-  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"], ["server", "Il server della tua prossima partita"], ["mappa", "Mappa della sala e la tua postazione"], ["discord", "Il tuo account Discord"],
+  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"], ["server", "Il server della tua prossima partita"], ["mappa", "Mappa della sala e la tua postazione"], ["discord", "Il tuo account Discord"], ["info", "Data, luogo e link del torneo"], ["teamspeak", "Server TeamSpeak"],
   ["segui", "Ricevi gli avvisi di un torneo"], ["nonseguire", "Smetti di seguire"], ["seguiti", "Tornei che segui"],
   ["iscrivimi", "Iscriviti a un torneo"], ["immagine", "Immagine del torneo"], ["diretta", "Dove guardare la diretta"], ["aiuto", "Elenco dei comandi"], ["stop", "Non ricevere più nulla"]
 ];
@@ -294,6 +296,8 @@ module.exports = function createBot(opts) {
     if (cmd === "diretta") return send(id, liveLinks ? "🔴 <b>In diretta!</b>\n" + linksText(liveLinks) : "Nessuna diretta in questo momento.");
   }
   const enabledGroups = () => Object.entries(cfg.groups).filter(([, g]) => g.status === "on" && g.in !== false).map(([id]) => id);
+  /* TeamSpeak: link di invito, oppure indirizzo da copiare (Telegram non apre i link ts3server://) */
+  function tsLine(L) { return "🎙 TeamSpeak: " + (/^https:/i.test(L.ts) ? esc(L.ts) : "<code>" + esc(L.ts) + "</code>") + (L.tspass ? "\n🔑 Password TeamSpeak: <code>" + esc(L.tspass) + "</code>" : ""); }
   function linksInfo() {
     const L = (vm && vm.links) || {}, a = [];
     if (L.when) a.push("📅 " + esc(L.when) + (L.place ? ", " + esc(L.place) : ""));
@@ -302,6 +306,7 @@ module.exports = function createBot(opts) {
     if (L.wa) a.push("💬 Gruppo WhatsApp: " + esc(L.wa));
     if (L.tg) a.push("📣 Canale Telegram: " + esc(L.tg));
     if (L.discord) a.push("🎧 Server Discord: " + esc(L.discord));
+    if (L.ts) a.push(tsLine(L));
     return a.length ? "\n\n" + a.join("\n") : "";
   }
   function tTitle(t) { return "<b>" + esc(t.l) + "</b>" + (t.name ? " – " + esc(t.name) : "") + (t.draft || (vm && vm.draft) ? " 🛠 <i>in lavorazione</i>" : ""); }
@@ -613,6 +618,8 @@ module.exports = function createBot(opts) {
         waits[chatId] = { type: "dc" };
         return send(chatId, "Scrivi il tuo account Discord (nome utente, es. fede_73): ti aggiungo ai canali delle tue partite." + (inv ? "\nServer del torneo: " + esc(inv) : ""));
       }
+      case "info": case "informazioni": { const li = linksInfo(); return send(chatId, "ℹ️ <b>" + esc(vm.title) + "</b>" + (vm.sub ? "\n" + esc(vm.sub) : "") + (li || "\n\nL'organizzatore non ha ancora inserito data, luogo e link.")); }
+      case "teamspeak": case "ts": case "ts3": { const L = (vm && vm.links) || {}; return send(chatId, L.ts ? tsLine(L) + (/^https:/i.test(L.ts) ? "" : "\nIn TeamSpeak: Connessioni, Connetti, e incolla l'indirizzo.") : "Questo torneo non ha un server TeamSpeak."); }
       case "scollega": c.player = ""; persist(); opts.onChange && opts.onChange(); return send(chatId, "Collegamento tolto: non ricevi più gli avvisi personali.");
       case "miepartite": return c.player ? send(chatId, playerMsg(c.player)) : send(chatId, "Prima dimmi chi sei: /io <i>il tuo nome</i>.");
       case "segui": return follow(chatId, arg, true);

@@ -63,7 +63,12 @@
   }
   function allSeats() { var o = []; sala().items.forEach(function (it) { o = o.concat(seats(it)); }); return o; }
   function local(it, px, py) { var dx = px - it.x, dy = py - it.y, c = Math.cos(rad(it.rot)), s = Math.sin(rad(it.rot)); return { x: dx * c + dy * s, y: -dx * s + dy * c }; }
-  function nextRowName() { var used = {}; sala().items.forEach(function (it) { if (it.type === "fila") used[it.name] = 1; }); for (var i = 0; i < 26; i++) { var l = String.fromCharCode(65 + i); if (!used[l]) return l; } return "Z" + sala().seq; }
+  function rowName(i) { var s = ""; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function nextRowName() { var used = {}; sala().items.forEach(function (it) { if (it.type === "fila") used[it.name] = 1; }); for (var i = 0; i < 702; i++) { var l = rowName(i); if (!used[l]) return l; } return "R" + sala().seq; }
+  /* primo IP libero dopo le file già numerate (resta sotto 255) */
+  function nextIp() { var top = 100; sala().items.forEach(function (it) { if (it.type === "fila") top = Math.max(top, (it.ipStart || 101) + seats(it).length - 1); }); return top + 1 > 254 ? 101 : top + 1; }
+  /* scorciatoie del menu Aggiungi: i tavoli da 1 e 2 postazioni sono file corte (numeri, IP, 3D e PDF come le file) */
+  var PRESET = { post2: ["Tavolo da 2 postazioni", 2, "🖥️"], post1: ["Tavolo da 1 postazione", 1, "🖥️"] };
 
   /* ---------- stato dei PC (ping) ---------- */
   var PING = {}, pingT = null;
@@ -195,13 +200,24 @@
   function snap(v) { return Math.round(v * 4) / 4; }
   function clampIt(it) { var z = size(it), X = sala(); it.x = Math.max(0, Math.min(X.w, it.x)); it.y = Math.max(0, Math.min(X.h, it.y)); return it; }
   function select(s) { sel = s; redraw(); paintProps(); paintTable(); }
-  function addItem(type) {
-    var X = sala(), c = CAT[type]; if (!c) return;
+  function addItem(type, at) {
+    var pre = PRESET[type], X = sala(); if (pre) type = "fila"; var c = CAT[type]; if (!c) return;
     var it = { id: "o" + (X.seq++), type: type, x: X.w / 2, y: X.h / 2, rot: 0 };
-    if (type === "fila") { it.name = nextRowName(); it.n = 8; it.double = false; it.ipBase = "192.168.1."; it.ipStart = 100 + X.items.filter(function (x) { return x.type === "fila"; }).length * 20 + 1; it.y = Math.min(X.h - 1, 2 + X.items.filter(function (x) { return x.type === "fila"; }).length * 2.4); }
+    if (type === "fila") { it.name = nextRowName(); it.n = pre ? pre[1] : 8; it.double = false; it.ipBase = "192.168.1."; it.ipStart = nextIp(); it.y = Math.min(X.h - 1, 2 + X.items.filter(function (x) { return x.type === "fila"; }).length * 2.4); }
     if (type === "maxi") it.y = 0.4;
     else if (type !== "fila") { var fr = freeSpot(size(it)); it.x = fr.x; it.y = fr.y; }
+    if (pre && !at) { var fp = freeSpot(size(it)); it.x = fp.x; it.y = fp.y; }
+    if (at) { it.x = snap(at.x); it.y = snap(at.y); clampIt(it); }
     X.items.push(it); save(); select({ item: it.id });
+  }
+  /* copia di un oggetto: in un punto preciso (doppio clic) o accanto all'originale */
+  function cloneItem(src, at) {
+    var X = sala(), c = JSON.parse(JSON.stringify(src)); c.id = "o" + (X.seq++);
+    if (c.type === "fila") { c.name = nextRowName(); c.ipStart = nextIp(); }
+    if (at) { c.x = snap(at.x); c.y = snap(at.y); }
+    else if (c.type === "fila") { c.y = Math.min(X.h - 1, src.y + (src.double ? 2.4 : 1.6)); c.x = src.x; }
+    else { c.x += 1; c.y += 1; }
+    X.items.push(clampIt(c)); save(); select({ item: c.id });
   }
   /* primo posto libero (passo di mezzo metro) dove l'oggetto non si sovrappone agli altri */
   function freeSpot(z) {
@@ -216,6 +232,27 @@
     if (A.delSnap) A.delSnap((T(CAT[it.type][0]) + " " + (it.name || it.label || "")).trim());
     seats(it).forEach(function (st) { delete X.st[st.id]; });
     X.items = X.items.filter(function (i) { return i.id !== id; }); sel = null; save(); select(null);
+  }
+
+  /* menu del tasto destro sulla pianta */
+  var keepSel = null;
+  function hideMenu() { var m = $("salamenu"); if (m) m.remove(); document.removeEventListener("pointerdown", menuAway, true); document.removeEventListener("keydown", menuKey, true); window.removeEventListener("blur", hideMenu); window.removeEventListener("scroll", hideMenu, true); }
+  function menuAway(e) { if (!e.target.closest || !e.target.closest("#salamenu")) hideMenu(); }
+  function menuKey(e) {
+    var m = $("salamenu"); if (!m) return;
+    var B = [].slice.call(m.querySelectorAll("button")), i = B.indexOf(document.activeElement);
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); hideMenu(); var cv = $("salacv"); if (cv) cv.focus(); }
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); B[(i + (e.key === "ArrowDown" ? 1 : B.length - 1)) % B.length].focus(); }
+  }
+  function showMenu(x, y) {
+    hideMenu(); var it = selItem(); if (!it) return;
+    var m = document.createElement("div"); m.id = "salamenu"; m.className = "sl-menu"; m.setAttribute("role", "menu");
+    m.innerHTML = [["rot90", "Ruota 90° →"], ["rot-90", "Ruota 90° ←"], ["dup", "Clona"], ["del", "Elimina"]].map(function (b) { return '<button type="button" role="menuitem" data-sm="' + b[0] + '">' + esc(T(b[1])) + '</button>'; }).join("");
+    document.body.appendChild(m);
+    var r = m.getBoundingClientRect(); m.style.left = Math.max(4, Math.min(x, innerWidth - r.width - 4)) + "px"; m.style.top = Math.max(4, Math.min(y, innerHeight - r.height - 4)) + "px";
+    m.addEventListener("click", function (e) { var b = e.target.closest("[data-sm]"); if (!b) return; var a = b.getAttribute("data-sm"); hideMenu(); onAction(a); var cv = $("salacv"); if (cv && a !== "del") cv.focus(); });
+    setTimeout(function () { document.addEventListener("pointerdown", menuAway, true); document.addEventListener("keydown", menuKey, true); window.addEventListener("blur", hideMenu); window.addEventListener("scroll", hideMenu, true); }, 0);
+    m.querySelector("button").focus();
   }
 
   /* pannello delle proprietà */
@@ -283,7 +320,7 @@
   function onAction(a) {
     var it = selItem(), X = sala();
     if (a === "del" && it) return delItem(it.id);
-    if (a === "dup" && it) { var c = JSON.parse(JSON.stringify(it)); c.id = "o" + (X.seq++); c.x += 1; c.y += 1; if (c.type === "fila") { c.name = nextRowName(); c.y = Math.min(X.h - 1, it.y + (it.double ? 2.4 : 1.6)); c.x = it.x; } X.items.push(clampIt(c)); save(); return select({ item: c.id }); }
+    if (a === "dup" && it) return cloneItem(it);
     if (/^rot/.test(a) && it) { it.rot = (((it.rot || 0) + parseInt(a.slice(3), 10)) % 360 + 360) % 360; save(); redraw(); return paintProps(); }
     if (a === "row" && it) return select({ item: it.id });
     if (a === "numip" && it) { var base = it.ipBase || "192.168.1.", n0 = it.ipStart || 101; seats(it).forEach(function (s, i) { (X.st[s.id] = X.st[s.id] || {}).ip = base + (n0 + i); }); save(); redraw(); paintTable(); return toast(T("IP numerati da ") + base + n0 + "."); }
@@ -570,10 +607,10 @@
     if (WALL) { box.innerHTML = '<section class="panel salamap"><h2>' + esc(T("Mappa della sala")) + '</h2><img id="salaimg" alt=""></section>'; mapImg(); return; }
     box.innerHTML = '<section class="panel salaed"><h2>' + esc(T("Sala")) + ' <button class="hb" data-help="sala" title="Guida" aria-label="Apri la guida">?</button></h2>' +
       '<div class="row sl-bar"><span class="sl-view" role="group" aria-label="' + esc(T("Vista")) + '"><button type="button" data-sv2="2d" aria-pressed="' + (view === "2d") + '">' + esc(T("Pianta 2D")) + '</button><button type="button" data-sv2="3d" aria-pressed="' + (view === "3d") + '">3D</button></span>' +
-      '<label class="row" style="gap:6px">' + esc(T("Aggiungi")) + '<select id="saladd">' + Object.keys(CAT).map(function (k) { return '<option value="' + k + '">' + (CAT[k][4] ? CAT[k][4] + " " : "") + esc(T(CAT[k][0])) + '</option>'; }).join("") + '</select></label><button type="button" class="p" data-sa="add">' + esc(T("Aggiungi")) + '</button>' +
+      '<label class="row" style="gap:6px">' + esc(T("Aggiungi")) + '<select id="saladd">' + Object.keys(CAT).map(function (k) { return '<option value="' + k + '">' + (CAT[k][4] ? CAT[k][4] + " " : "") + esc(T(CAT[k][0])) + '</option>' + (k === "fila" ? Object.keys(PRESET).map(function (q) { return '<option value="' + q + '">' + PRESET[q][2] + " " + esc(T(PRESET[q][0])) + '</option>'; }).join("") : ""); }).join("") + '</select></label><button type="button" class="p" data-sa="add">' + esc(T("Aggiungi")) + '</button>' +
       '<label class="row" style="gap:6px">' + esc(T("Sala")) + ' <input type="number" id="salaw" min="4" max="200" step="1" value="' + X.w + '" aria-label="' + esc(T("Larghezza della sala in metri")) + '"> × <input type="number" id="salah" min="4" max="200" step="1" value="' + X.h + '" aria-label="' + esc(T("Profondità della sala in metri")) + '"> m</label></div>' +
       '<div class="sl-wrap"><div class="sl-stage"><canvas id="salacv" tabindex="0" aria-label="' + esc(T("Pianta della sala")) + '"' + (view === "3d" ? " hidden" : "") + '></canvas><div id="sala3d"' + (view === "2d" ? " hidden" : "") + '></div></div><aside id="salaprops" class="sl-props"></aside></div>' +
-      '<p class="hint">' + esc(T("Trascina gli oggetti per spostarli (anche nella vista 3D). Clic su una postazione per assegnare giocatore e IP. Tasti sulla pianta: R ruota di 90°, Q ed E di 15°, frecce spostano, Canc elimina.")) + '</p></section>' +
+      '<p class="hint">' + esc(T("Trascina gli oggetti per spostarli (anche nella vista 3D). Clic su una postazione per assegnare giocatore e IP. Con un oggetto selezionato, doppio clic su un punto vuoto ne crea un altro uguale lì. Tasto destro su un oggetto: ruota, clona, elimina. Tasti sulla pianta: R ruota di 90°, Q ed E di 15°, frecce spostano, Ctrl+D clona, Canc elimina.")) + '</p></section>' +
       '<section class="panel salamap"><h2>' + esc(T("Mappa della sala")) + '</h2><img id="salaimg" alt="' + esc(T("Mappa della sala")) + '"><p class="hint">' + esc(T("Questa è la mappa che vedono i partecipanti sul proiettore e con /mappa nel bot Telegram, con la loro postazione evidenziata.")) + '</p></section>' +
       '<section class="panel"><h2>' + esc(T("Postazioni")) + '</h2><div class="row"><button type="button" data-sa="pingall">' + esc(T("Ping di tutte")) + '</button><label class="row chk"><input type="checkbox" id="salaauto"' + (pingT ? " checked" : "") + '> ' + esc(T("Ping automatico ogni 30 secondi")) + '</label><button type="button" data-sa="fillall">' + esc(T("Metti i giocatori liberi nelle postazioni libere")) + '</button></div><div id="salatab"></div></section>' +
       '<section class="panel"><h2>' + esc(T("Wi-Fi, server dei giochi e informazioni")) + '</h2><div id="salainfo"></div></section>' +
@@ -612,7 +649,10 @@
     /* pianta: clic, trascinamento, tasti */
     box.addEventListener("pointerdown", function (e) {
       if (e.target.id !== "salacv" || !geo) return;
-      var pt = toRoom(e), h = hit(pt); select(h);
+      var pt = toRoom(e), h = hit(pt); hideMenu();
+      if (e.button === 2) return;
+      if (!h && sel && sel.item) keepSel = { id: sel.item, t: Date.now() };
+      select(h);
       /* trascinando una postazione si sposta tutta la fila */
       var it = selItem(); if (it && h) { drag = { it: it, dx: it.x - pt.x, dy: it.y - pt.y, moved: false }; e.target.setPointerCapture(e.pointerId); }
     });
@@ -621,11 +661,28 @@
       var pt = toRoom(e); drag.it.x = snap(pt.x + drag.dx); drag.it.y = snap(pt.y + drag.dy); clampIt(drag.it); drag.moved = true; redraw();
     });
     box.addEventListener("pointerup", function () { if (drag) { if (drag.moved) { save(); paintProps(); } drag = null; } });
+    /* doppio clic su un punto vuoto con un oggetto selezionato: un altro oggetto uguale in quel punto */
+    box.addEventListener("dblclick", function (e) {
+      if (e.target.id !== "salacv" || !geo) return;
+      var pt = toRoom(e); if (hit(pt)) return;
+      var X = sala(); if (pt.x < 0 || pt.y < 0 || pt.x > X.w || pt.y > X.h) return;
+      var src = keepSel && Date.now() - keepSel.t < 800 && X.items.filter(function (i) { return i.id === keepSel.id; })[0]; keepSel = null;
+      if (!src) return;
+      e.preventDefault(); cloneItem(src, pt);
+    });
+    /* tasto destro su un oggetto: ruota, clona, elimina */
+    box.addEventListener("contextmenu", function (e) {
+      if (e.target.id !== "salacv" || !geo) return;
+      e.preventDefault(); var h = hit(toRoom(e)); if (!h) { hideMenu(); return; }
+      select({ item: h.item }); showMenu(e.clientX, e.clientY);
+    });
     box.addEventListener("keydown", function (e) {
       if (e.target.id !== "salacv") return;
       var it = selItem(); if (!it) return;
       var k = e.key, d = e.shiftKey ? 1 : 0.25;
       if (k === "Delete" || k === "Backspace") { e.preventDefault(); if (!sel.seat) delItem(it.id); return; }
+      if (k === "ContextMenu" || (k === "F10" && e.shiftKey)) { e.preventDefault(); var cr = $("salacv").getBoundingClientRect(); showMenu(cr.left + geo.ox + it.x * geo.sc, cr.top + geo.oy + it.y * geo.sc); return; }
+      if ((k === "d" || k === "D") && (e.ctrlKey || e.metaKey)) { e.preventDefault(); cloneItem(it); return; }
       if (k === "r" || k === "R") { e.preventDefault(); onAction("rot90"); return; }
       if (k === "q" || k === "Q") { e.preventDefault(); onAction("rot-15"); return; }
       if (k === "e" || k === "E") { e.preventDefault(); onAction("rot15"); return; }

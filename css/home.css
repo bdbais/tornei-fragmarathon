@@ -387,3 +387,8 @@ html.set-on body{overflow:hidden}
 #setup .gctab td{padding:3px 6px;border-bottom:1px solid var(--line)}
 #setup .gctab td:last-child{width:1%}
 #setup .gctab input{width:100%;box-sizing:border-box;font-family:ui-monospace,Consolas,monospace}
+
+/* menu del tasto destro sulla pianta della sala */
+.sl-menu{position:fixed;z-index:1000;min-width:180px;padding:6px;display:grid;gap:2px;background:var(--panel);border:1px solid var(--edge);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.sl-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);padding:8px 12px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer}
+.sl-menu button:hover,.sl-menu button:focus-visible{background:var(--acc);color:var(--accink);outline:none}
