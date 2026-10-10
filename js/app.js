@@ -124,7 +124,7 @@ function renderTabs(){
   var HELPI=svg+'<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.3"/></svg>';
   var TROPHY=svg+'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/></svg>';
   function t(k,ic,l){return'<button class="tab" role="tab" data-k="'+k+'" aria-selected="'+(k===S.cur)+'">'+ic+l+'</button>'}
-  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
+  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><label class="skinsel">Tema <select id="skin" aria-label="Tema dei colori">'+skinOpts((S.ui&&S.ui.skin)||"auto")+'</select></label><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
   $("tabs").innerHTML=Object.keys(DEF).map(function(k){return t(k,ico(k),esc(DEF[k].l)+platBadge(k))}).join("")+'<button class="tab" id="plus" aria-label="Aggiungi un gioco" title="Aggiungi un gioco">+</button>';
 }
 function renderSetup(){
@@ -153,7 +153,7 @@ function renderSetup(){
 function modeHint(g){
   var n=g.players.length,P=2;while(P<n)P*=2;
   if(g.mode==="elim")return'<p class="hint">Eliminazione diretta: chi perde esce. Si gioca anche la finale per il 3º posto.'+(n>1?" Con "+n+" partecipanti: tabellone da "+P+(P>n?", "+(P-n)+" passano il primo turno senza giocare":"")+".":"")+'</p>';
-  if(g.mode==="double")return'<p class="hint">Doppia eliminazione (il formato di EVO e di molti Major): si esce solo alla seconda sconfitta. Chi perde nel tabellone vincenti scende nel tabellone perdenti; i due vincitori si giocano la finale.'+(n>1?" Con "+n+" partecipanti si giocano al massimo "+(2*n-1)+" partite.":"")+'</p>';
+  if(g.mode==="double")return'<p class="hint">Doppia eliminazione (il formato di EVO e di molti Major): si esce solo alla seconda sconfitta. Chi perde nel tabellone vincenti (winner bracket) scende nel tabellone perdenti (loser bracket); i due vincitori si giocano la finale.'+(n>1?" Con "+n+" partecipanti si giocano al massimo "+(2*n-1)+" partite.":"")+'</p>';
   if(g.mode==="swiss"){var nr=g.swR||TF.swDefaultRounds(Math.max(2,n));return'<p class="hint">Sistema svizzero (la fase a gruppi dei Major di CS2): '+nr+' turni, a ogni turno si affronta chi ha un punteggio simile, senza rivincite. Vittoria 3 punti, pareggio 1. A pari punti decide il Buchholz, cioè la somma dei punti degli avversari affrontati.'+((g.swTop||0)>=2?" Poi playoff a eliminazione diretta tra i primi "+g.swTop+".":"")+'</p>'}
   if(g.mode==="rr"){var ng=Math.max(1,Math.min(g.ng||1,Math.floor(n/2)||1)),tot=0;for(var i=0;i<ng;i++){var sz=Math.floor(n/ng)+(i<n%ng?1:0);tot+=sz*(sz-1)/2}return'<p class="hint">Gironi all&#39;italiana (il formato di Worlds e dei campionati): nel girone tutti contro tutti, vittoria 3 punti, pareggio 1.'+(n>1?" Con "+n+" partecipanti in "+ng+(ng>1?" gironi":" girone")+": "+tot+" partite.":"")+((g.nq||0)>=2?" Poi playoff a eliminazione diretta tra i primi "+g.nq+" (prima i primi classificati di ogni girone).":" Vince chi chiude primo in classifica.")+'</p>'}
   return"";
@@ -766,6 +766,7 @@ $("tabs0").onclick=$("tabs").onclick=function(e){var b=e.target.closest("button"
   if(b.id==="helpbtn"){openHelp(helpCtx());return}
   if(b.id==="plus"){var ag=$("addgame");ag.hidden=!ag.hidden;if(!ag.hidden)$("agname").focus();return}
   S.cur=b.dataset.k;armed=false;save();render()};
+$("tabs0").addEventListener("change",function(e){if(e.target.id==="skin"){S.ui.skin=e.target.value;save();render()}});
 $("addgame").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.id==="agcancel"){$("addgame").hidden=true;return}
@@ -996,7 +997,11 @@ function fitProj(){
    Formati aggiuntivi: doppia eliminazione, svizzero, gironi all'italiana
    (la logica pura è in js/formats.js, qui solo stato e interfaccia)
    ====================================================================== */
-var MODES=[["ffa","Free for all a punti (battle royale)"],["elim","Eliminazione diretta"],["double","Doppia eliminazione"],["swiss","Sistema svizzero + playoff"],["rr","Gironi all'italiana + playoff"]];
+var SKINS=[["auto","Automatico: tema del gioco"],["frag","Fragmarathon"],["-","Ispirati alle piattaforme"],["chiaro","Bracket chiaro (stile Challonge)"],["notte","Arena notturna (stile start.gg)"],["lega","Lega pro (stile ESL)"],["wiki","Wiki (stile Liquipedia)"],["neon","Neon (stile Battlefy)"],["-","Temi dei giochi"],["quake","Quake: lava e metallo"],["tf2","Team Fortress 2: retrò"],["wreck","Wreckfest: cantiere"],["cs2","Counter-Strike 2: tattico"],["fifa","FIFA: campo da calcio"]];
+var GAMESKIN={quake:"quake",tf2:"tf2",wreck:"wreck",cs2:"cs2",fifa:"fifa"};
+function skinOpts(cur){var o="",grp=false;SKINS.forEach(function(s){if(s[0]==="-"){o+=(grp?"</optgroup>":"")+'<optgroup label="'+s[1]+'">';grp=true;return}o+='<option value="'+s[0]+'"'+(cur===s[0]?" selected":"")+'>'+s[1]+'</option>'});return o+(grp?"</optgroup>":"")}
+function applySkin(){var sk=(S.ui&&S.ui.skin)||"auto",eff=sk==="auto"?(GAMESKIN[S.cur]||"frag"):sk,r=document.documentElement;if(eff==="frag")r.removeAttribute("data-skin");else r.setAttribute("data-skin",eff)}
+var MODES=[["ffa","Free for all a punti (battle royale)"],["elim","Eliminazione diretta"],["double","Doppia eliminazione (winner + loser bracket)"],["swiss","Sistema svizzero + playoff"],["rr","Gironi all'italiana + playoff"]];
 function modeOpts(cur){return MODES.map(function(m){return'<option value="'+m[0]+'"'+(cur===m[0]?" selected":"")+'>'+m[1]+'</option>'}).join("")}
 function isTeam(g,k){return g.team!==undefined?g.team:!!DEF[k||S.cur].t}
 function letter(i){return String.fromCharCode(65+i)}
@@ -1042,9 +1047,9 @@ function renderDE(g){
     });
     return o;
   }
-  h+='<section class="panel"><h2>Tabellone vincenti'+helpBtn("double")+'</h2><div class="bracket">'+cols(st.WB,function(r,t){return r===t-1?"Finale vincenti":roundName(r,t)})+'</div></section>';
-  if(st.LB.length)h+='<section class="panel"><h2>Tabellone perdenti</h2><div class="bracket">'+cols(st.LB,function(r,t){return r===t-1?"Finale perdenti":"Perdenti, turno "+(r+1)})+'</div></section>';
-  h+='<section class="panel"><h2>Finale</h2><div class="bracket"><div class="round"><h3>Finale</h3><div class="match">'+deSlot(g,D,E.gf,"a")+deSlot(g,D,E.gf,"b")+'</div></div>'
+  h+='<section class="panel"><h2>Tabellone vincenti (winner bracket)'+helpBtn("double")+'</h2><div class="bracket">'+cols(st.WB,function(r,t){return r===t-1?"Finale vincenti":roundName(r,t)})+'</div></section>';
+  if(st.LB.length)h+='<section class="panel"><h2>Tabellone perdenti (loser bracket)</h2><div class="bracket">'+cols(st.LB,function(r,t){return r===t-1?"Finale perdenti":"Perdenti, turno "+(r+1)})+'</div></section>';
+  h+='<section class="panel"><h2>Finale (grand final)</h2><div class="bracket"><div class="round"><h3>Finale</h3><div class="match">'+deSlot(g,D,E.gf,"a")+deSlot(g,D,E.gf,"b")+'</div></div>'
    +(E.gf2?'<div class="round"><h3>Bella (bracket reset)</h3><div class="match">'+deSlot(g,D,E.gf2,"a")+deSlot(g,D,E.gf2,"b")+'</div></div>':'')+'</div>'
    +'<p class="hint">Inserisci i punteggi: vince il più alto. Chi perde nel tabellone vincenti scende nel tabellone perdenti; alla seconda sconfitta si esce. Finché una partita del primo turno non ha risultati, trascina ⠿ per scambiare i partecipanti.</p></section>';
   return h;
@@ -1298,6 +1303,14 @@ function wClone(el){
   [].forEach.call(c.querySelectorAll("select"),function(i){var s=document.createElement("span");s.className="wv";s.textContent=i.options[i.selectedIndex]?i.options[i.selectedIndex].text:"";i.replaceWith(s)});
   [].forEach.call(c.querySelectorAll("button"),function(b){b.disabled=true;b.tabIndex=-1});
   [].forEach.call(c.querySelectorAll("[data-dz]"),function(x){x.removeAttribute("data-dz")});
+  /* gironi all'italiana: sul proiettore classifica e solo la prossima giornata da giocare */
+  [].forEach.call(c.querySelectorAll(".groups.rr .gbox"),function(gb){
+    var blocks=[],cur=null;
+    [].forEach.call(gb.children,function(x){if(x.classList.contains("day")){cur={d:x,m:[]};blocks.push(cur)}else if(cur&&x.classList.contains("mt"))cur.m.push(x)});
+    var keep=blocks.filter(function(b){return b.m.some(function(m){return[].some.call(m.querySelectorAll(".wv"),function(v){return v.textContent===""})})})[0];
+    blocks.forEach(function(b){if(b!==keep){b.d.remove();b.m.forEach(function(m){m.remove()})}});
+    if(keep)keep.d.textContent="Prossima: "+keep.d.textContent;
+  });
   return c;
 }
 function wFitBox(){
@@ -1368,7 +1381,7 @@ function wallInit(){
 }
 
 var _render=render,_renderOut=renderOut;
-render=function(){_render();fitProj();decorateProj()};
+render=function(){applySkin();_render();fitProj();decorateProj()};
 renderOut=function(){_renderOut();fitProj();decorateProj()};
 window.addEventListener("resize",fitProj);
 document.addEventListener("fullscreenchange",fitProj);

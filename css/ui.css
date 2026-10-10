@@ -75,18 +75,18 @@ body.wall{overflow:hidden;background:#000}
 body.wall main,body.wall::before{display:none}
 body.wall.nocur{cursor:none}
 #wall{position:fixed;inset:0;background:#000;color:#fff;
-  --bg:#000;--panel:#111;--ink:#fff;--mut:#c4c4c4;--line:#444;--edge:#5a5a5a;--acc:#FF5A1F;--accink:#000;--win:#FF5A1F;--gold:#FF5A1F}
+  --bg:#000;--panel:#111;--ink:#fff;--mut:#c4c4c4;--line:#444;--edge:#5a5a5a;--acc:var(--wacc,#FF5A1F);--accink:#000;--win:var(--wacc,#FF5A1F);--gold:var(--wacc,#FF5A1F)}
 #wstage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center;display:grid;grid-template-rows:150px 1fr 10px;background:#000}
-.wh{display:flex;align-items:center;gap:28px;padding:22px 48px 18px;background:#111;border-bottom:8px solid #FF5A1F}
+.wh{display:flex;align-items:center;gap:28px;padding:22px 48px 18px;background:#111;border-bottom:8px solid var(--acc)}
 .wh img.ico,.wh .gchip{width:96px!important;height:96px!important;margin:0;border-radius:12px}
 .wht{flex:1;min-width:0}
 .wht h1{margin:0;font:400 58px/1.05 "FragDisplay","Arial Black",Impact,sans-serif;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
-.wht p{margin:6px 0 0;font:600 40px/1.1 Bahnschrift,"Segoe UI",system-ui,sans-serif;color:#FF5A1F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wht p{margin:6px 0 0;font:600 40px/1.1 Bahnschrift,"Segoe UI",system-ui,sans-serif;color:var(--acc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wpg{font:600 36px Bahnschrift,"Segoe UI",system-ui,sans-serif;color:#9a9a9a;font-variant-numeric:tabular-nums}
 #wbody{position:relative;margin:28px 48px 24px;overflow:hidden}
 #wfit{position:absolute;left:0;top:0;transform-origin:0 0}
 .wbar{background:#1a1a1a}
-.wbar i{display:block;height:100%;width:0;background:#FF5A1F}
+.wbar i{display:block;height:100%;width:0;background:var(--acc)}
 @keyframes wprog{from{width:0}to{width:100%}}
 @media (prefers-reduced-motion:reduce){.wbar i{animation:none!important;width:0}}
 .wempty{margin:180px auto 0;max-width:1300px;text-align:center;font:600 56px/1.2 Bahnschrift,"Segoe UI",system-ui,sans-serif;color:#bbb}
@@ -98,13 +98,13 @@ body.wall.nocur{cursor:none}
 #wfit .bracket,#wfit .gbox,#wfit .groups{overflow:visible}
 #wfit .slot{color:#fff;opacity:1}
 #wfit .slot.l{color:#8a8a8a}
-#wfit .slot.w{background:#FF5A1F;color:#000}
+#wfit .slot.w{background:var(--acc);color:#000}
 #wfit .slot.w .sub{color:#222}
 #wfit .wv{display:inline-flex;align-items:center;justify-content:center;min-width:2.2ch;padding:0 6px;font-weight:700;font-variant-numeric:tabular-nums}
 #wfit .srow .wv{width:54px;border-left:1px solid #444}
-#wfit .fr.adv{background:#FF5A1F;color:#000}
+#wfit .fr.adv{background:var(--acc);color:#000}
 #wfit .fr.adv .fp,#wfit .fr.adv .sub{color:#222}
-#wfit tr.q td{background:#FF5A1F;color:#000}
+#wfit tr.q td{background:var(--acc);color:#000}
 #wfit tr.q td .sub{color:#222}
 #wfit .wrow.hl svg,#wfit .fr.adv svg,#wfit tr.q svg,#wfit .slot.w svg{fill:#000}
 #wfit .gp{border-color:#555}
@@ -128,8 +128,8 @@ body.wall.nocur{cursor:none}
 .wctl button,.wctl select,.wctl input{background:#222;color:#fff;border:1px solid #444;border-radius:8px;padding:8px 12px;font:600 14px Inter,system-ui,sans-serif}
 .wctl input{width:70px;padding:7px 8px;text-align:center}
 .wctl label{display:flex;align-items:center;gap:6px}
-.wctl button.on{background:#FF5A1F;border-color:#FF5A1F;color:#000}
-.wctl :focus-visible{outline:3px solid #FF5A1F;outline-offset:1px}
+.wctl button.on{background:var(--acc);border-color:var(--acc);color:#000}
+.wctl :focus-visible{outline:3px solid var(--acc);outline-offset:1px}
 .wkeys{padding:0 8px}
 .wkeys kbd{border-color:#555;color:#ddd}
 @media (prefers-reduced-motion:reduce){.wctl{transition:none}}

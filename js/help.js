@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "proiettore", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "proiettore", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     inizio: { t: "Come si inizia", h:
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +
@@ -42,9 +42,9 @@ window.HELP = {
       "<li>Finché una partita del primo turno non ha risultati, trascina ⠿ su un altro nome per scambiare gli accoppiamenti.</li></ul>" },
 
     double: { t: "Doppia eliminazione", h:
-      "<p>Si esce solo dopo <b>due sconfitte</b>. È il formato di EVO e di molti tornei di picchiaduro e sparatutto.</p>" +
-      "<ul><li><b>Tabellone vincenti</b>: chi perde qui non è fuori, scende nel tabellone perdenti.</li>" +
-      "<li><b>Tabellone perdenti</b>: chi perde qui esce dal torneo.</li>" +
+      "<p>Si esce solo dopo <b>due sconfitte</b>: è il formato chiamato anche <i>double bracket</i> o <i>double elimination</i>, quello di EVO e di molti tornei di picchiaduro e sparatutto.</p>" +
+      "<ul><li><b>Tabellone vincenti</b> (<i>winner</i> o <i>upper bracket</i>): chi perde qui non è fuori, scende nel tabellone perdenti.</li>" +
+      "<li><b>Tabellone perdenti</b> (<i>loser</i> o <i>lower bracket</i>): chi perde qui esce dal torneo.</li>" +
       "<li><b>Finale</b>: il vincitore dei vincenti contro il vincitore dei perdenti.</li>" +
       "<li><b>Bella</b> (bracket reset): se vince chi arriva dai perdenti, entrambi hanno una sconfitta e si gioca un'ultima partita. Puoi disattivarla nelle impostazioni.</li>" +
       "<li>Il 3º posto è chi perde la finale del tabellone perdenti.</li></ul>" +
@@ -85,6 +85,13 @@ window.HELP = {
       "<li>Il proiettore si aggiorna da solo appena inserisci un punteggio.</li>" +
       "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
       "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
+
+    temi: { t: "Temi dei colori", h:
+      "<p>Scegli il tema dal menu <b>Tema</b> in alto a destra. Vale per la finestra principale e per il proiettore e viene salvato con i dati dell'evento.</p>" +
+      "<ul><li><b>Automatico</b>: ogni gioco ha i suoi colori (Quake lava e metallo, Team Fortress 2 retrò, Wreckfest cantiere, Counter-Strike 2 tattico, FIFA campo da calcio); le altre schede usano Fragmarathon. Sul proiettore, in galleria, il tema cambia con il gioco mostrato.</li>" +
+      "<li><b>Fragmarathon</b>: il tema dell'evento; segue chiaro o scuro di Windows.</li>" +
+      "<li><b>Ispirati alle piattaforme</b>: Bracket chiaro (stile Challonge), Arena notturna (stile start.gg), Lega pro (stile ESL), Wiki (stile Liquipedia), Neon (stile Battlefy). Riprendono solo i colori, non loghi o marchi.</li>" +
+      "<li><b>Temi dei giochi</b>: puoi anche fissare il tema di un gioco per tutto il programma.</li></ul>" },
 
     archivio: { t: "Archivio tornei e backup", h:
       "<h4>Salvare un torneo</h4><p><b>Salva questo torneo</b> crea un file nella cartella <b>Documenti\\Tornei Fragmarathon\\tornei</b>. Da quel momento il file si aggiorna da solo a ogni modifica. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>S</kbd>.</p>" +

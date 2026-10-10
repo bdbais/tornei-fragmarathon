@@ -14,7 +14,7 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 |---|---|
 | Free for all a punti | Tutto il girone gioca nella stessa partita, passano i migliori. Gironi di qualsiasi dimensione, bilanciati da soli. |
 | Eliminazione diretta | Chi perde esce. Bye automatici e finale per il 3º posto. |
-| Doppia eliminazione | Si esce alla seconda sconfitta: tabellone vincenti, perdenti, finale e "bella" facoltativa. |
+| Doppia eliminazione (double bracket) | Si esce alla seconda sconfitta: winner bracket, loser bracket, finale e "bella" (bracket reset) facoltativa. |
 | Sistema svizzero | Turni con avversari di punteggio simile, senza rivincite, spareggio Buchholz, playoff facoltativi. |
 | Gironi all'italiana | Tutti contro tutti a giornate, vittoria 3 e pareggio 1, playoff facoltativi. |
 
@@ -26,6 +26,7 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 - **Backup automatici** in `Documenti\Tornei Fragmarathon\backup` all'avvio del torneo, a ogni cambio di turno o girone e alla fine.
 - **Guida contestuale**: pulsante `?` in ogni finestra, oppure `F1`.
 - **Hall of Fame** con i punti per ogni gioco, per giocatori e squadre.
+- **Temi**: automatico per gioco (Quake, Team Fortress 2, Wreckfest, Counter-Strike 2, FIFA), Fragmarathon, e temi ispirati alle piattaforme di tornei (stile Challonge, start.gg, ESL, Liquipedia, Battlefy). Il proiettore segue il tema.
 - **Aggiornamenti automatici** dalla release GitHub (versione installata).
 - Scorciatoie: `F1` guida, `Ctrl+S` salva torneo, `Ctrl+Z` annulla, `F5` proiettore (`PgUp`/`PgDn` pannelli, `G` galleria).
 

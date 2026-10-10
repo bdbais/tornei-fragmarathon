@@ -1,6 +1,6 @@
 {
   "name": "tornei-fragmarathon",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Gestore tornei per LAN party del Fragmarathon: free for all, eliminazione diretta e doppia, svizzero, gironi all'italiana, schermo proiettore. Offline.",
   "main": "main.js",
   "author": {

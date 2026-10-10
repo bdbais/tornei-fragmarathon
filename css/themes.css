@@ -1,0 +1,34 @@
+/* Tornei Fragmarathon: temi.
+   "Fragmarathon" è il tema di base (index.html) e segue chiaro/scuro di Windows.
+   Gli altri sono ispirati alle piattaforme di tornei più usate e ai giochi:
+   cambiano solo i colori (token), non la struttura. Si applicano con
+   <html data-skin="...">. --b1/--b2/--glow colorano l'intestazione,
+   --wacc è l'accento sul proiettore (sempre su fondo nero, testo nero sopra). */
+
+:root[data-skin="chiaro"]{--bg:#F2F3F5;--panel:#FFFFFF;--ink:#1F2328;--mut:#5C6370;--line:#D6D9DE;--edge:#3A3F47;--acc:#F26722;--accink:#111111;--win:#F26722;--gold:#F26722;--b1:#1F2328;--b2:#2A2F36;--glow:rgba(242,103,34,.35);--wacc:#FF7A33}
+:root[data-skin="notte"]{--bg:#0B1220;--panel:#131C2E;--ink:#E8ECF4;--mut:#9AA6BC;--line:#24304A;--edge:#3A4A6B;--acc:#D3292D;--accink:#FFFFFF;--win:#D3292D;--gold:#D3292D;--b1:#0B1220;--b2:#111B30;--glow:rgba(229,56,59,.38);--wacc:#FF4D50}
+:root[data-skin="lega"]{--bg:#0A1628;--panel:#102240;--ink:#F1F5FB;--mut:#A3B3CC;--line:#1F3558;--edge:#35507A;--acc:#FFC20E;--accink:#0A1628;--win:#FFC20E;--gold:#FFC20E;--b1:#0A1628;--b2:#0F2038;--glow:rgba(255,194,14,.30);--wacc:#FFC20E}
+:root[data-skin="wiki"]{--bg:#F8F9FA;--panel:#FFFFFF;--ink:#202122;--mut:#54595D;--line:#C8CCD1;--edge:#2D3640;--acc:#3366CC;--accink:#FFFFFF;--win:#3366CC;--gold:#3366CC;--b1:#2D3640;--b2:#333D49;--glow:rgba(51,102,204,.38);--wacc:#6B9BFF}
+:root[data-skin="neon"]{--bg:#120B24;--panel:#1C1236;--ink:#F3EEFF;--mut:#B3A6D6;--line:#2F2252;--edge:#4A3A7A;--acc:#22D3EE;--accink:#06222A;--win:#22D3EE;--gold:#22D3EE;--b1:#120B24;--b2:#1A1033;--glow:rgba(34,211,238,.30);--wacc:#22D3EE}
+
+/* temi dei giochi */
+:root[data-skin="quake"]{--bg:#120D0A;--panel:#1E1612;--ink:#F2E9E1;--mut:#B5A396;--line:#3A2A22;--edge:#5C4436;--acc:#E2531B;--accink:#120D0A;--win:#E2531B;--gold:#E2531B;--b1:#140E0B;--b2:#1C1410;--glow:rgba(226,83,27,.45);--wacc:#E2531B}
+:root[data-skin="tf2"]{--bg:#2A221D;--panel:#372D26;--ink:#F3E7D3;--mut:#CDB9A0;--line:#4E4037;--edge:#6B584B;--acc:#BD3B3B;--accink:#FFF4E0;--win:#BD3B3B;--gold:#BD3B3B;--b1:#2A221D;--b2:#33291F;--glow:rgba(189,59,59,.40);--wacc:#E05252}
+:root[data-skin="wreck"]{--bg:#15140F;--panel:#222018;--ink:#F5F1E3;--mut:#BDB59B;--line:#3A3727;--edge:#5A553C;--acc:#F2B705;--accink:#15140F;--win:#F2B705;--gold:#F2B705;--b1:#15140F;--b2:#1F1D14;--glow:rgba(242,183,5,.35);--wacc:#F2B705}
+:root[data-skin="cs2"]{--bg:#0D131A;--panel:#151E28;--ink:#E7EDF3;--mut:#9FB0C2;--line:#243243;--edge:#3B4E64;--acc:#DE9B35;--accink:#0D131A;--win:#DE9B35;--gold:#DE9B35;--b1:#0D131A;--b2:#121B25;--glow:rgba(222,155,53,.35);--wacc:#DE9B35}
+:root[data-skin="fifa"]{--bg:#08241A;--panel:#0E3223;--ink:#ECF7F0;--mut:#A7CDB6;--line:#1A4A35;--edge:#2C6A4E;--acc:#35D46A;--accink:#04170D;--win:#35D46A;--gold:#35D46A;--b1:#08241A;--b2:#0B2D20;--glow:rgba(53,212,106,.30);--wacc:#35D46A}
+
+/* intestazione e dettagli che nel tema di base hanno colori fissi */
+:root[data-skin] .brand{background:radial-gradient(circle at 110px 50%,var(--glow),transparent 150px),repeating-linear-gradient(135deg,var(--b1) 0,var(--b1) 15px,var(--b2) 17px,var(--b2) 31px,var(--b1) 33px)}
+:root[data-skin] .brand .tag{color:var(--accink)}
+:root[data-skin] .tab[aria-selected=true] .pl{color:var(--accink)}
+:root[data-skin] body::before{filter:invert(1);opacity:.06}
+:root[data-skin="chiaro"] body::before,:root[data-skin="wiki"] body::before{filter:none;opacity:.05}
+:root[data-skin="tf2"] .brand h1,:root[data-skin="tf2"] h2,:root[data-skin="tf2"] h3{letter-spacing:.01em}
+:root[data-skin="fifa"] .gbox,:root[data-skin="fifa"] .match{border-style:solid}
+:root[data-skin="wreck"] .brand::after{background:#3a3a3a}
+:root[data-skin="lega"] .brand::after,:root[data-skin="notte"] .brand::after,:root[data-skin="cs2"] .brand::after{background:var(--mut)}
+
+/* scelta del tema nella barra in alto */
+.skinsel{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:.85rem;white-space:nowrap}
+.skinsel select{min-width:0;padding:6px 8px;font-size:.85rem}

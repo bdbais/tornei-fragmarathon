@@ -160,6 +160,7 @@ body.proj::before{display:none}
 .tabs{flex-wrap:wrap;overflow:visible;row-gap:10px}
 </style>
 <link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/themes.css">
 </head>
 <body>
 <main>
@@ -169,7 +170,7 @@ body.proj::before{display:none}
   <section class="panel" id="addgame" hidden>
     <h2>Aggiungi un gioco</h2>
     <div class="row"><input type="text" id="agname" placeholder="Nome del gioco" aria-label="Nome del gioco">
-      <select id="agmode" aria-label="Formato"><option value="ffa">Free for all a punti (battle royale)</option><option value="elim">Eliminazione diretta</option><option value="double">Doppia eliminazione</option><option value="swiss">Sistema svizzero + playoff</option><option value="rr">Gironi all&#39;italiana + playoff</option></select>
+      <select id="agmode" aria-label="Formato"><option value="ffa">Free for all a punti (battle royale)</option><option value="elim">Eliminazione diretta</option><option value="double">Doppia eliminazione (winner + loser bracket)</option><option value="swiss">Sistema svizzero + playoff</option><option value="rr">Gironi all&#39;italiana + playoff</option></select>
       <select id="agteam" aria-label="Tipo di partecipanti"><option value="0">Giocatori singoli</option><option value="1">A squadre</option></select>
       <select id="agplat" aria-label="Piattaforma"><option value="">Piattaforma non specificata</option><option value="pc">PC</option><option value="xbox">Xbox Series X</option><option value="ps4">PlayStation 4</option><option value="ps5">PlayStation 5</option><option value="switch">Nintendo Switch</option></select>
       <button class="p" id="agadd">Aggiungi gioco</button><button id="agcancel">Annulla</button></div>
