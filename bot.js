@@ -72,7 +72,7 @@ module.exports = function createBot(opts) {
   const waits = {}, pngWait = {};
   let queue = Promise.resolve();
 
-  function defaults() { return { token: "", enabled: false, join: "approve", notify: { stage: true, final: true, results: false, player: true }, admins: [], adminUsers: [], userRoles: {}, chats: {}, pending: [], offset: 0, code: newCode(), apiBase: "", welcome: "" }; }
+  function defaults() { return { token: "", enabled: false, join: "approve", notify: { stage: true, final: true, results: false, player: true }, admins: [], adminUsers: [], userRoles: {}, chats: {}, pending: [], offset: 0, code: newCode(), apiBase: "", welcome: "", groups: {}, blocked: {} }; }
   function load() {
     try {
       const c = Object.assign(defaults(), JSON.parse(fs.readFileSync(file, "utf8"))); c.notify = Object.assign(defaults().notify, c.notify);
@@ -132,6 +132,99 @@ module.exports = function createBot(opts) {
     return L.find((t) => t.k === q) || L.find((t) => baseK(t.k) === q) || L.find((t) => norm(t.l) === q || norm(t.name) === q)
       || L.find((t) => norm(t.l).includes(q) || norm(t.name).includes(q) || norm(t.l + " " + t.name).includes(q)) || null;
   }
+  /* ---------- gruppi e canali ----------
+     Quando qualcuno aggiunge il bot a un gruppo o canale, il bot non parla finché un amministratore
+     non lo abilita (dall'app o con /gruppi). Abilitato: si presenta con il link per scrivergli in privato,
+     risponde ai comandi di sola lettura e riceve annunci e diretta. "Esci e blocca" lo fa uscire e
+     blocca chi lo ha aggiunto: se ci riprova, il bot esce da solo; i suoi messaggi privati vengono ignorati. */
+  const isBlocked = (u) => !!(u && cfg.blocked[String(u.id)]);
+  const adminIds = () => Object.keys(cfg.chats).filter((id) => roleOf(id) === "admin");
+  const who = (u) => (u ? (u.username ? "@" + u.username : [u.first_name, u.last_name].filter(Boolean).join(" ")) : "");
+  const GTYPE = { group: "gruppo", supergroup: "gruppo", channel: "canale" };
+  function gLabel(id) { const g = cfg.groups[id] || {}; return "<b>" + esc(g.title || id) + "</b> (" + (GTYPE[g.type] || "chat") + ")"; }
+  const GSTATE = { pending: "⏳ in attesa", on: "✅ attivo", off: "⏸ disattivato" };
+  function groupKb(id) {
+    const g = cfg.groups[id] || {};
+    return [[g.status === "on" ? { text: "⏸ Disattiva", callback_data: "Q:f:" + id } : { text: "✅ Abilita", callback_data: "Q:o:" + id }, { text: "🚪 Esci", callback_data: "Q:x:" + id }],
+      [{ text: "⛔ Esci e blocca chi mi ha aggiunto", callback_data: "Q:b:" + id }]];
+  }
+  async function onMember(m) {
+    const chat = m.chat, st = m.new_chat_member && m.new_chat_member.status, by = m.from, id = String(chat.id);
+    if (chat.type === "private") return;
+    const g = cfg.groups[id] || (cfg.groups[id] = { status: "pending" });
+    g.title = chat.title || g.title || id; g.type = chat.type; g.username = chat.username || "";
+    if (st === "member" || st === "administrator") {
+      g.in = true; g.ts = Date.now(); g.by = by ? { id: String(by.id), name: who(by) } : g.by;
+      if (isBlocked(by)) {
+        g.in = false; g.status = "off"; persist(); await api("leaveChat", { chat_id: id }).catch(() => {});
+        adminIds().forEach((a) => send(a, "⛔ " + esc(who(by)) + " (bloccato) mi ha aggiunto a " + gLabel(id) + ": sono uscito da solo."));
+      } else if (g.status === "on") { persist(); intro(id); }
+      else {
+        g.status = g.status === "off" ? "off" : "pending"; persist();
+        adminIds().forEach((a) => send(a, "📥 Mi hanno aggiunto a " + gLabel(id) + (by ? " (da " + esc(who(by)) + ")" : "") + ".\nNon scrivo nulla lì finché non mi abiliti.", groupKb(id)));
+      }
+    } else if (st === "left" || st === "kicked") { g.in = false; persist(); }
+    opts.onChange && opts.onChange();
+  }
+  function intro(id) {
+    const u = me && me.username;
+    send(id, "👋 Ciao a tutti! Sono il bot dei tornei di <b>" + esc(vm ? vm.title : "Tornei") + "</b>." + linksInfo() +
+      (u ? "\n\nPer iscriverti e ricevere gli avvisi personali scrivimi in privato: https://t.me/" + u : "") +
+      "\n\nQui rispondo a /tornei, /classifica, /partite, /risultati e /diretta.", u ? [[{ text: "Apri il bot", url: "https://t.me/" + u + "?start=gruppo" }]] : null);
+  }
+  function groupSet(id, status) {
+    const g = cfg.groups[id]; if (!g) return false;
+    const was = g.status; g.status = status; persist(); opts.onChange && opts.onChange();
+    if (status === "on" && was !== "on" && g.in !== false) intro(id);
+    return true;
+  }
+  async function groupLeave(id, block) {
+    const g = cfg.groups[id]; if (!g) return false;
+    if (block && g.by && g.by.id) {
+      cfg.blocked[g.by.id] = { name: g.by.name || g.by.id, ts: Date.now(), from: g.title || id };
+      for (const [gid, x] of Object.entries(cfg.groups)) if (x.by && x.by.id === g.by.id && x.in !== false && gid !== id) { x.in = false; x.status = "off"; await api("leaveChat", { chat_id: gid }).catch(() => {}); }
+    }
+    g.in = false; g.status = "off"; persist(); opts.onChange && opts.onChange();
+    await api("leaveChat", { chat_id: id }).catch(() => {});
+    return true;
+  }
+  function groupsMsg() {
+    const L = Object.entries(cfg.groups).filter(([, g]) => g.in !== false);
+    if (!L.length) return { text: "Non sono in nessun gruppo o canale." + (Object.keys(cfg.blocked).length ? "\n\n/bloccati – chi è bloccato" : "") };
+    return {
+      text: "<b>Gruppi e canali in cui sono</b>\n\n" + L.map(([id, g], i) => (i + 1) + ". " + gLabel(id) + " – " + (GSTATE[g.status] || g.status) + (g.by ? "\n   aggiunto da " + esc(g.by.name) : "")).join("\n") +
+        "\n\n<i>Abilita</i>: mi presento e rispondo ai comandi. <i>Esci e blocca</i>: esco e, se chi mi ha aggiunto ci riprova, esco da solo.",
+      kb: [].concat(...L.map(([id, g]) => [[{ text: (g.title || id).slice(0, 30), callback_data: "Q:i:" + id }]].concat(groupKb(id))))
+    };
+  }
+  function blockedMsg() {
+    const L = Object.entries(cfg.blocked);
+    if (!L.length) return { text: "Nessuno è bloccato." };
+    return { text: "<b>Bloccati</b> (se mi aggiungono a un gruppo esco da solo)\n\n" + L.map(([, b]) => "• " + esc(b.name) + (b.from ? " – da " + esc(b.from) : "")).join("\n"),
+      kb: L.map(([uid, b]) => [{ text: "Sblocca " + String(b.name).slice(0, 24), callback_data: "B:" + uid }]) };
+  }
+  async function onGroupMsg(msg) {
+    const id = String(msg.chat.id), g = cfg.groups[id], text = typeof msg.text === "string" ? msg.text.trim() : "";
+    if (!g) {
+      /* era già nel gruppo prima di questa versione: lo registro in attesa */
+      cfg.groups[id] = { status: "pending", title: msg.chat.title || id, type: msg.chat.type, in: true, ts: Date.now() }; persist(); opts.onChange && opts.onChange();
+      return;
+    }
+    if (g.status !== "on" || !text.startsWith("/") || !vm) return;
+    const sp = text.slice(1).split(/\s+/), [c0, at] = sp[0].split("@"), cmd = c0.toLowerCase(), arg = text.slice(1 + sp[0].length).trim();
+    if (at && me && at.toLowerCase() !== String(me.username || "").toLowerCase()) return;
+    viewer = null;
+    if (cmd === "start" || cmd === "aiuto" || cmd === "help") return intro(id);
+    if (cmd === "tornei") return send(id, listMsg().text);
+    if (cmd === "risultati") return send(id, resultsMsg());
+    if (cmd === "classifica" || cmd === "partite" || cmd === "torneo") {
+      const t = find(arg); if (!t) return send(id, "Quale torneo? Esempio: /" + cmd + " " + esc((T()[0] || { l: "cs2" }).l));
+      if (cmd === "partite") return send(id, tTitle(t) + "\n\n" + (t.next.length ? "<b>Da giocare</b>\n" + t.next.map(esc).join("\n") : "Nessuna partita da giocare adesso."));
+      return send(id, tTitle(t) + "\n\n" + (t.lines.length ? t.lines.map(esc).join("\n") : "Nessuna classifica ancora."));
+    }
+    if (cmd === "diretta") return send(id, liveLinks ? "🔴 <b>In diretta!</b>\n" + linksText(liveLinks) : "Nessuna diretta in questo momento.");
+  }
+  const enabledGroups = () => Object.entries(cfg.groups).filter(([, g]) => g.status === "on" && g.in !== false).map(([id]) => id);
   function linksInfo() {
     const L = (vm && vm.links) || {}, a = [];
     if (L.when) a.push("📅 " + esc(L.when) + (L.place ? ", " + esc(L.place) : ""));
@@ -371,6 +464,17 @@ module.exports = function createBot(opts) {
       if (data === "ME") { waits[chatId] = { type: "me" }; return send(chatId, "Scrivi il nome con cui giochi ai tornei."); }
       if (a === "M") return linkPlayer(chatId, k, false);
       if (a === "N") return linkPlayer(chatId, k, true);
+      if (a === "Q" || a === "B") {
+        if (!isAdmin) return send(chatId, "Solo gli amministratori gestiscono gruppi e canali.");
+        if (a === "B") { const b = cfg.blocked[k]; delete cfg.blocked[k]; persist(); opts.onChange && opts.onChange(); return send(chatId, b ? "Sbloccato: " + esc(b.name) + "." : "Era già sbloccato."); }
+        const op = k.slice(0, 1), gid = k.slice(2);
+        if (!cfg.groups[gid]) return send(chatId, "Gruppo non trovato.");
+        if (op === "i") return send(chatId, gLabel(gid) + " – " + (GSTATE[cfg.groups[gid].status] || ""), groupKb(gid));
+        if (op === "on" || op === "o") { groupSet(gid, "on"); return send(chatId, "✅ Abilitato " + gLabel(gid) + ": mi sono presentato con il link."); }
+        if (op === "f") { groupSet(gid, "off"); return send(chatId, "⏸ Disattivato " + gLabel(gid) + ": resto lì ma non scrivo."); }
+        if (op === "x") { const l = gLabel(gid); await groupLeave(gid, false); return send(chatId, "🚪 Sono uscito da " + l + "."); }
+        if (op === "b") { const l = gLabel(gid), by = (cfg.groups[gid].by || {}).name; await groupLeave(gid, true); return send(chatId, "⛔ Sono uscito da " + l + (by ? " e ho bloccato " + esc(by) + ": se ci riprova esco da solo." : ".")); }
+      }
       if (a === "V" && isAdmin && streamer) { if (k === "stop") return liveCmd(chatId, "ferma", true); if (k === "avvia") return liveCmd(chatId, "avvia", true); return liveCmd(chatId, "scena " + k, true); }
       return;
     }
@@ -385,7 +489,7 @@ module.exports = function createBot(opts) {
       case "start": case "aiuto": case "help": {
         const m = listMsg();
         const kb = c.player || isOrg ? m.kb : [[{ text: "🎮 Sono un giocatore: collega il mio nome", callback_data: "ME" }]].concat(m.kb || []);
-        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + linksInfo() + (cfg.welcome ? "\n\n" + esc(cfg.welcome) : "") + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
+        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + linksInfo() + (cfg.welcome ? "\n\n" + esc(cfg.welcome) : "") + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti (anche ai gruppi abilitati)\n/gruppi – gruppi e canali in cui sono: abilita, esci, blocca\n/bloccati – chi non può più aggiungermi\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
       }
       case "tornei": { const m = listMsg(); return send(chatId, m.text, m.kb); }
       case "torneo": { const t = find(arg); if (!t) { const m = listMsg(); return send(chatId, (arg ? "Non trovo «" + esc(arg) + "».\n\n" : "") + m.text, m.kb); } const d = detailMsg(t, chatId); return send(chatId, d.text, d.kb); }
@@ -425,9 +529,11 @@ module.exports = function createBot(opts) {
       case "annuncio": {
         if (!isAdmin) return send(chatId, "Comando riservato agli amministratori.");
         if (!arg) return send(chatId, "Scrivi il testo: /annuncio <i>testo</i>");
-        const ids = Object.keys(cfg.chats); ids.forEach((id) => send(id, "📢 <b>" + esc(vm.title) + "</b>\n" + esc(arg)));
-        return send(chatId, "Annuncio inviato a " + ids.length + " chat.");
+        const ids = Object.keys(cfg.chats).concat(enabledGroups()); ids.forEach((id) => send(id, "📢 <b>" + esc(vm.title) + "</b>\n" + esc(arg)));
+        return send(chatId, "Annuncio inviato a " + ids.length + " chat (" + (enabledGroups().length === 1 ? "1 gruppo o canale" : enabledGroups().length + " gruppi o canali") + ").");
       }
+      case "gruppi": { if (!isAdmin) return send(chatId, "Comando riservato agli amministratori."); const m = groupsMsg(); return send(chatId, m.text, m.kb); }
+      case "bloccati": { if (!isAdmin) return send(chatId, "Comando riservato agli amministratori."); const m = blockedMsg(); return send(chatId, m.text, m.kb); }
       default: return send(chatId, "Comando sconosciuto. /aiuto per l'elenco.");
     }
   }
@@ -437,13 +543,15 @@ module.exports = function createBot(opts) {
     let backoff = 2000;
     while (running) {
       try {
-        const ups = await api("getUpdates", { offset: cfg.offset, timeout: 50, allowed_updates: ["message", "callback_query"] });
+        const ups = await api("getUpdates", { offset: cfg.offset, timeout: 50, allowed_updates: ["message", "callback_query", "my_chat_member", "channel_post"] });
         backoff = 2000; lastErr = ""; lastOk = Date.now();
         for (const u of ups) {
           cfg.offset = u.update_id + 1;
           try {
-            if (u.callback_query) { const q = u.callback_query; api("answerCallbackQuery", { callback_query_id: q.id }).catch(() => {}); if (q.message) await handle(q.message.chat.id, q.from, null, String(q.data || "")); }
-            else if (u.message && typeof u.message.text === "string") await handle(u.message.chat.id, u.message.from, u.message.text.trim(), null);
+            if (u.my_chat_member) await onMember(u.my_chat_member);
+            else if (u.callback_query) { const q = u.callback_query; api("answerCallbackQuery", { callback_query_id: q.id }).catch(() => {}); if (q.message && q.message.chat.type === "private" && !isBlocked(q.from)) await handle(q.message.chat.id, q.from, null, String(q.data || "")); }
+            else if (u.message && u.message.chat.type !== "private") await onGroupMsg(u.message);
+            else if (u.message && typeof u.message.text === "string" && !isBlocked(u.message.from)) await handle(u.message.chat.id, u.message.from, u.message.text.trim(), null);
           } catch (e) { lastErr = String(e.message || e); }
         }
         if (ups.length) persist();
@@ -468,6 +576,8 @@ module.exports = function createBot(opts) {
     return {
       enabled: cfg.enabled, hasToken: !!cfg.token, tokenHint: cfg.token ? cfg.token.split(":")[0] + ":…" + cfg.token.slice(-4) : "", running, username: me && me.username, lastErr: tokErr || friendly(lastErr), lastOk,
       join: cfg.join, notify: cfg.notify, code: cfg.code, welcome: cfg.welcome || "",
+      groups: Object.entries(cfg.groups).filter(([, g]) => g.in !== false).map(([id, g]) => ({ id, title: g.title || id, type: GTYPE[g.type] || "chat", status: g.status, by: (g.by && g.by.name) || "", ts: g.ts || 0 })),
+      blocked: Object.entries(cfg.blocked).map(([id, b]) => ({ id, name: b.name, from: b.from || "" })),
       userRoles: Object.keys(cfg.userRoles).map((u) => ({ u: "@" + u, role: cfg.userRoles[u].role, games: cfg.userRoles[u].games || [] })),
       people: chats.map((id) => { const c = cfg.chats[id], f = c.follow || {}; return { id, name: c.name || c.first || String(id), role: roleOf(id), games: c.games || [], player: c.player || "", follow: f.all ? "tutti" : (f.games || []).length, seen: c.seen || 0 }; })
         .sort((a, b) => ({ admin: 0, org: 1, "": 2 })[a.role] - ({ admin: 0, org: 1, "": 2 })[b.role] || b.seen - a.seen).slice(0, 300),
@@ -496,6 +606,9 @@ module.exports = function createBot(opts) {
       if (c.notify) cfg.notify = Object.assign(cfg.notify, c.notify);
       if (typeof c.apiBase === "string") cfg.apiBase = c.apiBase;
       if (c.renamePlayer && c.renamePlayer.from && c.renamePlayer.to) Object.values(cfg.chats).forEach((ch) => { if (ch.player === c.renamePlayer.from) ch.player = String(c.renamePlayer.to).slice(0, 60); });
+      if (c.groupSet && cfg.groups[c.groupSet.id] && ["on", "off", "pending"].includes(c.groupSet.status)) groupSet(String(c.groupSet.id), c.groupSet.status);
+      if (c.groupLeave) await groupLeave(String(c.groupLeave.id), !!c.groupLeave.block);
+      if (c.unblock) { delete cfg.blocked[String(c.unblock)]; persist(); }
       if (typeof c.welcome === "string") cfg.welcome = c.welcome.trim().slice(0, 800);
       if (c.newCode) cfg.code = newCode();
       const uname = (x) => String(x || "").replace(/^https?:\/\/t\.me\//i, "").replace(/^@/, "").trim().toLowerCase();
@@ -528,7 +641,7 @@ module.exports = function createBot(opts) {
       liveLinks = L || [];
       if (!running) return;
       const t = vm ? vm.title : "Tornei";
-      Object.keys(cfg.chats).forEach((id) => send(id, "🔴 <b>" + esc(t) + " è in diretta!</b>\n\n" + linksText(liveLinks)));
+      Object.keys(cfg.chats).concat(enabledGroups()).forEach((id) => send(id, "🔴 <b>" + esc(t) + " è in diretta!</b>\n\n" + linksText(liveLinks)));
     },
     liveEnded() { liveLinks = null; },
     pngReply(id, data) { if (pngWait[id]) { const f = pngWait[id]; delete pngWait[id]; f(data); } }

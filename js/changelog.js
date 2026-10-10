@@ -4,6 +4,13 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.5.3", d: "2026-10-10", t: "Bot nei gruppi e nei canali", items: [
+      "Quando qualcuno aggiunge il bot a un gruppo o canale, gli amministratori ricevono un messaggio con Abilita, Esci ed Esci e blocca; finché non è abilitato il bot non scrive nulla lì.",
+      "Abilitato, il bot si presenta con il link per scrivergli in privato, risponde a /tornei, /classifica, /partite, /risultati, /diretta e riceve annunci e diretta.",
+      "Dal telefono: /gruppi mostra dove è stato inserito, con i pulsanti per abilitare, uscire o bloccare chi lo ha aggiunto; /bloccati per sbloccare.",
+      "Chi viene bloccato non può più aggiungere il bot (esce da solo) e i suoi messaggi privati vengono ignorati.",
+      "La stessa gestione è nelle Impostazioni del bot, sezione Gruppi e canali."
+    ] },
     { v: "3.5.2", d: "2026-10-10", t: "Bot sempre accesi, backup cifrato di tutti i tornei", items: [
       "Tutti i bot Telegram partono con il programma e rispondono per tutti i tornei che li usano, anche se non sono aperti: iscrizioni, immagini e avvisi compresi.",
       "Interruttore acceso/spento per ogni bot nella schermata dei tornei, con le iscrizioni da confermare.",

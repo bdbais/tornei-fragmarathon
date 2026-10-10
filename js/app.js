@@ -1004,13 +1004,24 @@ function botHtml(st){
    +'<label class="botwel">Messaggio di benvenuto di questo bot (si vede con /start)<textarea id="botwel" rows="2" maxlength="800" placeholder="Es. Benvenuto alla LAN! Wi-Fi: Fragmarathon. Regolamento in sala.">'+esc(st.welcome||"")+'</textarea></label>'
    +'<div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Avvisi a chi segue un torneo:</span><label class="row chk"><input type="checkbox" class="botn" data-n="stage"'+(st.notify.stage?" checked":"")+'>cambio di turno o fase</label><label class="row chk"><input type="checkbox" class="botn" data-n="final"'+(st.notify.final?" checked":"")+'>podio finale</label><label class="row chk"><input type="checkbox" class="botn" data-n="results"'+(st.notify.results?" checked":"")+'>ogni risultato</label></div>'
    +'<label class="row chk" style="margin-top:6px"><input type="checkbox" class="botn" data-n="player"'+(st.notify.player!==false?" checked":"")+'>avvisi personali ai giocatori collegati: tocca a te, i tuoi risultati, la tua posizione</label>'
-   +botPeople(st)
+   +botPeople(st)+botGroups(st)
    +'<p class="hint">Codice per diventare amministratore dal telefono: <code>/admin '+esc(st.code)+'</code> (cambia dopo ogni uso). <button id="botcode">Nuovo codice</button></p>'
    +'<p class="hint">'+st.chats+' chat hanno scritto al bot, '+st.followers+' seguono almeno un torneo.</p>';
   if(st.pending.length)h+='<h4 style="margin:12px 0 4px">Iscrizioni da confermare</h4><table class="res"><tr><th>Nome</th><th>Torneo</th><th>Da</th><th></th></tr>'+st.pending.map(function(p){return'<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(p.l)+'</td><td>'+esc(p.user||"")+'</td><td><button class="p" data-botok="'+esc(p.id)+'">Accetta</button> <button data-botno="'+esc(p.id)+'">Rifiuta</button></td></tr>'}).join("")+'</table>';
   return h;
 }
 var ROLE_L={admin:"Amministratore",org:"Organizzatore tornei","":"Partecipante"};
+/* gruppi e canali in cui è stato aggiunto il bot: abilita, esci, esci e blocca chi l'ha aggiunto */
+function botGroups(st){
+  var G=st.groups||[],B=st.blocked||[],h='<h4 style="margin:16px 0 6px">Gruppi e canali</h4>';
+  if(!G.length)h+='<p class="hint" style="margin:0">Il bot non è in nessun gruppo o canale. Quando qualcuno lo aggiunge, compare qui (e agli amministratori arriva un messaggio): non scrive nulla finché non lo abiliti.</p>';
+  else h+='<table class="res"><tr><th>Nome</th><th>Tipo</th><th>Aggiunto da</th><th>Stato</th><th></th></tr>'+G.map(function(g){
+    return'<tr><td><b>'+esc(g.title)+'</b></td><td>'+esc(g.type)+'</td><td>'+esc(g.by||"")+'</td><td><select data-gst="'+esc(g.id)+'" aria-label="Stato di '+esc(g.title)+'"><option value="pending"'+(g.status==="pending"?" selected":"")+'>In attesa</option><option value="on"'+(g.status==="on"?" selected":"")+'>Attivo</option><option value="off"'+(g.status==="off"?" selected":"")+'>Disattivato</option></select></td>'
+     +'<td style="white-space:nowrap"><button data-gleave="'+esc(g.id)+'">Esci</button> <button data-gblock="'+esc(g.id)+'"'+(g.by?"":" disabled")+' title="Esce e blocca chi lo ha aggiunto">Esci e blocca</button></td></tr>'}).join("")+'</table>'
+   +'<p class="hint" style="margin:4px 0 0"><b>Attivo</b>: si presenta con il link per scrivergli in privato, risponde a /tornei, /classifica, /partite, /risultati, /diretta e riceve annunci e diretta. Dal telefono: /gruppi.</p>';
+  if(B.length)h+='<p style="margin:10px 0 4px"><b>Bloccati</b> (se aggiungono il bot a un gruppo, esce da solo):</p><div class="chips">'+B.map(function(b){return'<span class="chip">'+esc(b.name)+(b.from?' <small class="sub" style="display:inline">da '+esc(b.from)+'</small>':'')+'<button data-unblock="'+esc(b.id)+'" aria-label="Sblocca '+esc(b.name)+'" title="Sblocca">×</button></span>'}).join("")+'</div>';
+  return h;
+}
 function botGamesSel(cls,attr,sel){return'<select multiple class="'+cls+'" '+attr+' size="'+Math.min(4,Object.keys(DEF).length)+'" aria-label="Tornei che organizza (nessuno selezionato = tutti)">'+Object.keys(DEF).map(function(k){return'<option value="'+k+'"'+(sel.indexOf(k)>=0?" selected":"")+'>'+esc(DEF[k].l)+'</option>'}).join("")+'</select>'}
 function botPeople(st){
   var names={};S.roster.forEach(function(n){names[n]=1});Object.keys(DEF).forEach(function(k){S.games[k].players.forEach(function(n){names[n]=1});Object.keys(S.games[k].members||{}).forEach(function(t){(S.games[k].members[t]||[]).forEach(function(n){names[n]=1})})});
@@ -1166,6 +1177,7 @@ $("editbox").addEventListener("change",function(e){
   if(e.target.classList.contains("bpplayer")){botCfg({setPlayer:{id:e.target.dataset.id,player:e.target.value}});return}
   if(e.target.id==="botjoin"){botCfg({join:e.target.value});return}
   if(e.target.id==="botpicksel"){botChoose(e.target.value);return}
+  if(e.target.dataset&&e.target.dataset.gst){botCfg({groupSet:{id:e.target.dataset.gst,status:e.target.value}});toast(e.target.value==="on"?"Gruppo abilitato: il bot si presenta con il link.":"Stato del gruppo aggiornato.");return}
   if(e.target.id==="botwel"){botCfg({welcome:e.target.value});toast("Messaggio di benvenuto salvato.");return}
   if(e.target.classList.contains("botn")){var nn={};nn[e.target.dataset.n]=e.target.checked;botCfg({notify:nn});return}
   var f=e.target.files&&e.target.files[0];if(!f)return;
@@ -1185,6 +1197,9 @@ $("editbox").onclick=function(e){
   if(b.id==="s_ok"){strSave();return}
   if(b.id==="s_open"){var lb=$("livebox");lb.hidden=false;renderLive();lb.scrollIntoView({block:"start"});return}
   if(b.id==="bottokshow"){var ti=$("bottok"),sh=ti.type==="password";ti.type=sh?"text":"password";b.textContent=sh?"Nascondi":"Mostra";b.setAttribute("aria-pressed",String(sh));return}
+  if(b.dataset.gleave){if(!arm("gl"+b.dataset.gleave,b,"Conferma: esci"))return;botCfg({groupLeave:{id:b.dataset.gleave}});toast("Il bot è uscito dal gruppo.");return}
+  if(b.dataset.gblock){if(!arm("gb"+b.dataset.gblock,b,"Conferma: esci e blocca"))return;botCfg({groupLeave:{id:b.dataset.gblock,block:true}});toast("Il bot è uscito e chi l'ha aggiunto è bloccato.");return}
+  if(b.dataset.unblock){botCfg({unblock:b.dataset.unblock});toast("Sbloccato.");return}
   if(b.id==="botnew"){DESK.botsList().then(function(L){return DESK.botsAdd("Bot "+(L.length+1))}).then(function(id){return botChoose(id)}).then(function(){toast("Nuovo bot creato per questo torneo: incolla il suo token e premi Salva e collega.");var t=$("bottok");if(t)t.focus()});return}
   if(b.id==="botmanage"){if(window.HOME)window.HOME.open("bots");return}
   if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
