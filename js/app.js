@@ -14,7 +14,16 @@ function registerCustom(){
   Object.keys(S.names).forEach(function(k){if(DEF[k]&&S.names[k])DEF[k].l=S.names[k]});
 }
 function normGames(){Object.keys(DEF).forEach(function(k){if(!S.games[k])S.games[k]=fresh(k);var gg=S.games[k];if(gg.mode==="gironi"||gg.mode==="solo"){gg.mode="ffa";if(gg.phase!=="setup"){gg.phase="setup";gg.running=false;gg.dirty=false;gg.groups=null;gg.rounds=null;gg.third=null}}if(gg.running===undefined)gg.running=gg.phase!=="setup"})}
-function applyUi(){var h=document.querySelector(".brand h1"),tg=document.querySelector(".brand .tag"),t=S.ui.title||UI0.title;if(h)h.textContent=t;if(tg)tg.textContent=S.ui.sub||UI0.sub;document.title=t}
+function applyUi(){
+  var h=document.querySelector(".brand h1"),tg=document.querySelector(".brand .tag"),t=S.ui.title||UI0.title;if(h)h.textContent=t;if(tg)tg.textContent=S.ui.sub||UI0.sub;document.title=t;
+  /* logo dell'evento: quello caricato dall'utente o quello di base */
+  var em=document.querySelector(".brand img.emblem"),lf=document.getElementById("logoFull");
+  if(!applyUi.def)applyUi.def={em:em&&em.getAttribute("src"),lf:lf&&lf.getAttribute("src")};
+  if(em)em.setAttribute("src",S.ui.logo||applyUi.def.em);if(lf)lf.setAttribute("src",S.ui.logo||applyUi.def.lf);
+  /* CSS personalizzato: in fondo al <head>, sopra a tema e stili di base */
+  var cs=document.getElementById("customcss");if(!cs){cs=document.createElement("style");cs.id="customcss";document.head.appendChild(cs)}
+  if(cs.textContent!==(S.ui.css||""))cs.textContent=S.ui.css||"";
+}
 initS();registerCustom();normGames();
 if(!DEF[S.cur])S.cur="quake";
 var hist=[],lastJ=null;
@@ -791,14 +800,48 @@ function renderEdit(){
     var cu=BUILTIN.indexOf(k)<0;
     h+='<div style="flex:1 1 260px"><div class="hint" style="margin:0 0 4px">'+(cu?"Gioco aggiunto":esc(ORIGL[k]))+'</div><div class="row" style="flex-wrap:nowrap"><input type="text" class="egn" data-k="'+k+'" value="'+esc(DEF[k].l)+'">'+(cu?'<button class="egdel" data-k="'+k+'">Elimina</button>':'')+'</div></div>';
   });
-  $("editform").innerHTML=h+'</div>';
+  h+='</div><h3 style="margin-top:20px">Logo dell&#39;evento</h3><div class="row"><img class="elogo" src="'+esc(S.ui.logo||applyUi.def.em)+'" alt="Logo attuale"><button id="elogo">Carica logo…</button>'+(S.ui.logo?'<button id="elogodef">Torna al logo Fragmarathon</button>':'')+'<input type="file" id="elf" accept="image/*" hidden></div>'
+   +'<p class="hint">PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Viene ridotto a 512 pixel e salvato con i dati dell&#39;evento: compare nell&#39;intestazione, nelle immagini PNG e nei PDF.</p>'
+   +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row"><button id="ecssimp">Importa file .css…</button><button id="ecssexp">Scarica il modello</button>'+(S.ui.css?'<button id="ecssdel">Rimuovi il CSS</button>':'')+'<input type="file" id="ecf" accept=".css,text/css" hidden></div>'
+   +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
+   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>';
+  $("editform").innerHTML=h;
 }
+var CSSTPL="/* Tornei Fragmarathon: CSS personalizzato.\n   Importalo da MODIFICA > CSS personalizzato. Vale sopra a qualsiasi tema.\n   :root:not(#x) serve a vincere su tema e chiaro/scuro di Windows. */\n\n:root:not(#x){\n  --bg:#101418;      /* sfondo della pagina */\n  --panel:#182028;   /* sfondo dei pannelli */\n  --ink:#F2F4F7;     /* testo */\n  --mut:#A9B4C2;     /* testo secondario */\n  --line:#2A3542;    /* righe sottili */\n  --edge:#3E4C5C;    /* bordi e intestazioni delle tabelle */\n  --acc:#FF5A1F;     /* colore principale: pulsanti, qualificati, vincitori */\n  --accink:#111111;  /* testo sopra al colore principale */\n  --win:var(--acc);\n  --gold:var(--acc);\n  --wacc:#FF5A1F;    /* colore principale sul proiettore (su fondo nero) */\n}\n\n/* Intestazione: righe e bagliore */\n.brand{}\n.brand h1{}\n.brand .tag{}\n\n/* Proiettore: il pannello mostrato */\n#wfit{}\n#wall .wh{}\n";
+function readLogo(file){
+  var rd=new FileReader();
+  rd.onload=function(){
+    var im=new Image();
+    im.onload=function(){
+      var z=512,sc=Math.min(1,z/Math.max(im.width||z,im.height||z)),w=Math.round((im.width||z)*sc),h=Math.round((im.height||z)*sc),c=document.createElement("canvas");
+      c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);
+      try{S.ui.logo=c.toDataURL("image/png");applyUi();save();renderEdit();toast("Logo aggiornato.")}catch(e){toast("Non riesco a usare questa immagine.")}
+    };
+    im.onerror=function(){toast("Il file non è un'immagine valida.")};
+    im.src=rd.result;
+  };
+  rd.readAsDataURL(file);
+}
+$("editbox").addEventListener("change",function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  if(e.target.id==="elf")readLogo(f);
+  if(e.target.id==="ecf"){
+    if(f.size>300000){toast("Il file CSS è troppo grande (massimo 300 KB).");e.target.value="";return}
+    var rd=new FileReader();rd.onload=function(){S.ui.css=String(rd.result);applyUi();save();renderEdit();toast("CSS importato: "+f.name+".")};rd.readAsText(f);
+  }
+  e.target.value="";
+});
 $("editbtn").onclick=function(){var eb=$("editbox");eb.hidden=!eb.hidden;if(!eb.hidden){armDel=null;renderEdit();eb.scrollIntoView({block:"center"})}};
 $("editbox").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.id==="ecancel"){$("editbox").hidden=true;return}
+  if(b.id==="elogo"){$("elf").click();return}
+  if(b.id==="elogodef"){delete S.ui.logo;applyUi();save();renderEdit();toast("Ripristinato il logo Fragmarathon.");return}
+  if(b.id==="ecssimp"){$("ecf").click();return}
+  if(b.id==="ecssexp"){dlBlob(new Blob([CSSTPL],{type:"text/css"}),"tornei-fragmarathon-modello.css");toast("Modello CSS scaricato.");return}
+  if(b.id==="ecssdel"){S.ui.css="";applyUi();save();renderEdit();toast("CSS personalizzato rimosso.");return}
   if(b.id==="esave"){
-    S.ui.title=$("etitle").value.trim();S.ui.sub=$("esub").value.trim();
+    S.ui.title=$("etitle").value.trim();S.ui.sub=$("esub").value.trim();if($("ecss"))S.ui.css=$("ecss").value.slice(0,300000);
     document.querySelectorAll(".egn").forEach(function(i){var k=i.dataset.k,v=i.value.trim();if(v&&v!==ORIGL[k])S.names[k]=v;else delete S.names[k]});
     registerCustom();applyUi();save();$("editbox").hidden=true;render();
   }else if(b.classList.contains("egdel")){
@@ -1349,7 +1392,7 @@ function wPoll(){
   if(wS.gal&&wItems.length>1&&Date.now()-wT>=wS.sec*1000)wGo(1);
 }
 function wallInit(){
-  document.body.classList.add("wall");document.title=(S.ui.title||UI0.title)+" — Proiettore";
+  applyUi();document.body.classList.add("wall");document.title=(S.ui.title||UI0.title)+" — Proiettore";
   var w=document.createElement("div");w.id="wall";
   w.innerHTML='<div id="wstage"><header class="wh"><span id="wico"></span><div class="wht"><h1 id="wtitle"></h1><p id="wsub"></p></div><div class="wpg" id="wpg"></div></header><div id="wbody"></div><div class="wbar"><i id="wprog"></i></div></div>'
    +'<div class="wctl" id="wctl" role="toolbar" aria-label="Comandi del proiettore"><button data-w="prev" title="Pannello precedente (PgUp)" aria-label="Pannello precedente">◀</button><button data-w="next" title="Pannello successivo (PgDn)" aria-label="Pannello successivo">▶</button>'

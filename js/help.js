@@ -86,12 +86,15 @@ window.HELP = {
       "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
       "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
 
-    temi: { t: "Temi dei colori", h:
+    temi: { t: "Temi, logo e CSS", h:
       "<p>Scegli il tema dal menu <b>Tema</b> in alto a destra. Vale per la finestra principale e per il proiettore e viene salvato con i dati dell'evento.</p>" +
       "<ul><li><b>Automatico</b>: ogni gioco ha i suoi colori (Quake lava e metallo, Team Fortress 2 retrò, Wreckfest cantiere, Counter-Strike 2 tattico, FIFA campo da calcio); le altre schede usano Fragmarathon. Sul proiettore, in galleria, il tema cambia con il gioco mostrato.</li>" +
       "<li><b>Fragmarathon</b>: il tema dell'evento; segue chiaro o scuro di Windows.</li>" +
       "<li><b>Ispirati alle piattaforme</b>: Bracket chiaro (stile Challonge), Arena notturna (stile start.gg), Lega pro (stile ESL), Wiki (stile Liquipedia), Neon (stile Battlefy). Riprendono solo i colori, non loghi o marchi.</li>" +
-      "<li><b>Temi dei giochi</b>: puoi anche fissare il tema di un gioco per tutto il programma.</li></ul>" },
+      "<li><b>Temi dei giochi</b>: puoi anche fissare il tema di un gioco per tutto il programma.</li></ul>" +
+      "<h4>Logo dell'evento</h4><p>In fondo alla pagina premi <b>MODIFICA</b>, poi <b>Carica logo</b>: PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Compare nell'intestazione, nelle immagini PNG e nei PDF. <b>Torna al logo Fragmarathon</b> rimette quello di base.</p>" +
+      "<h4>CSS personalizzato</h4><p>Sempre in <b>MODIFICA</b>: <b>Importa file .css</b> carica un foglio di stile preparato fuori dal programma, oppure lo scrivi nella casella e premi <b>Salva</b>. <b>Scarica il modello</b> ti dà un file di partenza con tutte le variabili dei colori (--bg, --panel, --ink, --mut, --line, --edge, --acc, --accink, --wacc per il proiettore). Il CSS vale sopra al tema scelto, anche sul proiettore, e viaggia con i backup.</p>" +
+      "<p class='note'>Per sicurezza il CSS non può caricare nulla da internet (url(https://…) e @import vengono bloccati). Le immagini vanno incorporate come url(data:…).</p>" },
 
     archivio: { t: "Archivio tornei e backup", h:
       "<h4>Salvare un torneo</h4><p><b>Salva questo torneo</b> crea un file nella cartella <b>Documenti\\Tornei Fragmarathon\\tornei</b>. Da quel momento il file si aggiorna da solo a ogni modifica. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>S</kbd>.</p>" +

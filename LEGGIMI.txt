@@ -1,8 +1,8 @@
-TORNEI FRAGMARATHON 3.1.2
+TORNEI FRAGMARATHON 3.1.3
 Creato da fragmarathon.net e Lazarus.
 
 INSTALLARE (consigliato)
-1. Scarica "Tornei-Fragmarathon-Setup-3.1.2.exe" da
+1. Scarica "Tornei-Fragmarathon-Setup-3.1.3.exe" da
    https://github.com/bdbais/tornei-fragmarathon/releases/latest
 2. Doppio clic. Il programma si installa, crea l'icona sul desktop e si apre da solo.
    Se Windows mostra "Windows ha protetto il PC": Ulteriori informazioni > Esegui comunque.
@@ -36,3 +36,7 @@ NOVITA 3.1.1
 NOVITA 3.1.2
 - Temi dei colori: automatico per gioco, Fragmarathon, e temi ispirati a Challonge, start.gg, ESL, Liquipedia, Battlefy.
 - La doppia eliminazione indica anche winner bracket e loser bracket.
+
+NOVITA 3.1.3
+- MODIFICA: carica il logo dell'evento (intestazione, PNG, PDF).
+- MODIFICA: importa un CSS personalizzato da file, con modello da scaricare.
