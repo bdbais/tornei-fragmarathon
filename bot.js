@@ -17,7 +17,8 @@ const HELP = [
   "/risultati – podi dei tornei conclusi",
   "/hof – Hall of Fame (con file da scaricare)",
   "/giocatore <i>nome</i> – dove gioca, posizioni, prossime partite",
-  "/io <i>nome</i> – collega il tuo nome, poi /miepartite",
+  "/io <i>nome</i> – collega il tuo account al tuo giocatore: ti avviso quando tocca a te",
+  "/miepartite – le tue partite e posizioni",
   "/segui <i>nome</i> o /segui tutti – ricevi gli avvisi",
   "/nonseguire <i>nome</i> o /nonseguire tutti",
   "/seguiti – i tornei che segui",
@@ -29,7 +30,7 @@ const HELP = [
 const COMMANDS = [
   ["tornei", "I tornei e come stanno andando"], ["torneo", "Dettagli di un torneo"], ["classifica", "Classifica o tabellone"],
   ["partite", "Partite da giocare adesso"], ["risultati", "Podi dei tornei conclusi"], ["hof", "Hall of Fame"],
-  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo nome"], ["miepartite", "Le tue prossime partite"],
+  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"],
   ["segui", "Ricevi gli avvisi di un torneo"], ["nonseguire", "Smetti di seguire"], ["seguiti", "Tornei che segui"],
   ["iscrivimi", "Iscriviti a un torneo"], ["immagine", "Immagine del torneo"], ["diretta", "Dove guardare la diretta"], ["aiuto", "Elenco dei comandi"], ["stop", "Non ricevere più nulla"]
 ];
@@ -56,9 +57,16 @@ module.exports = function createBot(opts) {
   const waits = {}, pngWait = {};
   let queue = Promise.resolve();
 
-  function defaults() { return { token: "", enabled: false, join: "approve", notify: { stage: true, final: true, results: false }, admins: [], chats: {}, pending: [], offset: 0, code: newCode(), apiBase: "" }; }
+  function defaults() { return { token: "", enabled: false, join: "approve", notify: { stage: true, final: true, results: false, player: true }, admins: [], adminUsers: [], userRoles: {}, chats: {}, pending: [], offset: 0, code: newCode(), apiBase: "" }; }
   function load() {
-    try { const c = Object.assign(defaults(), JSON.parse(fs.readFileSync(file, "utf8"))); c.notify = Object.assign(defaults().notify, c.notify); return c; }
+    try {
+      const c = Object.assign(defaults(), JSON.parse(fs.readFileSync(file, "utf8"))); c.notify = Object.assign(defaults().notify, c.notify);
+      /* versioni precedenti: admin per chat e per username diventano ruoli */
+      (c.admins || []).forEach((a) => { const ch = c.chats[a] || (c.chats[a] = { follow: { all: false, games: [] } }); if (!ch.role) ch.role = "admin"; });
+      (c.adminUsers || []).forEach((u) => { if (!c.userRoles[u]) c.userRoles[u] = { role: "admin", games: [] }; });
+      c.admins = []; c.adminUsers = [];
+      return c;
+    }
     catch { return defaults(); }
   }
   function persist() { try { fs.writeFileSync(file, JSON.stringify(cfg, null, 1)); } catch {} }
@@ -217,13 +225,58 @@ module.exports = function createBot(opts) {
         if (nuovi.length && nuovi.length <= 6) fol.forEach((id) => send(id, "⚔️ " + tTitle(t) + "\n" + nuovi.map((r) => esc(r.text)).join("\n")));
       }
     });
+    if (cfg.notify.player !== false) personal(old);
+  }
+  /* avvisi personali a chi ha collegato il suo account a un giocatore: tocca a te, i tuoi risultati, la tua posizione */
+  function personal(old) {
+    Object.keys(cfg.chats).forEach((id) => {
+      const P = cfg.chats[id].player; if (!P) return;
+      vm.tournaments.forEach((t) => {
+        const o = old[t.k]; if (!o) return;
+        const me = [P].concat(Object.keys(t.members || {}).filter((tn) => (t.members[tn] || []).includes(P)));
+        const mine = (x) => (x.p || []).some((n) => me.includes(n));
+        const was = new Set((o.nextP || []).map((x) => x.t)), turn = (t.nextP || []).filter((x) => mine(x) && !was.has(x.t));
+        if (turn.length) send(id, "🎮 <b>Tocca a te</b> – " + tTitle(t) + "\n" + turn.map((x) => esc(x.t)).join("\n"));
+        const seen = new Set((o.results || []).map((r) => r.id)), res = (t.results || []).filter((r) => !seen.has(r.id) && mine(r));
+        if (res.length && res.length <= 4) send(id, "📊 Il tuo risultato – " + tTitle(t) + "\n" + res.map((r) => esc(r.text)).join("\n"));
+        if (!o.done && t.done) { const who = me.find((n) => t.pl && t.pl[n]); if (who) send(id, "🏁 " + tTitle(t) + " è finito: " + (who !== P ? "la tua squadra " + esc(who) + " ha" : "hai") + " chiuso al <b>" + t.pl[who] + "º posto</b>."); }
+      });
+    });
   }
 
   /* ---------- comandi ---------- */
+  /* ---------- ruoli ----------
+     admin = amministratore: tutto (iscrizioni, annunci, diretta).
+     org = organizzatore tornei: conferma le iscrizioni di tutti i tornei o solo di quelli indicati.
+     Il ruolo sta nella chat (assegnato dall'app o con /admin); per username si può assegnare a chi
+     non ha ancora scritto al bot (cfg.userRoles): lo prende appena scrive in privato. */
+  function roleOf(id) { const c = cfg.chats[id]; return c && (c.role === "admin" || c.role === "org") ? c.role : ""; }
+  function canManage(id, k) { const r = roleOf(id); if (r === "admin") return true; if (r !== "org") return false; const g = cfg.chats[id].games || []; return !g.length || !k || g.includes(k); }
+  function managers(k) { return Object.keys(cfg.chats).filter((id) => canManage(id, k)); }
   function chat(id, from) {
     const c = cfg.chats[id] || (cfg.chats[id] = { follow: { all: false, games: [] } });
-    c.name = (from && (from.username ? "@" + from.username : from.first_name)) || c.name || ""; c.seen = Date.now();
+    const u = from && from.username ? String(from.username).toLowerCase() : "", ur = u && cfg.userRoles[u];
+    if (ur && from.id === id && !c.role) { c.role = ur.role; c.games = (ur.games || []).slice(); c.viaUser = u; persist(); opts.onChange && opts.onChange(); }
+    c.name = (from && (from.username ? "@" + from.username : from.first_name)) || c.name || ""; c.first = (from && from.first_name) || c.first || ""; c.seen = Date.now();
     return c;
+  }
+  function knownNames() {
+    const all = new Set(vm.roster || []);
+    T().forEach((t) => { t.players.forEach((p) => all.add(p)); Object.values(t.members || {}).forEach((ms) => ms.forEach((m) => all.add(m))); });
+    return [...all];
+  }
+  /* collega l'account Telegram a un giocatore: da lì arrivano gli avvisi personali */
+  function linkPlayer(chatId, name, force) {
+    name = String(name || "").replace(/\s+/g, " ").trim();
+    if (!/^[^<>\u0000-\u001f]{1,32}$/.test(name)) return send(chatId, "Nome non valido: da 1 a 32 caratteri, senza < >.");
+    const L = knownNames(), exact = L.find((n) => norm(n) === norm(name));
+    if (!exact && !force) {
+      const sim = L.filter((n) => norm(n).includes(norm(name)) || norm(name).includes(norm(n))).slice(0, 4);
+      const kb = sim.map((n) => [{ text: "Sono " + n, callback_data: "M:" + n.slice(0, 40) }]).concat([[{ text: "Collegami comunque come «" + name.slice(0, 20) + "»", callback_data: "N:" + name.slice(0, 40) }]]);
+      return send(chatId, "Non trovo «" + esc(name) + "» tra i partecipanti." + (sim.length ? " Forse sei:" : "\nSe non sei ancora iscritto usa /iscrivimi, oppure collegati comunque: appena l'organizzatore ti aggiunge riceverai gli avvisi."), kb);
+    }
+    const c = cfg.chats[chatId]; c.player = exact || name; persist(); opts.onChange && opts.onChange();
+    return send(chatId, "✅ Sei collegato come <b>" + esc(c.player) + "</b>: ti avviso quando tocca a te, con i tuoi risultati e la posizione finale.\n/miepartite per le tue partite, /scollega per togliere il collegamento.");
   }
   function follow(chatId, q, on) {
     const c = cfg.chats[chatId]; c.follow = c.follow || { all: false, games: [] };
@@ -247,7 +300,7 @@ module.exports = function createBot(opts) {
     const f = cfg.chats[chatId].follow; if (!f.games.includes(t.k)) f.games.push(t.k);
     if (cfg.join === "auto") { opts.onJoin(req); persist(); return send(chatId, "✅ Sei iscritto a " + tTitle(t) + " come <b>" + esc(name) + "</b>." + (t.team ? " L'organizzatore ti metterà in una squadra." : "") + "\nRiceverai gli avvisi del torneo."); }
     cfg.pending.push(req); persist(); opts.onChange && opts.onChange();
-    cfg.admins.forEach((a) => send(a, "📝 Richiesta di iscrizione a " + tTitle(t) + ": <b>" + esc(name) + "</b>" + (req.user ? " (" + esc(req.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + req.id }, { text: "Rifiuta", callback_data: "X:" + req.id }]]));
+    managers(t.k).forEach((a) => send(a, "📝 Richiesta di iscrizione a " + tTitle(t) + ": <b>" + esc(name) + "</b>" + (req.user ? " (" + esc(req.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + req.id }, { text: "Rifiuta", callback_data: "X:" + req.id }]]));
     return send(chatId, "📝 Richiesta inviata: l'organizzatore deve confermare l'iscrizione di <b>" + esc(name) + "</b> a " + tTitle(t) + ".");
   }
   function decide(id, ok, byChat) {
@@ -271,7 +324,7 @@ module.exports = function createBot(opts) {
     return sendFile(chatId, "photo", "torneo.png", "image/png", Buffer.from(String(data).split(",")[1] || "", "base64"), tTitle(t));
   }
   async function handle(chatId, from, text, data) {
-    const c = chat(chatId, from); const isAdmin = cfg.admins.includes(chatId);
+    const c = chat(chatId, from); const isAdmin = roleOf(chatId) === "admin", isOrg = !!roleOf(chatId);
     if (!vm) return send(chatId, "Il programma dei tornei si sta avviando, riprova tra qualche secondo.");
     if (data) {
       const [a, k] = [data.slice(0, 1), data.slice(2)], t = k ? find(k) : null;
@@ -285,21 +338,25 @@ module.exports = function createBot(opts) {
       if (a === "U" && t) return follow(chatId, t.k, false);
       if (a === "G" && t) return photo(chatId, t);
       if (a === "I" && t) return joinStart(chatId, from, t, null);
-      if ((a === "A" || a === "X") && isAdmin) return decide(k, a === "A", chatId);
+      if (a === "A" || a === "X") { const rq = cfg.pending.find((p) => p.id === k); if (!rq) return send(chatId, "Richiesta già gestita."); return canManage(chatId, rq.k) ? decide(k, a === "A", chatId) : send(chatId, "Non puoi gestire le iscrizioni di questo torneo."); }
+      if (data === "ME") { waits[chatId] = { type: "me" }; return send(chatId, "Scrivi il nome con cui giochi ai tornei."); }
+      if (a === "M") return linkPlayer(chatId, k, false);
+      if (a === "N") return linkPlayer(chatId, k, true);
       if (a === "V" && isAdmin && streamer) { if (k === "stop") return liveCmd(chatId, "ferma", true); if (k === "avvia") return liveCmd(chatId, "avvia", true); return liveCmd(chatId, "scena " + k, true); }
       return;
     }
-    if (waits[chatId] && !text.startsWith("/")) { const w = waits[chatId]; delete waits[chatId]; if (w.type === "join") return joinStart(chatId, from, find(w.k), text); }
+    if (waits[chatId] && !text.startsWith("/")) { const w = waits[chatId]; delete waits[chatId]; if (w.type === "join") return joinStart(chatId, from, find(w.k), text); if (w.type === "me") return linkPlayer(chatId, text, false); }
     if (!text.startsWith("/")) return send(chatId, "Scrivi /tornei per vedere i tornei, oppure /aiuto per tutti i comandi.");
     const sp = text.slice(1).split(/\s+/), cmd = sp[0].split("@")[0].toLowerCase(), arg = text.slice(1 + sp[0].length).trim();
-    return command(chatId, from, cmd, arg, isAdmin);
+    return command(chatId, from, cmd, arg, isAdmin, isOrg);
   }
-  async function command(chatId, from, cmd, arg, isAdmin) {
+  async function command(chatId, from, cmd, arg, isAdmin, isOrg) {
     const c = cfg.chats[chatId];
     switch (cmd) {
       case "start": case "aiuto": case "help": {
         const m = listMsg();
-        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isAdmin ? "\n\n<b>Organizzatori</b>\n/richieste – iscrizioni da confermare\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), m.kb);
+        const kb = c.player || isOrg ? m.kb : [[{ text: "🎮 Sono un giocatore: collega il mio nome", callback_data: "ME" }]].concat(m.kb || []);
+        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
       }
       case "tornei": { const m = listMsg(); return send(chatId, m.text, m.kb); }
       case "torneo": { const t = find(arg); if (!t) { const m = listMsg(); return send(chatId, (arg ? "Non trovo «" + esc(arg) + "».\n\n" : "") + m.text, m.kb); } const d = detailMsg(t, chatId); return send(chatId, d.text, d.kb); }
@@ -312,7 +369,12 @@ module.exports = function createBot(opts) {
         return;
       }
       case "giocatore": case "cerca": return send(chatId, playerMsg(arg));
-      case "io": { if (!arg) return send(chatId, c.player ? "Sei collegato come <b>" + esc(c.player) + "</b>." : "Scrivi /io <i>il tuo nome</i>."); c.player = arg.slice(0, 32); persist(); return send(chatId, "Ok, sei <b>" + esc(c.player) + "</b>. Usa /miepartite."); }
+      case "io": case "sono": {
+        if (arg) return linkPlayer(chatId, arg, false);
+        if (c.player) return send(chatId, "Sei collegato come <b>" + esc(c.player) + "</b>.", [[{ text: "Cambia nome", callback_data: "ME" }]]);
+        waits[chatId] = { type: "me" }; return send(chatId, "Scrivi il nome con cui giochi ai tornei.");
+      }
+      case "scollega": c.player = ""; persist(); opts.onChange && opts.onChange(); return send(chatId, "Collegamento tolto: non ricevi più gli avvisi personali.");
       case "miepartite": return c.player ? send(chatId, playerMsg(c.player)) : send(chatId, "Prima dimmi chi sei: /io <i>il tuo nome</i>.");
       case "segui": return follow(chatId, arg, true);
       case "nonseguire": return follow(chatId, arg, false);
@@ -320,17 +382,19 @@ module.exports = function createBot(opts) {
       case "iscrivimi": { const parts = arg.split("|"); return joinStart(chatId, from, find(parts[0]), parts[1] ? parts[1].trim() : null); }
       case "immagine": return photo(chatId, find(arg));
       case "diretta": case "live": return liveCmd(chatId, arg, isAdmin);
-      case "stop": delete cfg.chats[chatId]; cfg.admins = cfg.admins.filter((a) => a !== chatId); persist(); return send(chatId, "Fatto: non riceverai più messaggi. Per ricominciare scrivi /start.");
+      case "stop": delete cfg.chats[chatId]; persist(); opts.onChange && opts.onChange(); return send(chatId, "Fatto: non riceverai più messaggi. Per ricominciare scrivi /start.");
       case "admin":
-        if (arg && arg === cfg.code) { if (!cfg.admins.includes(chatId)) cfg.admins.push(chatId); cfg.code = newCode(); persist(); opts.onChange && opts.onChange(); return send(chatId, "🔑 Ora sei un organizzatore: riceverai le richieste di iscrizione da confermare.\n/richieste per vederle."); }
+        if (arg && arg === cfg.code) { c.role = "admin"; c.games = []; cfg.code = newCode(); persist(); opts.onChange && opts.onChange(); return send(chatId, "🔑 Ora sei un amministratore: ricevi le richieste di iscrizione, puoi mandare annunci e comandare la diretta.\n/richieste per le iscrizioni."); }
         return send(chatId, "Codice non valido. Il codice è nelle impostazioni del programma (Bot Telegram).");
-      case "richieste":
-        if (!isAdmin) return send(chatId, "Comando riservato agli organizzatori.");
-        if (!cfg.pending.length) return send(chatId, "Nessuna richiesta da confermare.");
-        for (const p of cfg.pending) await send(chatId, "📝 " + esc(p.l) + ": <b>" + esc(p.name) + "</b>" + (p.user ? " (" + esc(p.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + p.id }, { text: "Rifiuta", callback_data: "X:" + p.id }]]);
+      case "richieste": {
+        if (!isOrg) return send(chatId, "Comando riservato agli organizzatori.");
+        const mineP = cfg.pending.filter((p) => canManage(chatId, p.k));
+        if (!mineP.length) return send(chatId, "Nessuna richiesta da confermare.");
+        for (const p of mineP) await send(chatId, "📝 " + esc(p.l) + ": <b>" + esc(p.name) + "</b>" + (p.user ? " (" + esc(p.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + p.id }, { text: "Rifiuta", callback_data: "X:" + p.id }]]);
         return;
+      }
       case "annuncio": {
-        if (!isAdmin) return send(chatId, "Comando riservato agli organizzatori.");
+        if (!isAdmin) return send(chatId, "Comando riservato agli amministratori.");
         if (!arg) return send(chatId, "Scrivi il testo: /annuncio <i>testo</i>");
         const ids = Object.keys(cfg.chats); ids.forEach((id) => send(id, "📢 <b>" + esc(vm.title) + "</b>\n" + esc(arg)));
         return send(chatId, "Annuncio inviato a " + ids.length + " chat.");
@@ -374,7 +438,10 @@ module.exports = function createBot(opts) {
     const chats = Object.keys(cfg.chats);
     return {
       enabled: cfg.enabled, hasToken: !!cfg.token, running, username: me && me.username, lastErr, lastOk,
-      join: cfg.join, notify: cfg.notify, code: cfg.code, admins: cfg.admins.map((a) => (cfg.chats[a] && cfg.chats[a].name) || String(a)),
+      join: cfg.join, notify: cfg.notify, code: cfg.code,
+      userRoles: Object.keys(cfg.userRoles).map((u) => ({ u: "@" + u, role: cfg.userRoles[u].role, games: cfg.userRoles[u].games || [] })),
+      people: chats.map((id) => { const c = cfg.chats[id], f = c.follow || {}; return { id, name: c.name || c.first || String(id), role: roleOf(id), games: c.games || [], player: c.player || "", follow: f.all ? "tutti" : (f.games || []).length, seen: c.seen || 0 }; })
+        .sort((a, b) => ({ admin: 0, org: 1, "": 2 })[a.role] - ({ admin: 0, org: 1, "": 2 })[b.role] || b.seen - a.seen).slice(0, 300),
       chats: chats.length, followers: chats.filter((id) => { const f = cfg.chats[id].follow || {}; return f.all || (f.games || []).length; }).length,
       pending: cfg.pending.map((p) => ({ id: p.id, name: p.name, l: p.l, user: p.user, ts: p.ts }))
     };
@@ -391,7 +458,25 @@ module.exports = function createBot(opts) {
       if (c.notify) cfg.notify = Object.assign(cfg.notify, c.notify);
       if (typeof c.apiBase === "string") cfg.apiBase = c.apiBase;
       if (c.newCode) cfg.code = newCode();
-      if (c.removeAdmins) cfg.admins = [];
+      const uname = (x) => String(x || "").replace(/^https?:\/\/t\.me\//i, "").replace(/^@/, "").trim().toLowerCase();
+      const gamesOk = (g) => (Array.isArray(g) ? g : []).map(String).slice(0, 50);
+      /* ruolo per username (vale appena quella persona scrive al bot in privato) */
+      if (c.userRole) {
+        const u = uname(c.userRole.u);
+        if (/^[a-z0-9_]{4,32}$/.test(u) && ["admin", "org"].includes(c.userRole.role)) {
+          cfg.userRoles[u] = { role: c.userRole.role, games: c.userRole.role === "org" ? gamesOk(c.userRole.games) : [] };
+          Object.keys(cfg.chats).forEach((id) => { const ch = cfg.chats[id]; if (ch.viaUser === u || (ch.name || "").toLowerCase() === "@" + u) { ch.role = cfg.userRoles[u].role; ch.games = cfg.userRoles[u].games.slice(); ch.viaUser = u; } });
+        }
+      }
+      if (c.removeUserRole) {
+        const u = uname(c.removeUserRole); delete cfg.userRoles[u];
+        Object.keys(cfg.chats).forEach((id) => { const ch = cfg.chats[id]; if (ch.viaUser === u) { ch.role = "player"; ch.games = []; delete ch.viaUser; } });
+      }
+      /* ruolo, tornei e giocatore di una persona che ha già scritto al bot */
+      if (c.setRole && cfg.chats[c.setRole.id]) { const ch = cfg.chats[c.setRole.id]; ch.role = ["admin", "org"].includes(c.setRole.role) ? c.setRole.role : "player"; ch.games = ch.role === "org" ? gamesOk(c.setRole.games) : []; delete ch.viaUser; }
+      if (c.setPlayer && cfg.chats[c.setPlayer.id]) { const pn = String(c.setPlayer.player || "").replace(/\s+/g, " ").trim().slice(0, 32); cfg.chats[c.setPlayer.id].player = /[<>]/.test(pn) ? "" : pn; }
+      if (c.removeChat && cfg.chats[c.removeChat]) delete cfg.chats[c.removeChat];
+      if (c.removeAdmins) Object.keys(cfg.chats).forEach((id) => { if (cfg.chats[id].role === "admin" || cfg.chats[id].role === "org") cfg.chats[id].role = "player"; });
       persist();
       if ("token" in c || "enabled" in c || c.removeToken || "apiBase" in c) return start();
       return status();

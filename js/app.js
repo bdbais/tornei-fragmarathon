@@ -866,29 +866,31 @@ function botLines(g,k){
   return L;
 }
 function botNext(g,k){
-  var N=[];if(g.phase==="setup"||result(g,k).status==="Concluso")return N;
-  if(g.ffa){var F=g.ffa,rd=F.rounds[F.rounds.length-1],fin=rd.groups.length===1;rd.groups.forEach(function(gr,gi){if(gr.p.some(function(n){return gr.s[n]==null}))N.push((fin?"Finale":"Girone "+letter(gi))+": "+gr.p.join(", "))});return N}
-  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.w===undefined)N.push((id==="GF"?"Finale":id==="GF2"?"Bella":id.charAt(0)==="W"?"Vincenti":"Perdenti")+": "+m.a+" vs "+m.b)});return N}
-  if(g.rounds){var R=g.rounds,ci=R.findIndex(function(rd){return rd.some(function(m){return m.a&&m.b&&!m.w})});if(ci>=0)R[ci].forEach(function(m){if(m.a&&m.b&&!m.w)N.push(roundName(ci,R.length)+": "+m.a+" vs "+m.b)});var t=g.third;if(t&&t.match&&t.a&&t.b&&!t.w)N.push("Finale 3º posto: "+t.a+" vs "+t.b);return N}
-  if(g.sw){var W=g.sw;W.rounds[W.rounds.length-1].forEach(function(m){if(m.b&&m.w==null)N.push("Turno "+W.rounds.length+": "+m.a+" vs "+m.b)});return N}
-  if(g.groups){g.groups.forEach(function(x,gi){var op=x.matches.filter(function(m){return m.sa==null||m.sb==null});if(!op.length)return;var d=op[0].day;op.filter(function(m){return m.day===d}).forEach(function(m){N.push((g.groups.length>1?"Girone "+letter(gi)+", ":"")+"giornata "+d+": "+m.a+" vs "+m.b)})});return N}
+  /* partite da giocare adesso: testo e nomi coinvolti (servono agli avvisi personali) */
+  var N=[],vs=function(lab,a,b){N.push({t:lab+": "+a+" vs "+b,p:[a,b]})};
+  if(g.phase==="setup"||result(g,k).status==="Concluso")return N;
+  if(g.ffa){var F=g.ffa,rd=F.rounds[F.rounds.length-1],fin=rd.groups.length===1;rd.groups.forEach(function(gr,gi){if(gr.p.some(function(n){return gr.s[n]==null}))N.push({t:(fin?"Finale":"Girone "+letter(gi))+": "+gr.p.join(", "),p:gr.p.slice()})});return N}
+  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.w===undefined)vs(id==="GF"?"Finale":id==="GF2"?"Bella":id.charAt(0)==="W"?"Vincenti":"Perdenti",m.a,m.b)});return N}
+  if(g.rounds){var R=g.rounds,ci=R.findIndex(function(rd){return rd.some(function(m){return m.a&&m.b&&!m.w})});if(ci>=0)R[ci].forEach(function(m){if(m.a&&m.b&&!m.w)vs(roundName(ci,R.length),m.a,m.b)});var t=g.third;if(t&&t.match&&t.a&&t.b&&!t.w)vs("Finale 3º posto",t.a,t.b);return N}
+  if(g.sw){var W=g.sw;W.rounds[W.rounds.length-1].forEach(function(m){if(m.b&&m.w==null)vs("Turno "+W.rounds.length,m.a,m.b)});return N}
+  if(g.groups){g.groups.forEach(function(x,gi){var op=x.matches.filter(function(m){return m.sa==null||m.sb==null});if(!op.length)return;var d=op[0].day;op.filter(function(m){return m.day===d}).forEach(function(m){vs((g.groups.length>1?"Girone "+letter(gi)+", ":"")+"giornata "+d,m.a,m.b)})});return N}
   return N;
 }
 function botResults(g,k){
   var R=[];
-  if(g.ffa)g.ffa.rounds.forEach(function(rd,ri){var fin=rd.groups.length===1;rd.groups.forEach(function(gr,gi){var e=gEval(gr,fin,g.ffa.adv);if(e.full)R.push({id:"f"+ri+"-"+gi+":"+gr.p.join(","),text:(fin?"Finale":"Turno "+(ri+1)+", girone "+letter(gi))+": "+e.sorted.slice(0,3).map(function(x){return x.pos+"º "+x.n+" ("+gr.s[x.n]+")"}).join(", ")})})});
-  if(g.groups)g.groups.forEach(function(x,gi){x.matches.forEach(function(m,mi){if(m.sa!=null&&m.sb!=null)R.push({id:"g"+gi+"-"+mi+":"+m.sa+"-"+m.sb,text:m.a+" "+m.sa+"–"+m.sb+" "+m.b})})});
-  if(g.sw)g.sw.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(m.b&&m.w!=null)R.push({id:"s"+ri+"-"+mi+":"+m.a+m.b+m.w,text:m.sa!=null&&m.sb!=null?m.a+" "+m.sa+"–"+m.sb+" "+m.b:(m.w==="="?m.a+" e "+m.b+" pareggiano":mres(m))})})});
-  if(g.rounds)g.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(m.w&&m.a&&m.b)R.push({id:"e"+ri+"-"+mi+":"+m.a+m.b+m.w,text:roundName(ri,g.rounds.length)+": "+mres(m)})})});
-  if(g.third&&g.third.w&&g.third.a&&g.third.b)R.push({id:"t3:"+g.third.w,text:"Finale 3º posto: "+mres(g.third)});
-  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.w!==undefined)R.push({id:"d"+id+":"+m.a+m.b+m.w,text:mres(m)})})}
+  if(g.ffa)g.ffa.rounds.forEach(function(rd,ri){var fin=rd.groups.length===1;rd.groups.forEach(function(gr,gi){var e=gEval(gr,fin,g.ffa.adv);if(e.full)R.push({id:"f"+ri+"-"+gi+":"+gr.p.join(","),p:gr.p.slice(),text:(fin?"Finale":"Turno "+(ri+1)+", girone "+letter(gi))+": "+e.sorted.slice(0,3).map(function(x){return x.pos+"º "+x.n+" ("+gr.s[x.n]+")"}).join(", ")})})});
+  if(g.groups)g.groups.forEach(function(x,gi){x.matches.forEach(function(m,mi){if(m.sa!=null&&m.sb!=null)R.push({id:"g"+gi+"-"+mi+":"+m.sa+"-"+m.sb,p:[m.a,m.b],text:m.a+" "+m.sa+"–"+m.sb+" "+m.b})})});
+  if(g.sw)g.sw.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(m.b&&m.w!=null)R.push({id:"s"+ri+"-"+mi+":"+m.a+m.b+m.w,p:[m.a,m.b],text:m.sa!=null&&m.sb!=null?m.a+" "+m.sa+"–"+m.sb+" "+m.b:(m.w==="="?m.a+" e "+m.b+" pareggiano":mres(m))})})});
+  if(g.rounds)g.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(m.w&&m.a&&m.b)R.push({id:"e"+ri+"-"+mi+":"+m.a+m.b+m.w,p:[m.a,m.b],text:roundName(ri,g.rounds.length)+": "+mres(m)})})});
+  if(g.third&&g.third.w&&g.third.a&&g.third.b)R.push({id:"t3:"+g.third.w,p:[g.third.a,g.third.b],text:"Finale 3º posto: "+mres(g.third)});
+  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.w!==undefined)R.push({id:"d"+id+":"+m.a+m.b+m.w,p:[m.a,m.b],text:mres(m)})})}
   return R;
 }
 function botVM(){
   var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
   function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
   return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,roster:S.roster.slice(),
-    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k);return{k:k,l:DEF[k].l,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),next:botNext(g,k),results:botResults(g,k)}}),
+    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
     hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
 }
 var botT=null;
@@ -912,9 +914,29 @@ function botHtml(st){
    +'<div class="row" style="margin-top:10px"><label class="row chk"><input type="checkbox" id="boton"'+(st.enabled?" checked":"")+'>Bot attivo</label>'
    +'<label class="row" style="gap:6px">Iscrizioni dal bot <select id="botjoin"><option value="approve"'+(st.join==="approve"?" selected":"")+'>Con conferma dell&#39;organizzatore</option><option value="auto"'+(st.join==="auto"?" selected":"")+'>Automatiche</option><option value="off"'+(st.join==="off"?" selected":"")+'>Chiuse</option></select></label></div>'
    +'<div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Avvisi a chi segue un torneo:</span><label class="row chk"><input type="checkbox" class="botn" data-n="stage"'+(st.notify.stage?" checked":"")+'>cambio di turno o fase</label><label class="row chk"><input type="checkbox" class="botn" data-n="final"'+(st.notify.final?" checked":"")+'>podio finale</label><label class="row chk"><input type="checkbox" class="botn" data-n="results"'+(st.notify.results?" checked":"")+'>ogni risultato</label></div>'
-   +'<p class="hint">Organizzatori: scrivete al bot <code>/admin '+esc(st.code)+'</code> per ricevere le richieste di iscrizione e poter mandare annunci (il codice cambia dopo ogni uso). '+(st.admins.length?'Già organizzatori: '+st.admins.map(esc).join(", ")+'. <button id="botadm">Rimuovi gli organizzatori</button>':'')+' <button id="botcode">Nuovo codice</button></p>'
+   +'<label class="row chk" style="margin-top:6px"><input type="checkbox" class="botn" data-n="player"'+(st.notify.player!==false?" checked":"")+'>avvisi personali ai giocatori collegati: tocca a te, i tuoi risultati, la tua posizione</label>'
+   +botPeople(st)
+   +'<p class="hint">Codice per diventare amministratore dal telefono: <code>/admin '+esc(st.code)+'</code> (cambia dopo ogni uso). <button id="botcode">Nuovo codice</button></p>'
    +'<p class="hint">'+st.chats+' chat hanno scritto al bot, '+st.followers+' seguono almeno un torneo.</p>';
   if(st.pending.length)h+='<h4 style="margin:12px 0 4px">Iscrizioni da confermare</h4><table class="res"><tr><th>Nome</th><th>Torneo</th><th>Da</th><th></th></tr>'+st.pending.map(function(p){return'<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(p.l)+'</td><td>'+esc(p.user||"")+'</td><td><button class="p" data-botok="'+esc(p.id)+'">Accetta</button> <button data-botno="'+esc(p.id)+'">Rifiuta</button></td></tr>'}).join("")+'</table>';
+  return h;
+}
+var ROLE_L={admin:"Amministratore",org:"Organizzatore tornei","":"Partecipante"};
+function botGamesSel(cls,attr,sel){return'<select multiple class="'+cls+'" '+attr+' size="'+Math.min(4,Object.keys(DEF).length)+'" aria-label="Tornei che organizza (nessuno selezionato = tutti)">'+Object.keys(DEF).map(function(k){return'<option value="'+k+'"'+(sel.indexOf(k)>=0?" selected":"")+'>'+esc(DEF[k].l)+'</option>'}).join("")+'</select>'}
+function botPeople(st){
+  var names={};S.roster.forEach(function(n){names[n]=1});Object.keys(DEF).forEach(function(k){S.games[k].players.forEach(function(n){names[n]=1});Object.keys(S.games[k].members||{}).forEach(function(t){(S.games[k].members[t]||[]).forEach(function(n){names[n]=1})})});
+  var h='<h4 style="margin:16px 0 6px">Persone e ruoli</h4><p class="hint" style="margin:0 0 8px"><b>Amministratore</b>: tutto (iscrizioni, annunci, diretta). <b>Organizzatore tornei</b>: conferma le iscrizioni, di tutti i tornei o solo di quelli selezionati. <b>Partecipante</b>: legge, segue e si iscrive. Collegando una persona a un giocatore riceve gli avvisi personali.</p>'
+   +'<datalist id="botnames">'+Object.keys(names).sort().map(function(n){return'<option value="'+esc(n)+'">'}).join("")+'</datalist>'
+   +'<div class="row" style="align-items:flex-start"><input type="text" id="bru" placeholder="@username Telegram" style="flex:1 1 180px"><select id="brr"><option value="admin">Amministratore</option><option value="org">Organizzatore tornei</option></select>'+botGamesSel("","id=\"brg\"",[])+'<button id="bradd">Aggiungi</button></div>'
+   +'<p class="hint" style="margin:4px 0 0">Il ruolo per username vale appena quella persona scrive al bot in privato. Per un organizzatore, nessun torneo selezionato vuol dire tutti.</p>';
+  if((st.userRoles||[]).length)h+='<div class="chips">'+st.userRoles.map(function(r){return'<span class="chip">'+esc(r.u)+' – '+ROLE_L[r.role]+(r.role==="org"&&r.games.length?' ('+r.games.map(function(k){return DEF[k]?esc(DEF[k].l):k}).join(", ")+')':'')+'<button data-bru="'+esc(r.u)+'" aria-label="Togli il ruolo a '+esc(r.u)+'">×</button></span>'}).join("")+'</div>';
+  if(st.people&&st.people.length){
+    h+='<table class="res botppl"><tr><th>Telegram</th><th>Ruolo</th><th>Tornei</th><th>Giocatore collegato</th><th>Segue</th><th></th></tr>'+st.people.map(function(p){
+      return'<tr><td>'+esc(p.name)+'</td><td><select class="bprole" data-id="'+esc(p.id)+'" aria-label="Ruolo di '+esc(p.name)+'">'+["","org","admin"].map(function(r){return'<option value="'+r+'"'+(p.role===r?" selected":"")+'>'+ROLE_L[r]+'</option>'}).join("")+'</select></td>'
+       +'<td>'+(p.role==="org"?botGamesSel("bpgames",'data-id="'+esc(p.id)+'"',p.games):p.role==="admin"?'tutti':'–')+'</td>'
+       +'<td><input type="text" class="bpplayer" list="botnames" data-id="'+esc(p.id)+'" value="'+esc(p.player)+'" placeholder="nessuno" aria-label="Giocatore collegato a '+esc(p.name)+'"></td>'
+       +'<td>'+(p.follow==="tutti"?"tutti":p.follow?p.follow+" tornei":"–")+'</td><td><button data-bpdel="'+esc(p.id)+'">'+(ARMS["bp"+p.id]?"Conferma":"Rimuovi")+'</button></td></tr>'}).join("")+'</table>';
+  }else h+='<p class="empty">Nessuno ha ancora scritto al bot.</p>';
   return h;
 }
 function botRefresh(){var b=$("botbox");if(!b||!DESK||!DESK.botStatus)return;DESK.botStatus().then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st)}).catch(function(){})}
@@ -1031,6 +1053,9 @@ $("editbox").addEventListener("change",function(e){
   }
   if(e.target.id==="aiprompt"){aiSaveCfg(aiReadForm());return}
   if(e.target.id==="boton"){botCfg({enabled:e.target.checked});return}
+  if(e.target.classList.contains("bprole")){var row=e.target.closest("tr"),gsel=row&&row.querySelector(".bpgames");botCfg({setRole:{id:e.target.dataset.id,role:e.target.value,games:gsel?[].slice.call(gsel.selectedOptions).map(function(o){return o.value}):[]}});return}
+  if(e.target.classList.contains("bpgames")){var rs=e.target.closest("tr").querySelector(".bprole");botCfg({setRole:{id:e.target.dataset.id,role:rs.value,games:[].slice.call(e.target.selectedOptions).map(function(o){return o.value})}});return}
+  if(e.target.classList.contains("bpplayer")){botCfg({setPlayer:{id:e.target.dataset.id,player:e.target.value}});return}
   if(e.target.id==="botjoin"){botCfg({join:e.target.value});return}
   if(e.target.classList.contains("botn")){var nn={};nn[e.target.dataset.n]=e.target.checked;botCfg({notify:nn});return}
   var f=e.target.files&&e.target.files[0];if(!f)return;
@@ -1052,7 +1077,9 @@ $("editbox").onclick=function(e){
   if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
   if(b.id==="botdel"){botCfg({removeToken:true});return}
   if(b.id==="botcode"){botCfg({newCode:true});return}
-  if(b.id==="botadm"){botCfg({removeAdmins:true});return}
+  if(b.id==="bradd"){var u=$("bru").value.trim();if(!/^@?[A-Za-z0-9_]{4,32}$/.test(u.replace(/^https?:\/\/t\.me\//i,""))){toast("Scrivi lo username Telegram, per esempio @LazarusCRY.");return}var gs=[].slice.call($("brg").selectedOptions).map(function(o){return o.value});botCfg({userRole:{u:u,role:$("brr").value,games:gs}});toast("Ruolo assegnato a "+u+".");return}
+  if(b.dataset.bru){botCfg({removeUserRole:b.dataset.bru});return}
+  if(b.dataset.bpdel){if(!arm("bp"+b.dataset.bpdel,b,"Conferma"))return;botCfg({removeChat:b.dataset.bpdel});return}
   if(b.dataset.botok||b.dataset.botno){DESK.botDecide(b.dataset.botok||b.dataset.botno,!!b.dataset.botok).then(botRefresh);return}
   if(b.id==="aireset"){var c0=aiReadForm();delete c0.prompt;aiSaveCfg(c0);renderEdit();return}
   if(b.dataset.aiuse!==undefined){aiUse(+b.dataset.aiuse);return}
