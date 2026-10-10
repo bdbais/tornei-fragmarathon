@@ -163,3 +163,44 @@ button.danger{background:#C62828;border-color:#C62828;color:#fff}
 .cl-b ul{margin:0;padding-left:18px;line-height:1.5;font-size:.93rem}
 .cl-b li{max-width:64ch;margin-bottom:3px}
 @media (max-width:560px){.cl-list>li{grid-template-columns:1fr;gap:4px}}
+
+/* sezioni comprimibili (js/sections.js) */
+.colh{cursor:pointer}
+.colbtn{display:inline-grid;place-items:center;width:26px;height:26px;padding:0;margin:0 8px 0 0;vertical-align:middle;border:0;background:none;color:var(--mut);border-radius:6px}
+.colbtn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg);transition:transform .15s}
+.colbtn:hover{color:var(--acc)}
+.collapsed>.phead .colbtn svg,.collapsed>.colh .colbtn svg{transform:none}
+.panel.collapsed>:not(.phead),.sect.collapsed>:not(.phead){display:none!important}
+.panel.collapsed{padding-bottom:12px}
+.panel.collapsed>.phead{margin-bottom:0}
+.sect.collapsed{margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){.colbtn svg{transition:none}}
+.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%,30%{background:color-mix(in srgb,var(--acc) 22%,transparent)}100%{background:transparent}}
+
+/* ricerca delle sezioni */
+#secbtn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;align-self:flex-start}
+#secbtn+#homebtn{margin-left:0}
+#secbtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+#secbtn kbd{font:600 .7rem Inter,system-ui,sans-serif;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+#secsearch{width:min(640px,calc(100vw - 32px));margin:10vh auto auto;padding:0;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink)}
+#secsearch::backdrop{background:rgba(0,0,0,.5)}
+.sx-box input{width:100%;padding:16px 18px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);font:500 1.1rem Inter,system-ui,sans-serif;outline:none}
+.sx-list{list-style:none;margin:0;padding:6px;max-height:min(52vh,460px);overflow:auto}
+.sx-list li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 12px;border-radius:8px;cursor:pointer}
+.sx-list li small{color:var(--mut);font-size:.78rem;white-space:nowrap}
+.sx-list li[aria-selected=true]{background:color-mix(in srgb,var(--acc) 18%,transparent)}
+.sx-list li[aria-selected=true] span{color:var(--ink);font-weight:600}
+.sx-list .sx-none{color:var(--mut);cursor:default}
+.sx-help{margin:0;padding:8px 18px 12px;color:var(--mut);font-size:.8rem;border-top:1px solid var(--line)}
+
+/* rinomina, annulla cancellazione */
+button.rnm{padding:0;border:0;background:none;color:inherit;font:inherit;cursor:text;border-radius:4px}
+button.rnm:hover{text-decoration:underline dotted;text-underline-offset:3px}
+input.rnin{padding:2px 6px;border:1px solid var(--acc);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit;min-width:6em}
+.tab.undodel,button.undodel{color:var(--acc);border:1px dashed var(--acc);border-radius:8px}
+.gdup{display:inline-flex;gap:8px;flex-wrap:wrap}
+#apptools{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+#apptools #secbtn{order:1;margin:0}
+#apptools #homebtn{order:2;margin:0}
+#apptools .verbtn{order:3}

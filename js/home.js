@@ -9,7 +9,7 @@
   var A = window.__app;
   if (!A || A.WALL) return;
   var D = A.DESK, esc = A.esc, IDXK = "tornei-evidx", EVK = "tornei-ev:", PREFK = "tornei-home";
-  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "";
+  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null;
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
@@ -21,8 +21,10 @@
     list: function () { return D.evList(); },
     read: function (id) { return D.evRead(id); },
     write: function (id, txt) { return D.evWrite(id, txt); },
-    trash: function (id) { return D.evTrash(id); }
+    trash: function (id) { return D.evTrash(id); },
+    untrash: function (id) { return D.evUntrash(id); }
   } : {
+    bin: {},
     idx: function () { try { return JSON.parse(lsGet(IDXK) || "{}") || {}; } catch (e) { return {}; } },
     list: function () {
       var x = this.idx();
@@ -35,9 +37,11 @@
       return Promise.resolve(true);
     },
     trash: function (id) {
+      this.bin[id] = lsGet(EVK + id);
       try { localStorage.removeItem(EVK + id); } catch (e) {}
       var x = this.idx(); delete x[id]; lsSet(IDXK, JSON.stringify(x)); return Promise.resolve(true);
-    }
+    },
+    untrash: function (id) { var t = this.bin[id]; delete this.bin[id]; return t ? this.write(id, t) : Promise.resolve(false); }
   };
 
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -112,7 +116,8 @@
     clearTimeout(saveT);
     flush().then(function () { return base; }).then(function (src) {
       var keep = from[0] === "tutto", st;
-      if (src) {
+      if (src && from[0] === "copia") st = src;
+      else if (src) {
         st = src; Object.keys(st.games || {}).forEach(function (k) { st.games[k] = template(st.games[k], keep); });
         if (!keep) { st.roster = []; st.teams = []; }
       } else st = { cur: "quake", roster: [], games: {}, ui: {} };
@@ -164,6 +169,15 @@
     };
     r.readAsText(file);
   }
+  function remember(d) {
+    lastDel = d; clearTimeout(delT); delT = setTimeout(function () { lastDel = null; paint(); }, 60000);
+  }
+  function undoDel() {
+    var d = lastDel; if (!d) return Promise.resolve();
+    lastDel = null; clearTimeout(delT);
+    var p = d.type === "bot" ? D.botsUndoRemove() : store.untrash(d.id);
+    return p.then(render).then(function () { A.toast("Rimesso: " + d.label + "."); });
+  }
   function trashEv(id, btn) {
     if (!armed[id]) {
       armed[id] = 1; btn.textContent = "Conferma"; btn.classList.add("danger");
@@ -178,10 +192,12 @@
       return readState(other.id).then(function (st) {
         st.ev = st.ev || {}; st.ev.id = other.id; A.load(st); useBot(st);
         return store.trash(id);
-      }).then(function () { A.toast((D ? "Torneo spostato nel cestino. " : "Torneo eliminato. ") + "Ora è aperto: " + (other.meta.title || "Torneo") + "."); render(); });
+      }).then(function () { remember({ type: "ev", id: id, label: (list.filter(function (e) { return e.id === id; })[0] || { meta: {} }).meta.title || "torneo" }); A.toast("Torneo eliminato. Ora è aperto: " + (other.meta.title || "Torneo") + "."); render(); });
     }
+    var gone = (list.filter(function (e) { return e.id === id; })[0] || { meta: {} }).meta.title || "torneo";
     store.trash(id).then(function () {
-      A.toast(D ? "Torneo spostato nel cestino (Documenti\\Tornei Fragmarathon\\cestino): da lì si può recuperare." : "Torneo eliminato.");
+      remember({ type: "ev", id: id, label: gone });
+      A.toast("Torneo eliminato: " + gone + ".");
       render();
     });
   }
@@ -239,13 +255,13 @@
       '<label class="wide chk"><span><input type="checkbox" name="draft"' + (m.draft ? " checked" : "") + '> In lavorazione</span><small>Nel bot lo vedono solo amministratori e organizzatori; nessun avviso ai partecipanti finché non lo togli.</small></label>' +
       (id ? "" : '<label class="wide">Parti da<select name="from"><option value="vuoto">Un torneo vuoto</option>' +
         list.map(function (e) { var t = esc(e.meta.title || "Torneo"); return '<option value="modello:' + esc(e.id) + '">Impostazioni di ' + t + ' (giochi, formule, tema, logo)</option><option value="tutto:' + esc(e.id) + '">' + t + ' con gli stessi giocatori, senza risultati</option>'; }).join("") + '</select></label>') +
-      '<div class="ev-formact"><button class="p" type="submit">' + (id ? "Salva" : "Crea torneo") + '</button><button type="button" data-a="cancel">Annulla</button></div></form>';
+      '<div class="ev-formact"><button class="p" type="submit">' + (id ? "Salva" : "Crea torneo") + '</button><button type="button" data-a="cancel">Chiudi</button></div></form>';
   }
   function card(e, hero) {
     var m = e.meta || {}, id = e.id, isCur = id === curId();
     var acts = '<div class="ev-act">' +
       (hero ? '<button class="p ev-go" data-a="open">' + (isCur ? "Continua" : "Apri") + '</button>' : '<button class="p" data-a="open">' + (isCur ? "Continua" : "Apri") + '</button>') +
-      '<button data-a="edit">Modifica</button><button data-a="dup" title="Nuovo torneo con gli stessi giochi, giocatori e impostazioni, senza risultati">Duplica</button>' +
+      '<button data-a="edit">Modifica</button>' + (dupAsk === id ? '<button data-a="dup0">Duplica senza risultati</button><button data-a="dup1">Duplica con i risultati</button>' : '<button data-a="dup" title="Copia di questo torneo, con o senza risultati">Duplica</button>') +
       '<button data-a="export">Esporta</button><button data-a="trash">Elimina</button></div>';
     var pin = '<button class="ev-pin" data-a="pin" aria-pressed="' + (m.pinned ? "true" : "false") + '" title="' + (m.pinned ? "Togli dai preferiti" : "Tieni in cima") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>';
     var body = editing === id ? editForm(m, id) :
@@ -292,7 +308,7 @@
       '<select id="hm-sort" aria-label="Ordina"><option value="recenti"' + (pref.sort === "recenti" || !pref.sort ? " selected" : "") + '>Modificati di recente</option><option value="data"' + (pref.sort === "data" ? " selected" : "") + '>Data del torneo</option><option value="nome"' + (pref.sort === "nome" ? " selected" : "") + '>Nome</option></select>' +
       '<button id="hm-view" aria-pressed="' + (pref.view === "list" ? "true" : "false") + '" title="Schede o elenco compatto">' + (pref.view === "list" ? "Schede" : "Elenco") + '</button>' +
       '<label class="hm-imp"><input type="file" id="hm-file" accept=".json,application/json" hidden>Importa</label>' +
-      '<button class="p" data-a="new">Nuovo torneo</button>' + (id ? '<button id="hm-close" title="Torna al torneo aperto (Esc)">Chiudi</button>' : "") + '</div></header>';
+      (lastDel ? '<button class="undodel" data-a="undodel" title="Rimetti: ' + esc(lastDel.label) + ' (Ctrl+Z)">Annulla cancellazione</button>' : "") + '<button class="p" data-a="new">Nuovo torneo</button>' + (id ? '<button id="hm-close" title="Torna al torneo aperto (Esc)">Chiudi</button>' : "") + '</div></header>';
     if (creating) h += '<section class="ev new" style="--ev:' + esc(evColor({})) + '"><div class="ev-band"><span class="ev-ini">+</span></div><div class="ev-body"><h3 class="ev-t">Nuovo torneo</h3>' + editForm({ date: new Date().toISOString().slice(0, 10) }, "") + '</div></section>';
     if (heroE && !q) h += card(heroE, true);
     var others = q ? all : rest;
@@ -342,7 +358,9 @@
       if (a === "open") return openEv(id);
       if (a === "edit") { editing = id; creating = false; paint(); var i = root.querySelector('.ev[data-id="' + id + '"] input[name=title]'); if (i) i.focus(); return; }
       if (a === "pin") { var e0 = list.filter(function (e) { return e.id === id; })[0]; return editEv(id, { pinned: !(e0 && e0.meta && e0.meta.pinned) }); }
-      if (a === "dup") { var e1 = list.filter(function (e) { return e.id === id; })[0], m1 = (e1 && e1.meta) || {}; return create({ title: (m1.title || "Torneo") + " (copia)", sub: m1.sub || "", date: "", place: m1.place || "", color: m1.color || "", bot: m1.bot || "", from: "tutto:" + id }); }
+      if (a === "undodel") return undoDel();
+      if (a === "dup") { dupAsk = id; return paint(); }
+      if (a === "dup0" || a === "dup1") { dupAsk = null; var e1 = list.filter(function (e) { return e.id === id; })[0], m1 = (e1 && e1.meta) || {}; return create({ title: (m1.title || "Torneo") + " (copia)", sub: m1.sub || "", date: a === "dup1" ? m1.date || "" : "", place: m1.place || "", color: m1.color || "", bot: m1.bot || "", draft: m1.draft, from: (a === "dup1" ? "copia:" : "tutto:") + id }); }
       if (a === "export") return exportEv(id);
       if (a === "trash") return trashEv(id, b);
       if (a === "botadd") return D.botsAdd("Bot " + ((bots || []).length + 1)).then(render).then(function () { var n = root.querySelectorAll(".bt-name"); if (n.length) { n[n.length - 1].focus(); n[n.length - 1].select(); } });
@@ -351,7 +369,8 @@
       if (a === "botdel") {
         if (!armed["b" + bid]) { armed["b" + bid] = 1; b.textContent = "Conferma"; b.classList.add("danger"); setTimeout(function () { delete armed["b" + bid]; if (b.isConnected) { b.textContent = "Rimuovi"; b.classList.remove("danger"); } }, 4000); return; }
         delete armed["b" + bid];
-        return D.botsRemove(bid).then(render).then(function () { A.toast("Bot rimosso dall'elenco. I tornei che lo usavano passano al primo bot."); });
+        var bl = (bots.filter(function (x) { return x.id === bid; })[0] || {}).label || "bot";
+        return D.botsRemove(bid).then(function () { remember({ type: "bot", label: bl }); return render(); }).then(function () { A.toast("Bot rimosso: " + bl + "."); });
       }
     });
     root.addEventListener("submit", function (ev) {
@@ -369,13 +388,15 @@
       if (t.classList.contains("bt-col") && bid) return D.botsEdit(bid, { color: t.value }).then(function (L) { bots = L; paint(); });
     });
     root.addEventListener("keydown", function (ev) {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) { ev.preventDefault(); ev.stopPropagation(); undoDel(); return; }
       if (ev.key === "Escape") { if (editing || creating) { editing = null; creating = false; paint(); } else close(); ev.stopPropagation(); }
       if (ev.key === "Enter" && ev.target.classList && ev.target.classList.contains("bt-name")) ev.target.blur();
     });
   }
 
   /* pulsante nell'intestazione */
-  var brand = document.querySelector(".brand");
+  function apptools() { var t = document.getElementById("apptools"), br = document.querySelector(".brand"); if (!t && br) { t = document.createElement("div"); t.id = "apptools"; br.parentNode.insertBefore(t, br); } return t; }
+  var brand = apptools();
   if (brand) {
     var hb = document.createElement("button");
     hb.id = "homebtn"; hb.type = "button"; hb.title = "Tutti i tornei: scegli quale amministrare";
@@ -383,7 +404,7 @@
     hb.addEventListener("click", function () { open(); });
     brand.appendChild(hb);
   }
-  window.HOME = { open: open, close: close, flush: flush };
+  window.HOME = { open: open, close: close, flush: flush, undo: undoDel, isOpen: function () { return !!root && !root.hidden; } };
 
   /* avvio: il torneo aperto si salva nel suo file (anche per chi arriva da una versione senza elenco), poi l'elenco */
   ensureEv();

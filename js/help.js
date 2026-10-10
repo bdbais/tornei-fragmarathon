@@ -9,8 +9,8 @@ window.HELP = {
       "<li><b>Nuovo torneo</b>: vuoto, con le impostazioni di un altro (giochi, formule, tema, logo) o anche con gli stessi giocatori, senza risultati.</li>" +
       "<li><b>Modifica</b>: nome, sottotitolo, data, luogo, colore, bot e <b>In lavorazione</b>.</li>" +
       "<li><b>In lavorazione</b>: nel bot il torneo lo vedono solo amministratori e organizzatori e i partecipanti non ricevono avvisi. Lo stesso vale per un singolo gioco (pulsante <b>Segna in lavorazione</b> nella sua scheda), che sparisce anche dal proiettore.</li>" +
-      "<li><b>Duplica</b>, <b>Esporta</b> (file da portare su un altro PC), <b>Importa</b>, la stella per tenerlo in cima.</li>" +
-      "<li><b>Elimina</b> (si preme due volte): nell'app installata il file va in <code>Documenti&#92;Tornei Fragmarathon&#92;cestino</code>, da cui si recupera.</li></ul>" +
+      "<li><b>Duplica</b> (con o senza risultati), <b>Esporta</b> (file da portare su un altro PC), <b>Importa</b>, la stella per tenerlo in cima.</li>" +
+      "<li><b>Elimina</b> (si preme due volte; per un minuto c'è <b>Annulla cancellazione</b>, anche Ctrl+Z): nell'app installata il file va in <code>Documenti&#92;Tornei Fragmarathon&#92;cestino</code>, da cui si recupera.</li></ul>" +
       "<h4>Bot Telegram</h4><p>In fondo all'elenco ci sono i bot: ognuno ha token, ruoli, iscritti, avvisi e messaggio di benvenuto propri. Ogni torneo usa il bot che scegli; gira quello del torneo aperto. Rinominalo cliccando sul nome.</p>" +
       "<p>Il numero di versione accanto al titolo apre le novità di tutte le versioni.</p>" },
     inizio: { t: "Come si inizia", h:
@@ -178,7 +178,9 @@ window.HELP = {
     scorciatoie: { t: "Scorciatoie da tastiera", h:
       "<ul><li><kbd>F1</kbd> apre questa guida sull'argomento della finestra in cui sei.</li>" +
       "<li><kbd>Ctrl</kbd>+<kbd>S</kbd> salva il torneo aperto nella cartella tornei.</li>" +
-      "<li><kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla l'ultima azione (fino a 60).</li>" +
+      "<li><kbd>Ctrl</kbd>+<kbd>K</kbd> cerca una sezione, un gioco, un'impostazione o un argomento della guida.</li>" +
+      "<li><kbd>Ctrl</kbd>+<kbd>Z</kbd> dopo una cancellazione la annulla (come il pulsante <b>Annulla cancellazione</b>, che resta un minuto); altrimenti annulla l'ultima modifica.</li>" +
+      "<li>Clic sul titolo di un pannello: lo comprime o lo riapre (resta ricordato). Clic sul nome di un giocatore o di una squadra: lo rinomini ovunque.</li>" +
       "<li><kbd>F5</kbd> apre il proiettore; lì <kbd>PgUp</kbd> <kbd>PgDn</kbd> cambiano pannello e <kbd>G</kbd> avvia la galleria.</li>" +
       "<li><kbd>Invio</kbd> in un punteggio passa al campo successivo.</li>" +
       "<li><kbd>Esc</kbd> chiude la guida.</li></ul>" },

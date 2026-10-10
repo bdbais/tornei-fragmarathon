@@ -29,6 +29,53 @@ if(!DEF[S.cur])S.cur="quake";
 var hist=[],lastJ=null;
 function nk(j){return j.replace(/"cur":"[^"]*"/,"")}
 function save(){var j=JSON.stringify(S);if(lastJ!==null&&nk(j)!==nk(lastJ)){hist.push(lastJ);if(hist.length>60)hist.shift()}lastJ=j;try{localStorage.setItem(KEY,j)}catch(e){}afterSave()}
+/* Cancellazioni: prima si fotografa lo stato; per un minuto compare "Annulla cancellazione". */
+var lastDel=null,delT=null;
+function delSnap(label){
+  lastDel={label:label,j:JSON.stringify(S)};clearTimeout(delT);
+  delT=setTimeout(function(){lastDel=null;undoBtn()},60000);setTimeout(undoBtn);
+}
+function undoBtn(){
+  var t=$("tabs0");if(!t)return;var b=$("undodel");
+  if(!lastDel){if(b)b.remove();return}
+  if(!b){b=document.createElement("button");b.className="tab undodel";b.id="undodel";var sv=t.querySelector(".savest");t.insertBefore(b,sv||null)}
+  b.textContent="Annulla cancellazione";b.title="Rimetti: "+lastDel.label;
+}
+function undoDel(){
+  if(!lastDel)return;var cur=S.cur,l=lastDel.label;S=JSON.parse(lastDel.j);S.cur=cur;lastDel=null;clearTimeout(delT);
+  initS();registerCustom();normGames();applyUi();if(!DEF[S.cur]&&["roster","squadre","results","hof"].indexOf(S.cur)<0)S.cur=Object.keys(DEF)[0];
+  save();renderRoster();render();undoBtn();toast("Rimesso: "+l+".");
+}
+/* Rinominare un giocatore o una squadra: cambia il nome ovunque (elenco, squadre, tutti i giochi, risultati). */
+var RN_SKIP={name:1,mode:1,phase:1,plat:1,logo:1,calc:1,file:1,draft:1,l:1};
+function renameDeep(o,a,b){
+  if(Array.isArray(o)){for(var i=0;i<o.length;i++){if(o[i]===a)o[i]=b;else if(o[i]&&typeof o[i]==="object")renameDeep(o[i],a,b)}return}
+  if(!o||typeof o!=="object")return;
+  Object.keys(o).forEach(function(k){
+    if(RN_SKIP[k])return;var v=o[k];
+    if(k===a&&!Object.prototype.hasOwnProperty.call(o,b)){delete o[k];o[b]=v;k=b}
+    if(v===a)o[k]=b;else if(v&&typeof v==="object")renameDeep(v,a,b);
+  });
+}
+function renameName(kind,a,b){
+  b=String(b||"").trim();if(!b||b===a)return false;
+  var low=b.toLowerCase(),clash=(kind==="team"?S.teams.map(function(t){return t.n}):S.roster).filter(function(x){return x.toLowerCase()===low&&x!==a})[0];
+  if(clash){toast("C'è già "+(kind==="team"?"una squadra":"un giocatore")+" che si chiama "+clash+".");return false}
+  if(kind==="team")S.teams.forEach(function(t){if(t.n===a)t.n=b});
+  else{S.roster=S.roster.map(function(p){return p===a?b:p});S.teams.forEach(function(t){t.m=t.m.map(function(x){return x===a?b:x})})}
+  Object.keys(S.games).forEach(function(k){renameDeep(S.games[k],a,b)});if(S.sala)renameDeep(S.sala,a,b);
+  if(kind!=="team"&&DESK&&DESK.botConfig)DESK.botConfig({renamePlayer:{from:a,to:b}}).catch(function(){});
+  save();renderRoster();render();toast((kind==="team"?"Squadra":"Giocatore")+" rinominato: "+a+" → "+b+".");return true;
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("button.rnm");if(!b||WALL)return;
+  var a=b.getAttribute("data-old"),kind=b.getAttribute("data-kind"),i=document.createElement("input");
+  i.type="text";i.className="rnin";i.value=a;i.setAttribute("aria-label","Nuovo nome per "+a);i.size=Math.max(6,a.length+2);
+  var done=false;function fin(ok){if(done)return;done=true;if(!(ok&&renameName(kind,a,i.value)))(kind==="team"?renderRoster():renderRoster())}
+  i.addEventListener("keydown",function(ev){if(ev.key==="Enter"){ev.preventDefault();fin(true)}else if(ev.key==="Escape"){ev.preventDefault();fin(false)}});
+  i.addEventListener("blur",function(){fin(true)});
+  b.replaceWith(i);i.focus();i.select();
+});
 function undo(){
   if(!hist.length)return;var cur=S.cur;S=JSON.parse(hist.pop());S.cur=cur;
   initS();registerCustom();normGames();applyUi();lastJ=JSON.stringify(S);try{localStorage.setItem(KEY,lastJ)}catch(e){}
@@ -133,7 +180,7 @@ function renderTabs(){
   var HELPI=svg+'<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.3"/></svg>';
   var TROPHY=svg+'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/></svg>';
   function t(k,ic,l){var dr=S.games[k]&&S.games[k].draft;return'<button class="tab'+(dr?" draft":"")+'" role="tab" data-k="'+k+'" aria-selected="'+(k===S.cur)+'"'+(dr?' title="In lavorazione"':'')+'>'+ic+l+'</button>'}
-  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+(window.desk&&window.desk.streamStatus?'<button class="tab" id="livebtn" title="Diretta su YouTube e Twitch"><span class="ldot" aria-hidden="true"></span>Diretta</button>':'')+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><label class="skinsel">Tema <select id="skin" aria-label="Tema dei colori">'+skinOpts((S.ui&&S.ui.skin)||"auto")+'</select></label><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
+  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+(window.desk&&window.desk.streamStatus?'<button class="tab" id="livebtn" title="Diretta su YouTube e Twitch"><span class="ldot" aria-hidden="true"></span>Diretta</button>':'')+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button>'+(lastDel?'<button class="tab undodel" id="undodel" title="Rimetti: '+esc(lastDel.label)+'">Annulla cancellazione</button>':'')+'<label class="skinsel">Tema <select id="skin" aria-label="Tema dei colori">'+skinOpts((S.ui&&S.ui.skin)||"auto")+'</select></label><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
   $("tabs").innerHTML=Object.keys(DEF).map(function(k){return t(k,ico(k),esc(DEF[k].l)+platBadge(k))}).join("")+'<button class="tab" id="plus" aria-label="Aggiungi un gioco" title="Aggiungi un gioco">+</button>';
 }
 function renderSetup(){
@@ -153,7 +200,7 @@ function renderSetup(){
      +(ms.length?ms.map(function(m,j){return'<span class="chip">'+esc(m)+'<button class="mr" data-t="'+i+'" data-m="'+j+'" aria-label="Rimuovi '+esc(m)+'"'+(lock?" disabled":"")+'>×</button></span>'}).join(""):'<span class="hint" style="margin:0">Nessun giocatore in squadra</span>')
      +'</div><div class="row"><input type="text" class="mi" data-t="'+i+'" placeholder="Nome giocatore" aria-label="Aggiungi giocatore a '+esc(p)+'"'+(lock?" disabled":"")+'><button class="ma" data-t="'+i+'"'+(lock?" disabled":"")+'>Aggiungi</button></div></div>'}).join("");
   else h+=g.players.map(function(p,i){return'<span class="chip">'+esc(p)+'<button data-i="'+i+'" aria-label="Rimuovi '+esc(p)+'"'+(lock?" disabled":"")+'>×</button></span>'}).join("");
-  h+='</div>'+bulkRow(g,d,lock)+'<div class="row" style="margin-top:14px"><button class="p" id="start"'+(lock||g.players.length<2?" disabled":"")+'>START</button><button id="pause"'+(lock?"":" disabled")+'>PAUSA</button><button id="logo">'+(g.logo?'Cambia logo':'Carica logo')+'</button>'+(g.logo?'<button id="nologo">Rimuovi logo</button>':'')+'<button id="reset">Azzera '+esc(d.l)+'</button><button id="gdraft" aria-pressed="'+(g.draft?"true":"false")+'" title="Nascosto ai partecipanti nel bot e sul proiettore: lo vedono solo amministratori e organizzatori">'+(g.draft?"In lavorazione: rendi visibile":"Segna in lavorazione")+'</button><button id="gdel">Elimina '+esc(d.l)+'</button><input type="file" id="lf" accept="image/*" hidden></div>'+(g.draft?'<p class="hint draftnote">In lavorazione: i partecipanti non lo vedono nel bot né sul proiettore.</p>':'');
+  h+='</div>'+bulkRow(g,d,lock)+'<div class="row" style="margin-top:14px"><button class="p" id="start"'+(lock||g.players.length<2?" disabled":"")+'>START</button><button id="pause"'+(lock?"":" disabled")+'>PAUSA</button><button id="logo">'+(g.logo?'Cambia logo':'Carica logo')+'</button>'+(g.logo?'<button id="nologo">Rimuovi logo</button>':'')+'<button id="reset">Azzera '+esc(d.l)+'</button><button id="gdraft" aria-pressed="'+(g.draft?"true":"false")+'" title="Nascosto ai partecipanti nel bot e sul proiettore: lo vedono solo amministratori e organizzatori">'+(g.draft?"In lavorazione: rendi visibile":"Segna in lavorazione")+'</button><span class="gdup"><button id="gdup">Duplica '+esc(d.l)+'</button></span><button id="gdel">Elimina '+esc(d.l)+'</button><input type="file" id="lf" accept="image/*" hidden></div>'+(g.draft?'<p class="hint draftnote">In lavorazione: i partecipanti non lo vedono nel bot né sul proiettore.</p>':'');
   h+=lock?'<p class="hint ok">Torneo in corso: giocatori e squadre sono bloccati. Premi PAUSA per modificarli.</p>':(g.phase!=="setup"?'<p class="hint">Torneo in pausa: puoi modificare giocatori e squadre.'+(g.dirty?" Dopo le modifiche, START rifà il sorteggio e i risultati attuali andranno persi.":" START riprende il torneo.")+'</p>':'');
   if(g.mode==="ffa"){var pl=ffaPlan(g.players.length,ffaGsOf(g),ffaAdvOf(g)),sz=ffaSizes(g.players.length,ffaGsOf(g));h+='<p class="hint">Free for all: in ogni girone i partecipanti giocano tutti insieme (non uno contro uno) e vince chi fa più punti. Passano i primi '+ffaAdvOf(g)+' di ogni girone e formano i gironi del turno dopo, fino a un solo girone finale: i primi 3 della finale sono i vincitori.'+(g.players.length>1?" Con "+g.players.length+" partecipanti: "+pl.map(function(k){return k===1?"finale":k+" gironi"}).join(" → ")+"."+(sz.length>1?" Primo turno: gironi da "+sz.join(", ")+".":""):"")+'</p>'}
   h+=modeHint(g)+renderCalc(g,lock);
@@ -307,7 +354,7 @@ var TEAMS=["ALPHA","DELTA","BRAVO","FOX","OMEGA","WOLF","ACE","SKYNET","VIPER","
 function renderRoster(){
   renderTeams();
   $("rcount").textContent="("+S.roster.length+")";
-  $("rchips").innerHTML=S.roster.length?S.roster.map(function(p,i){return'<span class="chip">'+esc(p)+'<button data-i="'+i+'" aria-label="Rimuovi '+esc(p)+'">×</button></span>'}).join(""):'<p class="empty">Nessun partecipante in lista.</p>';
+  $("rchips").innerHTML=S.roster.length?S.roster.map(function(p,i){return'<span class="chip"><button class="rnm" data-kind="player" data-old="'+esc(p)+'" title="Clicca per rinominare">'+esc(p)+'</button><button data-i="'+i+'" aria-label="Rimuovi '+esc(p)+'">×</button></span>'}).join(""):'<p class="empty">Nessun partecipante in lista.</p>';
 }
 $("rosterBox").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
@@ -331,14 +378,14 @@ $("rosterBox").onclick=function(e){
     if(S.teams.some(function(t){return t.n.toLowerCase()===v.toLowerCase()})){$("rtname").select();return}
     S.teams.push({n:v,m:[]});save();renderRoster();
   }
-  else if(b.classList.contains("rtdel")){S.teams.splice(+b.dataset.t,1);save();renderRoster()}
-  else if(b.classList.contains("rmm")){S.teams[+b.dataset.t].m.splice(+b.dataset.m,1);save();renderRoster()}
+  else if(b.classList.contains("rtdel")){delSnap("squadra "+S.teams[+b.dataset.t].n);S.teams.splice(+b.dataset.t,1);save();renderRoster()}
+  else if(b.classList.contains("rmm")){delSnap(S.teams[+b.dataset.t].m[+b.dataset.m]+" dalla squadra");S.teams[+b.dataset.t].m.splice(+b.dataset.m,1);save();renderRoster()}
   else if(b.classList.contains("rtgo")){
     var sel=document.querySelector('.rtsel[data-t="'+b.dataset.t+'"]');if(!sel||!sel.value)return;
     S.teams[+b.dataset.t].m.push(sel.value);save();renderRoster();
   }
   else if(b.dataset.i!==undefined){
-    var rn=S.roster.splice(+b.dataset.i,1)[0];
+    delSnap("giocatore "+S.roster[+b.dataset.i]);var rn=S.roster.splice(+b.dataset.i,1)[0];
     S.teams.forEach(function(t){t.m=t.m.filter(function(x){return x.toLowerCase()!==rn.toLowerCase()})});
     save();renderRoster();render();
   }
@@ -369,7 +416,7 @@ function renderTeams(){
   h+='</select></label><button id="rtrand"'+(S.roster.length?"":" disabled")+'>Crea squadre casuali</button><button id="rtrest"'+(free.length&&S.teams.length?"":" disabled")+'>Assegna i rimanenti a caso</button></div>';
   h+='<div class="row" style="margin-top:8px"><input type="text" id="rtname" placeholder="Nome nuova squadra (facoltativo)" aria-label="Nome nuova squadra"><button id="rtadd">Aggiungi squadra</button></div><div class="sq" style="margin-top:12px">';
   S.teams.forEach(function(t,i){
-    h+='<div class="team"><div class="row" style="justify-content:space-between"><strong>'+tico(t.n)+esc(t.n)+'</strong><button class="rtdel" data-t="'+i+'" aria-label="Elimina squadra '+esc(t.n)+'">×</button></div><div class="chips">'
+    h+='<div class="team"><div class="row" style="justify-content:space-between"><strong>'+tico(t.n)+'<button class="rnm" data-kind="team" data-old="'+esc(t.n)+'" title="Clicca per rinominare">'+esc(t.n)+'</button></strong><button class="rtdel" data-t="'+i+'" aria-label="Elimina squadra '+esc(t.n)+'">×</button></div><div class="chips">'
      +(t.m.length?t.m.map(function(m,j){return'<span class="chip">'+esc(m)+'<button class="rmm" data-t="'+i+'" data-m="'+j+'" aria-label="Rimuovi '+esc(m)+'">×</button></span>'}).join(""):'<span class="hint" style="margin:0">Nessun giocatore</span>')
      +'</div><div class="row"><select class="rtsel" data-t="'+i+'" aria-label="Scegli giocatore per '+esc(t.n)+'"><option value="">Scegli giocatore…</option>'+free.map(function(n){return'<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join("")+'</select><button class="rtgo" data-t="'+i+'">Aggiungi</button></div></div>';
   });
@@ -757,7 +804,7 @@ function addPlayer(){
 
 /* ---- eventi ---- */
 $("tabs0").onclick=$("tabs").onclick=function(e){var b=e.target.closest("button");if(!b)return;
-  if(b.id==="undo"){undo();return}
+  if(b.id==="undodel"){undoDel();return}
   if(b.id==="helpbtn"){openHelp(helpCtx());return}
   if(b.id==="livebtn"){var lb=$("livebox");lb.hidden=!lb.hidden;if(!lb.hidden){renderLive();strRefresh();lb.scrollIntoView({block:"nearest"})}return}
   if(b.id==="plus"){var ag=$("addgame");ag.hidden=!ag.hidden;if(!ag.hidden){var rr=$("agrestore");if(!rr){rr=document.createElement("div");rr.id="agrestore";rr.className="row";ag.appendChild(rr)}rr.innerHTML=(S.off||[]).length?'<span class="hint" style="margin:0">Rimetti un gioco tolto:</span>'+S.off.map(function(k){return'<button data-restore="'+k+'">'+esc(ORIGL[k])+'</button>'}).join(""):"";$("agname").focus()}return}
@@ -1160,6 +1207,8 @@ $("setup").onclick=function(e){
   else if(b.id==="pause"){g.running=false;save();render()}
   else if(b.id==="logo")$("lf").click();
   else if(b.id==="nologo"){delete g.logo;save();render()}
+  else if(b.id==="gdup"){b.parentNode.innerHTML='<button id="gdup0">Duplica senza risultati</button><button id="gdup1">Duplica con i risultati</button>';return}
+  else if(b.id==="gdup0"||b.id==="gdup1"){dupGame(S.cur,b.id==="gdup1")}
   else if(b.id==="gdraft"){g.draft=!g.draft;save();render();toast(g.draft?DEF[S.cur].l+" è in lavorazione: lo vedono solo amministratori e organizzatori.":DEF[S.cur].l+" ora è visibile a tutti.")}
   else if(b.id==="gdel"){
     if(!armed){armed=true;b.textContent="Conferma: elimina "+DEF[S.cur].l;b.classList.add("p");setTimeout(function(){armed=false;var el=$("gdel");if(el){el.textContent="Elimina "+(DEF[S.cur]||{}).l;el.classList.remove("p")}},4000)}
@@ -1169,11 +1218,11 @@ $("setup").onclick=function(e){
     if(!armed){
       armed=true;b.textContent="Conferma: azzera "+DEF[S.cur].l;b.classList.add("p");
       setTimeout(function(){armed=false;var el=$("reset");if(el){el.textContent="Azzera "+(DEF[S.cur]||{}).l;el.classList.remove("p")}},4000);
-    }else{armed=false;var lg=g.logo;S.games[S.cur]=fresh(S.cur);if(lg)S.games[S.cur].logo=lg;save();render()}
+    }else{armed=false;delSnap("risultati di "+DEF[S.cur].l);var lg=g.logo;S.games[S.cur]=fresh(S.cur);if(lg)S.games[S.cur].logo=lg;save();render()}
   }
   else if(b.classList.contains("ma"))addMember(+b.dataset.t);
-  else if(b.classList.contains("mr")){if(g.running)return;touch(g);var t=g.players[+b.dataset.t];g.members[t].splice(+b.dataset.m,1);save();render()}
-  else if(b.dataset.i!==undefined&&!g.running){touch(g);delete g.members[g.players[+b.dataset.i]];g.players.splice(+b.dataset.i,1);save();render()}
+  else if(b.classList.contains("mr")){if(g.running)return;delSnap(g.members[g.players[+b.dataset.t]][+b.dataset.m]+" dalla squadra");touch(g);var t=g.players[+b.dataset.t];g.members[t].splice(+b.dataset.m,1);save();render()}
+  else if(b.dataset.i!==undefined&&!g.running){delSnap(g.players[+b.dataset.i]+" da "+DEF[S.cur].l);touch(g);delete g.members[g.players[+b.dataset.i]];g.players.splice(+b.dataset.i,1);save();render()}
 };
 function addMember(i){
   var g=G(),inp=document.querySelector('.mi[data-t="'+i+'"]'),v=inp.value.trim();if(!v||g.running)return;
@@ -1604,11 +1653,19 @@ function statusMap(){var o={};Object.keys(DEF).forEach(function(k){o[k]=result(S
 /* Eliminare un gioco: prima un backup automatico, poi via dal torneo. I giochi base si possono rimettere dal "+". */
 function delGame(k){
   if(Object.keys(DEF).length<2){toast("Serve almeno un gioco nel torneo.");return}
-  var l=DEF[k].l;autoBackup("Prima di eliminare "+l);
+  var l=DEF[k].l;delSnap(l);autoBackup("Prima di eliminare "+l);
   if(BUILTIN.indexOf(k)>=0){S.off=(S.off||[]).filter(function(x){return x!==k});S.off.push(k)}
   else S.custom=S.custom.filter(function(c){return c.k!==k});
   delete S.games[k];if(S.names)delete S.names[k];
-  registerCustom();S.cur=Object.keys(DEF)[0];save();render();toast(l+" eliminato dal torneo (c'è un backup in Archivio).");
+  registerCustom();S.cur=Object.keys(DEF)[0];save();render();toast(l+" eliminato dal torneo.");
+}
+function dupGame(k,withRes){
+  var g=S.games[k],nk="c"+Date.now().toString(36),base=DEF[k].l.replace(/ \(\d+\)$/,""),n=2;
+  while(Object.keys(DEF).some(function(x){return DEF[x].l===base+" ("+n+")"}))n++;
+  S.custom.push({k:nk,l:base+" ("+n+")",m:g.mode,t:isTeam(g,k)?1:0});
+  var c=JSON.parse(JSON.stringify(g));delete c.file;
+  if(!withRes){var t={name:c.name||"",mode:c.mode,ng:c.ng||2,players:c.players.slice(),members:c.members||{},phase:"setup",groups:null,rounds:null};["team","plat","logo","calc","nq","tsize","ffaGs","ffaAdv","swR","swTop","hidden","cam","draft"].forEach(function(x){if(c[x]!==undefined)t[x]=c[x]});c=t}
+  S.games[nk]=c;registerCustom();normGames();S.cur=nk;save();render();toast("Creato "+DEF[nk].l+(withRes?" con i risultati.":", pronto da avviare."));
 }
 function restoreGame(k){S.off=(S.off||[]).filter(function(x){return x!==k});registerCustom();normGames();S.cur=k;$("addgame").hidden=true;save();render();toast(DEF[k].l+" è di nuovo nel torneo.")}
 function torneoJson(k){
@@ -1733,7 +1790,7 @@ document.addEventListener("keydown",function(e){
   if(e.key==="F1"){e.preventDefault();openHelp(helpCtx());return}
   if(e.key==="Escape"&&$("help")&&!$("help").hidden){closeHelp();return}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();if(DEF[S.cur])saveTorneo(S.cur);else toast("Apri la scheda di un gioco per salvarne il torneo.");return}
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!typing){e.preventDefault();undo();return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!typing){e.preventDefault();if(window.HOME&&window.HOME.isOpen()){window.HOME.undo();return}if(lastDel)undoDel();else undo();return}
   if(e.key==="F5"){e.preventDefault();var s5=wState();s5.view=S.cur;s5.key=null;wSave(s5);openWall()}
 });
 function openWall(){if(DESK)DESK.openWall();else window.open(location.pathname+"?wall=1","tfwall","popup=yes,width=1280,height=720")}
@@ -1979,6 +2036,7 @@ renderOut=function(){_renderOut();fitProj();decorateProj()};
 window.addEventListener("resize",fitProj);
 document.addEventListener("fullscreenchange",fitProj);
 /* Ponte per la schermata dei tornei (js/home.js): legge lo stato e ne carica un altro. */
+window.openHelp=function(k){openHelp(k)};
 window.__app={
   S:function(){return S},
   WALL:WALL,DESK:DESK,esc:esc,toast:toast,dl:dlBlob,fresh:fresh,

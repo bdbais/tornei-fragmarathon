@@ -485,6 +485,7 @@ module.exports = function createBot(opts) {
       if (["off", "approve", "auto"].includes(c.join)) cfg.join = c.join;
       if (c.notify) cfg.notify = Object.assign(cfg.notify, c.notify);
       if (typeof c.apiBase === "string") cfg.apiBase = c.apiBase;
+      if (c.renamePlayer && c.renamePlayer.from && c.renamePlayer.to) Object.values(cfg.chats).forEach((ch) => { if (ch.player === c.renamePlayer.from) ch.player = String(c.renamePlayer.to).slice(0, 60); });
       if (typeof c.welcome === "string") cfg.welcome = c.welcome.trim().slice(0, 800);
       if (c.newCode) cfg.code = newCode();
       const uname = (x) => String(x || "").replace(/^https?:\/\/t\.me\//i, "").replace(/^@/, "").trim().toLowerCase();

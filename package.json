@@ -1,6 +1,6 @@
 {
   "name": "tornei-fragmarathon",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "description": "Gestore tornei per LAN party del Fragmarathon: free for all, eliminazione diretta e doppia, svizzero, gironi all'italiana, schermo proiettore. Offline.",
   "main": "main.js",
   "author": {
@@ -30,7 +30,9 @@
   },
   "devDependencies": {
     "electron": "44.7.0",
-    "electron-builder": "26.15.3"
+    "electron-builder": "26.15.3",
+    "qrcode-generator": "^2.0.4",
+    "three": "^0.186.1"
   },
   "build": {
     "appId": "net.fragmarathon.tornei",

@@ -175,7 +175,7 @@ body.proj::before{display:none}
       <select id="agmode" aria-label="Formato"><option value="ffa">Free for all a punti (battle royale)</option><option value="elim">Eliminazione diretta</option><option value="double">Doppia eliminazione (winner + loser bracket)</option><option value="swiss">Sistema svizzero + playoff</option><option value="rr">Gironi all&#39;italiana + playoff</option></select>
       <select id="agteam" aria-label="Tipo di partecipanti"><option value="0">Giocatori singoli</option><option value="1">A squadre</option></select>
       <select id="agplat" aria-label="Piattaforma"><option value="">Piattaforma non specificata</option><option value="pc">PC</option><option value="xbox">Xbox Series X</option><option value="ps4">PlayStation 4</option><option value="ps5">PlayStation 5</option><option value="switch">Nintendo Switch</option></select>
-      <button class="p" id="agadd">Aggiungi gioco</button><button id="agcancel">Annulla</button></div>
+      <button class="p" id="agadd">Aggiungi gioco</button><button id="agcancel">Chiudi</button></div>
   </section>
   <section class="panel" id="livebox" hidden aria-labelledby="liveh"></section>
   <section class="panel" id="rosterBox" hidden>
@@ -204,7 +204,7 @@ body.proj::before{display:none}
 <section class="panel" id="editbox" hidden>
     <h2>Impostazioni</h2>
     <div id="editform"></div>
-    <div class="row" style="margin-top:14px"><button class="p" id="esave">Salva</button><button id="ecancel">Annulla</button></div>
+    <div class="row" style="margin-top:14px"><button class="p" id="esave">Salva</button><button id="ecancel">Chiudi senza salvare</button></div>
   </section>
   <div class="row" style="margin-top:4px"><button id="editbtn">IMPOSTAZIONI</button></div>
 </main>
@@ -214,6 +214,7 @@ body.proj::before{display:none}
 <script src="js/app.js"></script>
 <script src="js/changelog.js"></script>
 <script src="js/home.js"></script>
+<script src="js/sections.js"></script>
 <script src="js/pwa.js"></script>
 </body>
 </html>

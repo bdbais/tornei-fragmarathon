@@ -177,11 +177,17 @@ ipcMain.handle("ev:trash", (_e, id) => {
   fs.mkdirSync(DIRS.cestino, { recursive: true });
   fs.renameSync(f, path.join(DIRS.cestino, stamp() + "_" + id + ".json")); return true;
 });
+/* "Annulla cancellazione": riporta dal cestino l'ultima copia di quel torneo */
+ipcMain.handle("ev:untrash", (_e, id) => {
+  const f = evFile(id); if (fs.existsSync(f) || !fs.existsSync(DIRS.cestino)) return false;
+  const c = fs.readdirSync(DIRS.cestino).filter((x) => x.endsWith("_" + id + ".json")).sort().pop(); if (!c) return false;
+  fs.renameSync(path.join(DIRS.cestino, c), f); return true;
+});
 
 /* Bot Telegram: gira qui, con i dati che la pagina gli manda già calcolati.
    Si possono avere più bot (ognuno col suo file: token, ruoli, iscritti, impostazioni);
    ne gira uno alla volta, quello scelto dal torneo aperto. */
-let bot = null, botId = "";
+let bot = null, botId = "", lastBotDel = null;
 const BOTS_FILE = path.join(app.getPath("userData"), "bots.json");
 function botsLoad() {
   let b = null; try { b = JSON.parse(fs.readFileSync(BOTS_FILE, "utf8")); } catch {}
@@ -234,12 +240,20 @@ ipcMain.handle("bots:edit", (_e, id, o) => {
   botsSave(L); return botsInfo();
 });
 /* Togliere un bot sposta il suo file tra i dati dell'app ("bot-rimossi"): contiene il token, non va nei Documenti. */
+ipcMain.handle("bots:undoRemove", () => {
+  if (!lastBotDel) return botsInfo();
+  const L = botsLoad(); L.list.push(lastBotDel.entry); botsSave(L);
+  try { if (fs.existsSync(lastBotDel.moved)) fs.renameSync(lastBotDel.moved, botPath(lastBotDel.entry)); } catch {}
+  lastBotDel = null; return botsInfo();
+});
 ipcMain.handle("bots:remove", (_e, id) => {
   const L = botsLoad(); if (L.list.length < 2) return botsInfo();
   const e = L.list.find((x) => x.id === id); if (!e) return botsInfo();
   L.list = L.list.filter((x) => x !== e); botsSave(L);
   const dir = path.join(app.getPath("userData"), "bot-rimossi"); fs.mkdirSync(dir, { recursive: true });
-  try { fs.renameSync(botPath(e), path.join(dir, stamp() + "_" + path.basename(e.file))); } catch {}
+  const moved = path.join(dir, stamp() + "_" + path.basename(e.file));
+  try { fs.renameSync(botPath(e), moved); } catch {}
+  lastBotDel = { entry: e, moved };
   if (botId === id) { if (bot) bot.stop(); bot = null; botId = ""; botUse(L.list[0].id); }
   return botsInfo();
 });

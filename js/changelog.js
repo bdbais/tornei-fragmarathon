@@ -4,6 +4,14 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.5.1", d: "2026-10-10", t: "Rinomina, duplica, annulla cancellazione, ricerca", items: [
+      "Rinomina giocatori e squadre cliccando sul nome: cambia ovunque, anche nei tabelloni, nei risultati e nel bot.",
+      "Duplica un gioco o un torneo intero, con o senza risultati.",
+      "Via il pulsante Annulla: dopo ogni cancellazione compare per un minuto \"Annulla cancellazione\" (anche Ctrl+Z), anche per tornei e bot eliminati.",
+      "Tutti i pannelli e le sezioni delle impostazioni si comprimono cliccando il titolo; lo stato resta ricordato.",
+      "Ricerca delle sezioni (pulsante Cerca o Ctrl+K): schede, giochi, impostazioni, guida e comandi.",
+      "Cerca, Tornei e versione in una barra sopra il banner."
+    ] },
     { v: "3.5.0", d: "2026-10-10", t: "Elenco dei tornei e più bot Telegram", items: [
       "All'avvio si vede l'elenco dei tornei: scegli quale amministrare, creane uno nuovo (vuoto o partendo da un altro), duplicalo, esportalo, importalo, eliminalo (va nel cestino).",
       "Ogni torneo ha le sue impostazioni: nome, data, luogo, colore, tema, logo, formule e il bot Telegram scelto.",
@@ -85,6 +93,6 @@
     return b;
   }
   window.VERSION = { v: VER, open: open, button: button };
-  var brand = document.querySelector(".brand");
-  if (brand) brand.appendChild(button("inbrand"));
+  function apptools() { var t = document.getElementById("apptools"), br = document.querySelector(".brand"); if (!t && br) { t = document.createElement("div"); t.id = "apptools"; br.parentNode.insertBefore(t, br); } return t; }
+  var tb = apptools(); if (tb) tb.appendChild(button("inbrand"));
 })();
