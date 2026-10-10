@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("desk", {
   evList: () => ipcRenderer.invoke("ev:list"),
   sheetFetch: (url) => ipcRenderer.invoke("sheets:fetch", url),
   salaPing: (hosts) => ipcRenderer.invoke("sala:ping", hosts),
+  migration: () => ipcRenderer.invoke("app:migration"),
+  logError: (where, msg) => ipcRenderer.send("log:error", where, msg),
   evRead: (id) => ipcRenderer.invoke("ev:read", id),
   evWrite: (id, data) => ipcRenderer.invoke("ev:write", id, data),
   evTrash: (id) => ipcRenderer.invoke("ev:trash", id),

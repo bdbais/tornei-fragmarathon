@@ -1,6 +1,11 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "vec", name: "Vèneto",
   s: {
+    ": configurazioni controllate.": ": configurasion controlade.",
+    "Aggiornato da ": "Agiornà da ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "Un erore inaspetà no'l sara pì el programa: el finisse nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina la se bloca, la se ricarica da sola.",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "Dopo un agiornamento el programa el speta che la version vecia la se sara invese de sararse, e el controla e el porta avanti le configurasion (bot, tornei, direta): quele rovinade le vien messe da parte e segnalade.",
+    "Aggiornamenti più sicuri": "Agiornamenti pì sicuri",
  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo.",
  "Versione per telefono": "Version par telefonin",
  "Nome squadra": "Nome de la squadra",

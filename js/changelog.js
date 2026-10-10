@@ -4,6 +4,10 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.7.1", d: "2026-10-10", t: "Aggiornamenti più sicuri", items: [
+      "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.",
+      "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola."
+    ] },
     { v: "3.7.0", d: "2026-10-10", t: "La Sala e i server sugli incontri", items: [
       "Nuova scheda Sala: pianta della LAN in 2D e in 3D con file di postazioni (anche doppie), giocatori e indirizzi IP, maxischermo, switch, server, Wi-Fi, regia, podio, uscite di sicurezza, estintori, primo soccorso, quadro elettrico, refrigerazione, bagni, bar e altro; si trascina, si ruota, si numera da sola.",
       "Ping delle postazioni e dei server dall'app installata, anche automatico ogni 30 secondi: verde acceso, rosso non risponde.",

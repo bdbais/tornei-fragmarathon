@@ -10,6 +10,8 @@ INSTALLARE (consigliato)
    Documenti\Tornei Fragmarathon\tornei   (tornei salvati)
    Documenti\Tornei Fragmarathon\backup   (backup automatici)
 4. Gli aggiornamenti arrivano da soli: compare un avviso e si installano alla chiusura.
+   Al primo avvio dopo un aggiornamento le configurazioni vengono controllate e migrate.
+   Se qualcosa va storto, il dettaglio e' in Documenti\Tornei Fragmarathon\errori.log.
 
 VERSIONE WEB (senza installare)
 Apri https://tornei.bais.info/app/ con Edge o Chrome e scegli "Installa app".

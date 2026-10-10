@@ -2,6 +2,11 @@
  "code": "ru",
  "name": "Русский",
  "s": {
+    ": configurazioni controllate.": ": настройки проверены.",
+    "Aggiornato da ": "Обновлено с ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "Неожиданная ошибка больше не закрывает программу: она записывается в журнал Документы\\Tornei Fragmarathon\\errori.log, а если страница зависнет, она перезагрузится сама.",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "После обновления программа ждёт закрытия старой версии, а не закрывается сама, и проверяет и переносит настройки (боты, турниры, трансляция): повреждённые откладываются в сторону, о них сообщается.",
+    "Aggiornamenti più sicuri": "Более надёжные обновления",
   "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "На телефоне баннер компактный, вкладки прокручиваются по горизонтали, а поля форм занимают всю ширину: ничего больше не выходит за край экрана.",
   "Versione per telefono": "Версия для телефона",
   "Nome squadra": "Название команды",

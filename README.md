@@ -23,6 +23,7 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 - **Schermo proiettore**: l'icona su ogni pannello lo manda su una finestra separata (sul secondo monitor, a tutto schermo), da solo e ingrandito al massimo. `PgUp`/`PgDn` cambiano pannello; la **galleria** li fa scorrere da sola ogni N secondi, anche su tutti i giochi. Si aggiorna in tempo reale.
 - **Trascina e rilascia** giocatori e squadre tra gironi e partite, finché non ci sono risultati.
 - **Archivio**: ogni torneo si salva in `Documenti\Tornei Fragmarathon\tornei` e si riprende dall'elenco. Il file si aggiorna da solo a ogni modifica.
+- **Aggiornamenti sicuri**: al primo avvio dopo un aggiornamento il programma aspetta la chiusura della versione vecchia, controlla e migra le configurazioni (bot, tornei, diretta) e mette da parte quelle rovinate. Gli errori imprevisti finiscono in `Documenti\Tornei Fragmarathon\errori.log` invece di chiudere il programma.
 - **Backup automatici** in `Documenti\Tornei Fragmarathon\backup` all'avvio del torneo, a ogni cambio di turno o girone e alla fine.
 - **Guida contestuale**: pulsante `?` in ogni finestra, oppure `F1`.
 - **Hall of Fame** dell'evento: punti per la posizione finale di ogni torneo più i punti fatti con il peso che scegli (o una formula), con posizione e punti per ogni gioco.

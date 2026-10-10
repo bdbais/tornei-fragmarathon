@@ -1,6 +1,11 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ja", name: "日本語",
   s: {
+    ": configurazioni controllate.": ": 設定を確認しました。",
+    "Aggiornato da ": "アップデート: ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "予期しないエラーでプログラムが終了することはなくなりました。エラーは ドキュメント\\Tornei Fragmarathon\\errori.log に記録され、ページが固まった場合は自動で再読み込みされます。",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "アップデート後、プログラムは自分で終了せずに古いバージョンが閉じるのを待ち、設定（ボット、トーナメント、配信）を確認して移行します。壊れた設定は別に保存され、通知されます。",
+    "Aggiornamenti più sicuri": "より安全なアップデート",
  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。",
  "Versione per telefono": "スマートフォン表示",
  "Nome squadra": "チーム名",

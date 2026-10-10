@@ -1,6 +1,11 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "zh", name: "中文",
   s: {
+    ": configurazioni controllate.": ": 设置已检查。",
+    "Aggiornato da ": "已更新：从 ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "意外错误不再导致程序关闭：错误会记录在 文档\\Tornei Fragmarathon\\errori.log 中；如果页面卡住，会自动重新加载。",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "更新后，程序会等待旧版本关闭而不是自行退出，并检查和迁移设置（机器人、锦标赛、直播）：损坏的设置会被单独存放并提示。",
+    "Aggiornamenti più sicuri": "更安全的更新",
  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。",
  "Versione per telefono": "手机版布局",
  "Nome squadra": "队伍名称",

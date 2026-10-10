@@ -5,11 +5,26 @@ const AI = require("./js/ai.js");
 const createBot = require("./bot.js");
 const createStreamer = require("./streamer.js");
 
-if (!app.requestSingleInstanceLock()) app.quit();
+/* Un solo programma aperto. Dopo un aggiornamento il nuovo programma parte mentre il vecchio si sta
+   ancora chiudendo: in quel caso aspetta che si liberi il posto invece di chiudersi subito. */
+let LOCKED = app.requestSingleInstanceLock();
+const UPDATED = process.argv.includes("--updated");
+if (!LOCKED && !UPDATED) app.exit(0);
 
 /* Cartelle dei dati: create al primo avvio, senza configurazione. */
 /* TORNEI_DIR: cartella dati diversa (test automatici), così non si tocca quella vera nei Documenti */
 const ROOT = process.env.TORNEI_DIR || path.join(app.getPath("documents"), "Tornei Fragmarathon");
+/* Registro degli errori: un errore imprevisto non chiude più il programma, finisce in errori.log */
+function logErr(where, e) {
+  try {
+    fs.mkdirSync(ROOT, { recursive: true });
+    const f = path.join(ROOT, "errori.log");
+    try { if (fs.statSync(f).size > 2e6) fs.renameSync(f, f + ".old"); } catch {}
+    fs.appendFileSync(f, new Date().toISOString() + " [" + app.getVersion() + "] " + where + ": " + String((e && e.stack) || e).slice(0, 4000) + "\n");
+  } catch {}
+}
+process.on("uncaughtException", (e) => logErr("processo principale", e));
+process.on("unhandledRejection", (e) => logErr("processo principale (promessa)", e));
 const DIRS = { tornei: path.join(ROOT, "tornei"), backup: path.join(ROOT, "backup"), dirette: path.join(ROOT, "dirette"), eventi: path.join(ROOT, "eventi"), cestino: path.join(ROOT, "cestino") };
 const MAX_BACKUPS = 200;
 function ensureDirs() { [DIRS.tornei, DIRS.backup, DIRS.eventi].forEach((d) => fs.mkdirSync(d, { recursive: true })); }
@@ -365,14 +380,49 @@ ipcMain.handle("update:install", () => { if (updater) updater.quitAndInstall(fal
 app.on("second-instance", () => {
   if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
 });
-app.whenReady().then(() => {
-  try { ensureDirs(); } catch {}
+/* Primo avvio dopo un aggiornamento: controlla e migra le configurazioni, e lo scrive nel registro. */
+function migrate() {
+  const vf = path.join(app.getPath("userData"), "versione.json"), now = app.getVersion(), notes = [];
+  let prev = ""; try { prev = JSON.parse(fs.readFileSync(vf, "utf8")).v || ""; } catch {}
+  if (prev === now) return null;
+  /* bot: elenco valido e file leggibili; quelli rovinati si mettono da parte e ripartono puliti */
+  try {
+    let L = null; try { L = JSON.parse(fs.readFileSync(BOTS_FILE, "utf8")); } catch {}
+    if (L && (!Array.isArray(L.list) || !L.list.length)) { notes.push("elenco dei bot non valido: ricreato"); fs.renameSync(BOTS_FILE, BOTS_FILE + ".rovinato-" + stamp()); }
+    botsLoad().list.forEach((e) => {
+      const f = botPath(e); if (!fs.existsSync(f)) return;
+      try { JSON.parse(fs.readFileSync(f, "utf8")); } catch { notes.push("configurazione del bot " + e.label + " illeggibile: messa da parte, il bot riparte vuoto"); fs.renameSync(f, f + ".rovinato-" + stamp()); }
+    });
+  } catch (e) { logErr("migrazione bot", e); }
+  /* tornei: file leggibili */
+  try {
+    if (fs.existsSync(DIRS.eventi)) fs.readdirSync(DIRS.eventi).filter((f) => /\.json$/.test(f)).forEach((f) => {
+      try { JSON.parse(fs.readFileSync(path.join(DIRS.eventi, f), "utf8")); } catch { notes.push("torneo " + f + " illeggibile: spostato nel cestino"); fs.mkdirSync(DIRS.cestino, { recursive: true }); fs.renameSync(path.join(DIRS.eventi, f), path.join(DIRS.cestino, stamp() + "_rovinato_" + f)); }
+    });
+  } catch (e) { logErr("migrazione tornei", e); }
+  /* diretta: impostazioni leggibili */
+  try { const sf = path.join(app.getPath("userData"), "stream.json"); if (fs.existsSync(sf)) JSON.parse(fs.readFileSync(sf, "utf8")); }
+  catch { notes.push("impostazioni della diretta illeggibili: ripristinate"); try { fs.renameSync(path.join(app.getPath("userData"), "stream.json"), path.join(app.getPath("userData"), "stream.json.rovinato-" + stamp())); } catch {} }
+  try { writeAtomic(vf, JSON.stringify({ v: now, prev, at: new Date().toISOString(), notes })); } catch {}
+  logErr("aggiornamento", "da " + (prev || "versione precedente") + " a " + now + (notes.length ? ": " + notes.join("; ") : ": configurazioni controllate, nessun problema"));
+  return { prev, now, notes };
+}
+let MIGR = null;
+ipcMain.handle("app:migration", () => MIGR);
+ipcMain.on("log:error", (_e, where, msg) => logErr("pagina " + String(where || "").slice(0, 40), String(msg || "").slice(0, 4000)));
+function start() {
+  try { ensureDirs(); } catch (e) { logErr("cartelle", e); }
+  try { MIGR = migrate(); } catch (e) { logErr("migrazione", e); }
   createWindow();
-  initUpdater();
+  /* pagina andata in crash o bloccata: si registra e si ricarica */
+  win.webContents.on("render-process-gone", (_e, d) => { logErr("pagina chiusa", d && d.reason); if (d && d.reason !== "clean-exit" && win && !win.isDestroyed()) setTimeout(() => { try { win.reload(); } catch {} }, 800); });
+  win.on("unresponsive", () => logErr("pagina", "non risponde"));
+  try { initUpdater(); } catch (e) { logErr("aggiornamenti", e); }
   /* telecamere, microfono e cattura di finestre: solo per le pagine del programma */
   const own = (u) => String(u || "").startsWith("file://");
   session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(own(wc.getURL()) && (perm === "media" || perm === "display-capture")));
   session.defaultSession.setPermissionCheckHandler((wc, perm, origin) => own(wc ? wc.getURL() : origin) && (perm === "media" || perm === "display-capture"));
+  try {
   streamer = createStreamer({
     file: path.join(app.getPath("userData"), "stream.json"),
     logFile: path.join(ROOT, "diretta-ffmpeg.log"),
@@ -385,7 +435,19 @@ app.whenReady().then(() => {
     onLive: (links) => { const b = selBot(); if (b) b.liveStarted(links); },
     onEnd: () => { Object.values(bots).forEach((b) => b.liveEnded()); }
   });
-  botsStartAll();
+  } catch (e) { logErr("diretta", e); }
+  try { botsStartAll(); } catch (e) { logErr("bot", e); }
+}
+app.whenReady().then(() => {
+  if (LOCKED) return start();
+  /* aggiornamento: il programma vecchio si sta chiudendo, si aspetta al massimo 20 secondi */
+  const t0 = Date.now(), iv = setInterval(() => {
+    if (app.requestSingleInstanceLock()) { clearInterval(iv); LOCKED = true; start(); }
+    else if (Date.now() - t0 > 20000) { clearInterval(iv); logErr("avvio", "un altro Tornei Fragmarathon è ancora aperto"); app.exit(0); }
+  }, 500);
 });
-app.on("before-quit", () => { Object.values(bots).forEach((b) => b.stop()); if (streamer) streamer.dispose(); });
+app.on("before-quit", () => {
+  Object.values(bots).forEach((b) => { try { b.stop(); } catch (e) { logErr("chiusura bot", e); } });
+  try { if (streamer) streamer.dispose(); } catch (e) { logErr("chiusura diretta", e); }
+});
 app.on("window-all-closed", () => app.quit());

@@ -1,6 +1,11 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "de", name: "Deutsch",
   s: {
+    ": configurazioni controllate.": ": Einstellungen geprüft.",
+    "Aggiornato da ": "Aktualisiert von ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "Ein unerwarteter Fehler schließt das Programm nicht mehr: Er landet im Protokoll Dokumente\\Tornei Fragmarathon\\errori.log, und wenn die Seite hängt, lädt sie sich von selbst neu.",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "Nach einem Update wartet das Programm, bis die alte Version geschlossen ist, statt sich zu beenden, und prüft und migriert die Einstellungen (Bots, Turniere, Livestream): beschädigte werden beiseitegelegt und gemeldet.",
+    "Aggiornamenti più sicuri": "Sicherere Updates",
    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus.",
    "Versione per telefono": "Handy-Ansicht",
    "Nome squadra": "Teamname",

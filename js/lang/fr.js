@@ -2,6 +2,11 @@
  "code": "fr",
  "name": "Français",
  "s": {
+    ": configurazioni controllate.": ": réglages vérifiés.",
+    "Aggiornato da ": "Mis à jour de ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "Une erreur inattendue ne ferme plus le programme : elle est notée dans le journal Documents\\Tornei Fragmarathon\\errori.log et, si la page se bloque, elle se recharge toute seule.",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "Après une mise à jour, le programme attend que l'ancienne version se ferme au lieu de s'arrêter, puis vérifie et migre les réglages (bots, tournois, direct) : ceux qui sont abîmés sont mis de côté et signalés.",
+    "Aggiornamenti più sicuri": "Mises à jour plus sûres",
   "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Sur téléphone, la bannière est compacte, les onglets défilent horizontalement et les champs des formulaires prennent toute la largeur : plus rien ne dépasse de l'écran.",
   "Versione per telefono": "Version mobile",
   "Nome squadra": "Nom de l'équipe",

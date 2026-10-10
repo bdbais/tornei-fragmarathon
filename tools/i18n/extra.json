@@ -6,7 +6,12 @@
   "Nome giocatore",
   "Nome squadra",
   "Versione per telefono",
-  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo."
+  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.",
+  "Aggiornamenti più sicuri",
+  "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.",
+  "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.",
+  "Aggiornato da ",
+  ": configurazioni controllate."
  ],
  "tr": {
   "en": [
@@ -15,7 +20,12 @@
    "Player name",
    "Team name",
    "Phone layout",
-   "On phones the banner is compact, tabs scroll sideways and form fields use the full width: nothing spills off the screen any more."
+   "On phones the banner is compact, tabs scroll sideways and form fields use the full width: nothing spills off the screen any more.",
+   "Safer updates",
+   "After an update the program waits for the old version to close instead of shutting down, and checks and migrates the settings (bots, tournaments, live stream): damaged ones are set aside and reported.",
+   "An unexpected error no longer closes the program: it goes into the log Documents\\Tornei Fragmarathon\\errori.log and, if the page freezes, it reloads by itself.",
+   "Updated from ",
+   ": settings checked."
   ],
   "es": [
    "Añadir jugador",
@@ -23,7 +33,12 @@
    "Nombre del jugador",
    "Nombre del equipo",
    "Versión para móvil",
-   "En el móvil el banner es compacto, las pestañas se desplazan en horizontal y los campos de los formularios ocupan todo el ancho: ya nada se sale de la pantalla."
+   "En el móvil el banner es compacto, las pestañas se desplazan en horizontal y los campos de los formularios ocupan todo el ancho: ya nada se sale de la pantalla.",
+   "Actualizaciones más seguras",
+   "Tras una actualización, el programa espera a que se cierre la versión anterior en lugar de cerrarse, y comprueba y migra la configuración (bots, torneos, directo): la que está dañada se aparta y se avisa.",
+   "Un error inesperado ya no cierra el programa: queda en el registro Documentos\\Tornei Fragmarathon\\errori.log y, si la página se bloquea, se recarga sola.",
+   "Actualizado de ",
+   ": configuración comprobada."
   ],
   "fr": [
    "Ajouter un joueur",
@@ -31,7 +46,12 @@
    "Nom du joueur",
    "Nom de l'équipe",
    "Version mobile",
-   "Sur téléphone, la bannière est compacte, les onglets défilent horizontalement et les champs des formulaires prennent toute la largeur : plus rien ne dépasse de l'écran."
+   "Sur téléphone, la bannière est compacte, les onglets défilent horizontalement et les champs des formulaires prennent toute la largeur : plus rien ne dépasse de l'écran.",
+   "Mises à jour plus sûres",
+   "Après une mise à jour, le programme attend que l'ancienne version se ferme au lieu de s'arrêter, puis vérifie et migre les réglages (bots, tournois, direct) : ceux qui sont abîmés sont mis de côté et signalés.",
+   "Une erreur inattendue ne ferme plus le programme : elle est notée dans le journal Documents\\Tornei Fragmarathon\\errori.log et, si la page se bloque, elle se recharge toute seule.",
+   "Mis à jour de ",
+   ": réglages vérifiés."
   ],
   "de": [
    "Spieler hinzufügen",
@@ -39,7 +59,12 @@
    "Spielername",
    "Teamname",
    "Handy-Ansicht",
-   "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus."
+   "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus.",
+   "Sicherere Updates",
+   "Nach einem Update wartet das Programm, bis die alte Version geschlossen ist, statt sich zu beenden, und prüft und migriert die Einstellungen (Bots, Turniere, Livestream): beschädigte werden beiseitegelegt und gemeldet.",
+   "Ein unerwarteter Fehler schließt das Programm nicht mehr: Er landet im Protokoll Dokumente\\Tornei Fragmarathon\\errori.log, und wenn die Seite hängt, lädt sie sich von selbst neu.",
+   "Aktualisiert von ",
+   ": Einstellungen geprüft."
   ],
   "ro": [
    "Adaugă jucător",
@@ -47,7 +72,12 @@
    "Numele jucătorului",
    "Numele echipei",
    "Versiunea pentru telefon",
-   "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran."
+   "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran.",
+   "Actualizări mai sigure",
+   "După o actualizare, programul așteaptă să se închidă versiunea veche în loc să se închidă singur și verifică și migrează setările (boți, turnee, transmisiune live): cele deteriorate sunt puse deoparte și semnalate.",
+   "O eroare neașteptată nu mai închide programul: ajunge în jurnalul Documente\\Tornei Fragmarathon\\errori.log, iar dacă pagina se blochează, se reîncarcă singură.",
+   "Actualizat de la ",
+   ": setări verificate."
   ],
   "ru": [
    "Добавить игрока",
@@ -55,7 +85,12 @@
    "Имя игрока",
    "Название команды",
    "Версия для телефона",
-   "На телефоне баннер компактный, вкладки прокручиваются по горизонтали, а поля форм занимают всю ширину: ничего больше не выходит за край экрана."
+   "На телефоне баннер компактный, вкладки прокручиваются по горизонтали, а поля форм занимают всю ширину: ничего больше не выходит за край экрана.",
+   "Более надёжные обновления",
+   "После обновления программа ждёт закрытия старой версии, а не закрывается сама, и проверяет и переносит настройки (боты, турниры, трансляция): повреждённые откладываются в сторону, о них сообщается.",
+   "Неожиданная ошибка больше не закрывает программу: она записывается в журнал Документы\\Tornei Fragmarathon\\errori.log, а если страница зависнет, она перезагрузится сама.",
+   "Обновлено с ",
+   ": настройки проверены."
   ],
   "zh": [
    "添加选手",
@@ -63,7 +98,12 @@
    "选手名称",
    "队伍名称",
    "手机版布局",
-   "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。"
+   "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。",
+   "更安全的更新",
+   "更新后，程序会等待旧版本关闭而不是自行退出，并检查和迁移设置（机器人、锦标赛、直播）：损坏的设置会被单独存放并提示。",
+   "意外错误不再导致程序关闭：错误会记录在 文档\\Tornei Fragmarathon\\errori.log 中；如果页面卡住，会自动重新加载。",
+   "已更新：从 ",
+   ": 设置已检查。"
   ],
   "ja": [
    "プレイヤーを追加",
@@ -71,7 +111,12 @@
    "プレイヤー名",
    "チーム名",
    "スマートフォン表示",
-   "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。"
+   "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。",
+   "より安全なアップデート",
+   "アップデート後、プログラムは自分で終了せずに古いバージョンが閉じるのを待ち、設定（ボット、トーナメント、配信）を確認して移行します。壊れた設定は別に保存され、通知されます。",
+   "予期しないエラーでプログラムが終了することはなくなりました。エラーは ドキュメント\\Tornei Fragmarathon\\errori.log に記録され、ページが固まった場合は自動で再読み込みされます。",
+   "アップデート: ",
+   ": 設定を確認しました。"
   ],
   "vec": [
    "Zonta zogador",
@@ -79,7 +124,12 @@
    "Nome del zogador",
    "Nome de la squadra",
    "Version par telefonin",
-   "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo."
+   "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo.",
+   "Agiornamenti pì sicuri",
+   "Dopo un agiornamento el programa el speta che la version vecia la se sara invese de sararse, e el controla e el porta avanti le configurasion (bot, tornei, direta): quele rovinade le vien messe da parte e segnalade.",
+   "Un erore inaspetà no'l sara pì el programa: el finisse nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina la se bloca, la se ricarica da sola.",
+   "Agiornà da ",
+   ": configurasion controlade."
   ]
  }
 }

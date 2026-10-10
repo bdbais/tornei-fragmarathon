@@ -1,4 +1,9 @@
 (function(){
+/* errori della pagina: nel registro (Documenti\\Tornei Fragmarathon\\errori.log) invece di bloccare tutto */
+(function(){if(!window.desk||!window.desk.logError)return;var n=0;
+  window.addEventListener("error",function(e){if(n++<50)window.desk.logError("errore",(e.message||"")+" @ "+(e.filename||"").split("/").pop()+":"+e.lineno+(e.error&&e.error.stack?"\n"+e.error.stack:""))});
+  window.addEventListener("unhandledrejection",function(e){if(n++<50)window.desk.logError("promessa",String(e.reason&&e.reason.stack||e.reason))});
+})();
 var KEY="tornei-v2",WALL=/[?&]wall=1/.test(location.search);
 var DEF={quake:{l:"QUAKE LIVE",m:"ffa",t:0},tf2:{l:"Team Fortress 2",m:"elim",t:1},wreck:{l:"Wreckfest",m:"ffa",t:0},cs2:{l:"Counter-Strike 2",m:"elim",t:1},fifa:{l:"FIFA 26",m:"ffa",t:0}};
 var BUILTIN=Object.keys(DEF),ORIGL={},ORIGD=JSON.parse(JSON.stringify(DEF));BUILTIN.forEach(function(k){ORIGL[k]=DEF[k].l});
@@ -2282,4 +2287,6 @@ window.__app={
 };
 lastJ=JSON.stringify(S);
 if(WALL)wallInit();else{lastStat=statusMap();applyUi();renderRoster();render();botPush()}
+/* dopo un aggiornamento: cosa è cambiato nelle configurazioni */
+if(!WALL&&DESK&&DESK.migration)DESK.migration().then(function(m){if(m&&m.prev)setTimeout(function(){toast("Aggiornato da "+m.prev+" a "+m.now+(m.notes&&m.notes.length?": "+m.notes.join("; ")+".":": configurazioni controllate."))},1500)}).catch(function(){});
 })();

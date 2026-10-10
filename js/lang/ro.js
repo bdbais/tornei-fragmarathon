@@ -1,6 +1,11 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ro", name: "Română",
   s: {
+    ": configurazioni controllate.": ": setări verificate.",
+    "Aggiornato da ": "Actualizat de la ",
+    "Un errore imprevisto non chiude più il programma: finisce nel registro Documenti\\Tornei Fragmarathon\\errori.log e, se la pagina si blocca, si ricarica da sola.": "O eroare neașteptată nu mai închide programul: ajunge în jurnalul Documente\\Tornei Fragmarathon\\errori.log, iar dacă pagina se blochează, se reîncarcă singură.",
+    "Dopo un aggiornamento il programma aspetta che la versione vecchia si chiuda invece di chiudersi, e controlla e migra le configurazioni (bot, tornei, diretta): quelle rovinate vengono messe da parte e segnalate.": "După o actualizare, programul așteaptă să se închidă versiunea veche în loc să se închidă singur și verifică și migrează setările (boți, turnee, transmisiune live): cele deteriorate sunt puse deoparte și semnalate.",
+    "Aggiornamenti più sicuri": "Actualizări mai sigure",
  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran.",
  "Versione per telefono": "Versiunea pentru telefon",
  "Nome squadra": "Numele echipei",
