@@ -9,7 +9,7 @@
   var A = window.__app;
   if (!A || A.WALL) return;
   var D = A.DESK, esc = A.esc, IDXK = "tornei-evidx", EVK = "tornei-ev:", PREFK = "tornei-home";
-  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null;
+  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null, vmCache = {}, curVM = null, othT = null;
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
@@ -73,7 +73,7 @@
     return thumb(S.ui && S.ui.logo).then(function (lg) {
       var acc = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim(), ev = S.ev || {};
       return {
-        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", place: ev.place || "",
+        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", place: ev.place || "",
         color: ev.color || "", accent: acc, logo: lg, games: A.games(JSON.parse(JSON.stringify(S))),
         players: (S.roster || []).length, bot: ev.bot || "", pinned: !!ev.pinned, draft: !!ev.draft, created: ev.created || Date.now(), updated: Date.now()
       };
@@ -89,6 +89,36 @@
   A.onSave = function () { clearTimeout(saveT); saveT = setTimeout(flush, 1500); };
   window.addEventListener("beforeunload", function () { if (saveT) { clearTimeout(saveT); flush(); } });
 
+  /* Il bot risponde per tutti i tornei, non solo quello aperto: la pagina gli manda la vista di ognuno. */
+  function sendAll() {
+    if (!D || !D.botState) return;
+    var S = cur(), id = S.ev && S.ev.id, ev = [];
+    if (curVM && id) ev.push({ id: id, bot: S.ev.bot || "", vm: curVM });
+    Object.keys(vmCache).forEach(function (k) { if (k !== id) ev.push({ id: k, bot: vmCache[k].bot, vm: vmCache[k].vm }); });
+    D.botState({ events: ev }).catch(function () {});
+  }
+  A.pushVM = function (vm) { curVM = vm; sendAll(); };
+  function refreshOthers() {
+    if (!D || !D.botState) return Promise.resolve();
+    clearTimeout(othT);
+    return store.list().then(function (L) {
+      var id = curId(), keep = {};
+      return Promise.all(L.filter(function (e) { return e.id !== id; }).map(function (e) {
+        keep[e.id] = 1;
+        return store.read(e.id).then(function (t) { var j = JSON.parse(t), st = j.state || j; vmCache[e.id] = { bot: (st.ev && st.ev.bot) || "", vm: A.vmOf(st) }; }).catch(function () {});
+      })).then(function () { Object.keys(vmCache).forEach(function (k) { if (!keep[k]) delete vmCache[k]; }); sendAll(); });
+    });
+  }
+  function laterOthers() { clearTimeout(othT); othT = setTimeout(refreshOthers, 300); }
+  /* iscrizione dal bot a un torneo che non è quello aperto: si scrive nel suo file */
+  function joinOther(id, k, name) {
+    return store.read(id).then(function (t) {
+      var j = JSON.parse(t), st = j.state || j;
+      A.applyJoin(st, k, name);
+      var m = j.meta || {}; m.players = (st.roster || []).length;
+      return store.write(id, wrap(st, m)).then(function () { A.toast("Iscritto dal bot Telegram: " + name + " (" + (m.title || "altro torneo") + ")."); laterOthers(); if (root && !root.hidden) render(); });
+    }).catch(function (e) { A.toast("Iscrizione dal bot non salvata: " + ((e && e.message) || e)); });
+  }
   function useBot(S) { if (D && D.botsUse) return D.botsUse((S.ev && S.ev.bot) || "").catch(function () {}); return Promise.resolve(); }
 
   /* ---------- azioni ---------- */
@@ -107,7 +137,7 @@
     flush().then(function () { return readState(id); }).then(function (st) {
       if (!st || typeof st.games !== "object") throw new Error("file non valido");
       st.ev = st.ev || {}; st.ev.id = id;
-      A.load(st); useBot(st); close();
+      A.load(st); useBot(st); close(); laterOthers();
       A.toast("Torneo aperto: " + ((st.ui && st.ui.title) || A.ui0.title) + ".");
     }).catch(function (e) { A.toast("Non riesco ad aprire il torneo: " + ((e && e.message) || e)); });
   }
@@ -122,15 +152,15 @@
         if (!keep) { st.roster = []; st.teams = []; }
       } else st = { cur: "quake", roster: [], games: {}, ui: {} };
       st.ui = st.ui || {}; st.ui.title = f.title; st.ui.sub = f.sub;
-      st.ev = { id: newId(), created: Date.now(), date: f.date, place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
-      A.load(st); useBot(st); creating = false;
+      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
+      A.load(st); useBot(st); creating = false; laterOthers();
       return flush().then(function () { close(); A.toast("Torneo creato: " + f.title + ". Aggiungi giochi e giocatori."); });
     }).catch(function (e) { A.toast("Non riesco a creare il torneo: " + ((e && e.message) || e)); });
   }
   function editEv(id, f) {
     function apply(st) {
       st.ui = st.ui || {}; st.ev = st.ev || {};
-      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; }
+      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); }
       if (f.bot !== undefined) st.ev.bot = f.bot;
       if (f.pinned !== undefined) st.ev.pinned = f.pinned;
     }
@@ -141,7 +171,7 @@
     return store.read(id).then(function (t) {
       var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
       apply(st);
-      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.place = st.ev.place || ""; m.color = st.ev.color || "";
+      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.place = st.ev.place || ""; m.color = st.ev.color || "";
       m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
       return store.write(id, wrap(st, m));
     }).then(render).catch(function (e) { A.toast("Modifica non salvata: " + ((e && e.message) || e)); });
@@ -232,8 +262,21 @@
         (s === "done" && x.top ? "vince " + esc(x.top) : esc(x.st)) + (x.n ? ", " + x.n + (x.n === 1 ? " iscritto" : " iscritti") : "") + '</small></li>';
     }).join("") + '</ul>';
   }
+  /* solo link veri di WhatsApp e Telegram */
+  function linkOk(u, kind) {
+    u = String(u || "").trim(); if (!u) return "";
+    if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    return (kind === "wa" ? /^https:\/\/(chat\.whatsapp\.com|wa\.me|whatsapp\.com\/channel)\/[\w\/-]+$/i : /^https:\/\/(t\.me|telegram\.me)\/[\w+\/-]+$/i).test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
+  }
+  function linksHtml(m) {
+    var a = [], bu = bots ? (bots.filter(function (x) { return x.id === (m.bot || bots[0].id); })[0] || {}).username : "";
+    if (bu) a.push('<a class="ev-link tg" href="https://t.me/' + esc(bu) + '" target="_blank" rel="noopener">Bot @' + esc(bu) + '</a>');
+    if (m.tg) a.push('<a class="ev-link tg" href="' + esc(m.tg) + '" target="_blank" rel="noopener">Canale Telegram</a>');
+    if (m.wa) a.push('<a class="ev-link wa" href="' + esc(m.wa) + '" target="_blank" rel="noopener">Gruppo WhatsApp</a>');
+    return a.length ? '<p class="ev-links">' + a.join("") + '</p>' : "";
+  }
   function whenHtml(m) {
-    var a = []; if (fmtDate(m.date)) a.push('<span>' + esc(fmtDate(m.date)) + '</span>'); if (m.place) a.push('<span>' + esc(m.place) + '</span>');
+    var a = []; if (fmtDate(m.date)) a.push('<span>' + esc(fmtDate(m.date)) + (m.time ? ", ore " + esc(m.time) : "") + '</span>'); if (m.place) a.push('<span>' + esc(m.place) + '</span>');
     return a.length ? '<p class="ev-when">' + a.join("") + '</p>' : "";
   }
   function badge(m) {
@@ -250,8 +293,11 @@
       '<label class="wide">Nome<input name="title" required maxlength="80" value="' + esc(m.title || "") + '" placeholder="Es. Fragmarathon 28"></label>' +
       '<label class="wide">Sottotitolo<input name="sub" maxlength="120" value="' + esc(m.sub || "") + '" placeholder="Es. 28° Lanparty, sala polivalente"></label>' +
       '<label>Data<input type="date" name="date" value="' + esc(m.date || "") + '"></label>' +
+      '<label>Ora<input type="time" name="time" value="' + esc(m.time || "") + '"></label>' +
       '<label>Luogo<input name="place" maxlength="80" value="' + esc(m.place || "") + '" placeholder="Città o sala"></label>' +
       '<label class="col">Colore<input type="color" name="color" value="' + esc(evColor(m)) + '"></label>' + bo +
+      '<label class="wide">Gruppo WhatsApp (link di invito)<input type="text" inputmode="url" name="wa" value="' + esc(m.wa || "") + '" placeholder="https://chat.whatsapp.com/…"></label>' +
+      '<label class="wide">Canale o gruppo Telegram (facoltativo)<input type="text" inputmode="url" name="tg" value="' + esc(m.tg || "") + '" placeholder="https://t.me/…"></label>' +
       '<label class="wide chk"><span><input type="checkbox" name="draft"' + (m.draft ? " checked" : "") + '> In lavorazione</span><small>Nel bot lo vedono solo amministratori e organizzatori; nessun avviso ai partecipanti finché non lo togli.</small></label>' +
       (id ? "" : '<label class="wide">Parti da<select name="from"><option value="vuoto">Un torneo vuoto</option>' +
         list.map(function (e) { var t = esc(e.meta.title || "Torneo"); return '<option value="modello:' + esc(e.id) + '">Impostazioni di ' + t + ' (giochi, formule, tema, logo)</option><option value="tutto:' + esc(e.id) + '">' + t + ' con gli stessi giocatori, senza risultati</option>'; }).join("") + '</select></label>') +
@@ -267,7 +313,7 @@
     var body = editing === id ? editForm(m, id) :
       (hero && isCur ? '<p class="ev-kicker">Aperto adesso</p>' : "") +
       '<h3 class="ev-t">' + esc(m.title || "Torneo senza nome") + (m.draft ? '<span class="ev-draft">in lavorazione</span>' : "") + '</h3>' + (m.sub ? '<p class="ev-sub">' + esc(m.sub) + '</p>' : "") + whenHtml(m) +
-      gamesHtml(m, hero) + statsHtml(m, e) + acts;
+      linksHtml(m) + gamesHtml(m, hero) + statsHtml(m, e) + acts;
     return '<article class="ev' + (hero ? " hero" : "") + (isCur ? " cur" : "") + (e.broken ? " broken" : "") + '" data-id="' + esc(id) + '" style="--ev:' + esc(evColor(m)) + '">' +
       '<div class="ev-band">' + badge(m) + '</div><div class="ev-body">' + body + '</div>' + (editing === id ? "" : pin) + '</article>';
   }
@@ -280,9 +326,11 @@
         return '<div class="bt' + (b.active ? " on" : "") + '" data-bot="' + esc(b.id) + '" style="--bt:' + esc(b.color || "#2AABEE") + '">' +
           '<input type="color" class="bt-col" value="' + esc(b.color || "#2AABEE") + '" aria-label="Colore di ' + esc(b.label) + '">' +
           '<div class="bt-main"><input class="bt-name" value="' + esc(b.label) + '" maxlength="60" aria-label="Nome del bot">' +
-          '<p>' + (b.username ? "@" + esc(b.username) : (b.hasToken ? "Token salvato, non collegato" : "Token da impostare")) + (b.active ? (b.running ? ", attivo adesso" : ", scelto ma spento") : "") + ', ' + b.people + (b.people === 1 ? " persona" : " persone") + '</p>' +
+          '<p>' + (b.username ? "@" + esc(b.username) : (b.hasToken ? "Token salvato" : "Token da impostare")) + ', ' + b.people + (b.people === 1 ? " persona" : " persone") + (b.active ? ", è il bot del torneo aperto" : "") + '</p>' +
+          (b.pending ? '<p class="bt-pend"><button class="linkbtn" data-a="botset">' + b.pending + (b.pending === 1 ? " iscrizione da confermare" : " iscrizioni da confermare") + '</button></p>' : "") +
+          (b.enabled && b.hasToken && !b.running && b.err ? '<p class="bt-err">' + esc(b.err) + '</p>' : "") +
           '<p class="bt-use">' + (use[b.id] ? "Usato da: " + use[b.id].map(esc).join(", ") : "Nessun torneo lo usa") + '</p></div>' +
-          '<div class="bt-act">' + (b.active ? "" : '<button data-a="botuse">Usa nel torneo aperto</button>') + '<button data-a="botset">Impostazioni</button>' +
+          '<div class="bt-act"><button class="swt" role="switch" data-a="bottog" aria-checked="' + (b.enabled && b.hasToken ? "true" : "false") + '"' + (b.hasToken ? "" : ' disabled title="Prima imposta il token (Impostazioni)"') + '><i aria-hidden="true"></i>' + (b.running ? "Acceso" : b.enabled && b.hasToken ? "Acceso, non collegato" : "Spento") + '</button>' + (b.active ? "" : '<button data-a="botuse">Usa nel torneo aperto</button>') + '<button data-a="botset">Impostazioni</button>' +
           (bots.length > 1 ? '<button data-a="botdel">Rimuovi</button>' : "") + '</div></div>';
       }).join("") + '</div></section>';
   }
@@ -321,7 +369,7 @@
   }
   function render() {
     return Promise.all([store.list(), D && D.botsList ? D.botsList().catch(function () { return null; }) : Promise.resolve(null)]).then(function (r) {
-      list = (r[0] || []).filter(function (e) { return !e.broken || e.meta; }); bots = r[1] && r[1].length ? r[1] : null; paint();
+      list = (r[0] || []).filter(function (e) { return !e.broken || e.meta; }); bots = r[1] && r[1].length ? r[1] : null; paint(); laterOthers();
     });
   }
 
@@ -364,6 +412,7 @@
       if (a === "export") return exportEv(id);
       if (a === "trash") return trashEv(id, b);
       if (a === "botadd") return D.botsAdd("Bot " + ((bots || []).length + 1)).then(render).then(function () { var n = root.querySelectorAll(".bt-name"); if (n.length) { n[n.length - 1].focus(); n[n.length - 1].select(); } });
+      if (a === "bottog") { var on = b.getAttribute("aria-checked") !== "true"; b.disabled = true; return D.botsEnable(bid, on).then(function (L) { bots = L; paint(); A.toast(on ? "Bot acceso: risponde per tutti i tornei che lo usano." : "Bot spento."); }); }
       if (a === "botuse") { var S = cur(); S.ev = S.ev || {}; S.ev.bot = bid; A.touch(); return D.botsUse(bid).then(function () { clearTimeout(saveT); return flush(); }).then(render).then(function () { A.toast("Il torneo aperto ora usa questo bot."); }); }
       if (a === "botset") { var S2 = cur(); var go = S2.ev && S2.ev.bot === bid ? Promise.resolve() : (S2.ev = S2.ev || {}, S2.ev.bot = bid, A.touch(), D.botsUse(bid)); return go.then(function () { close(); var eb = document.getElementById("editbtn"); if (eb) eb.click(); setTimeout(function () { var x = document.getElementById("botbox"); if (x) x.scrollIntoView({ block: "start" }); }, 300); }); }
       if (a === "botdel") {
@@ -404,7 +453,32 @@
     hb.addEventListener("click", function () { open(); });
     brand.appendChild(hb);
   }
-  window.HOME = { open: open, close: close, flush: flush, undo: undoDel, isOpen: function () { return !!root && !root.hidden; } };
+  /* backup completo: tutti i tornei; ripristino: quelli con lo stesso codice vanno prima nel cestino */
+  function exportAll() {
+    clearTimeout(saveT);
+    return flush().then(function () { return store.list(); }).then(function (L) {
+      return Promise.all(L.map(function (e) { return store.read(e.id).then(function (t) { var j = JSON.parse(t); return { id: e.id, meta: j.meta || e.meta || {}, state: j.state || j }; }).catch(function () { return null; }); }));
+    }).then(function (a) { return a.filter(Boolean); });
+  }
+  function importAll(evs) {
+    var id0 = curId(), n = 0;
+    return store.list().then(function (L) {
+      var have = {}; L.forEach(function (e) { have[e.id] = 1; });
+      return evs.reduce(function (p, e) {
+        return p.then(function () {
+          if (!e || !/^[a-z0-9-]{4,40}$/.test(String(e.id)) || !e.state || typeof e.state.games !== "object") return;
+          e.state.ev = e.state.ev || {}; e.state.ev.id = e.id;
+          return (have[e.id] ? store.trash(e.id) : Promise.resolve()).then(function () { n++; return store.write(e.id, wrap(e.state, e.meta || {})); });
+        });
+      }, Promise.resolve());
+    }).then(function () {
+      var mine = evs.filter(function (e) { return e && e.id === id0; })[0];
+      if (mine) { A.load(mine.state); useBot(mine.state); }
+      laterOthers(); if (root && !root.hidden) render();
+      return n;
+    });
+  }
+  window.HOME = { open: open, close: close, flush: flush, undo: undoDel, readState: readState, joinOther: joinOther, exportAll: exportAll, importAll: importAll, isOpen: function () { return !!root && !root.hidden; } };
 
   /* avvio: il torneo aperto si salva nel suo file (anche per chi arriva da una versione senza elenco), poi l'elenco */
   ensureEv();

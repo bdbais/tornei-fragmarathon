@@ -11,7 +11,8 @@ window.HELP = {
       "<li><b>In lavorazione</b>: nel bot il torneo lo vedono solo amministratori e organizzatori e i partecipanti non ricevono avvisi. Lo stesso vale per un singolo gioco (pulsante <b>Segna in lavorazione</b> nella sua scheda), che sparisce anche dal proiettore.</li>" +
       "<li><b>Duplica</b> (con o senza risultati), <b>Esporta</b> (file da portare su un altro PC), <b>Importa</b>, la stella per tenerlo in cima.</li>" +
       "<li><b>Elimina</b> (si preme due volte; per un minuto c'è <b>Annulla cancellazione</b>, anche Ctrl+Z): nell'app installata il file va in <code>Documenti&#92;Tornei Fragmarathon&#92;cestino</code>, da cui si recupera.</li></ul>" +
-      "<h4>Bot Telegram</h4><p>In fondo all'elenco ci sono i bot: ognuno ha token, ruoli, iscritti, avvisi e messaggio di benvenuto propri. Ogni torneo usa il bot che scegli; gira quello del torneo aperto. Rinominalo cliccando sul nome.</p>" +
+      "<h4>Bot Telegram</h4><p>In fondo all'elenco ci sono i bot: ognuno ha token, ruoli, iscritti, avvisi e messaggio di benvenuto propri. Ogni torneo usa il bot che scegli. Tutti i bot accesi partono con il programma e rispondono per tutti i loro tornei, anche quelli non aperti; l'interruttore li accende o spegne. Le impostazioni (token, ruoli, iscrizioni da confermare) sono quelle del bot del torneo aperto. Rinominalo cliccando sul nome.</p>" +
+      "<h4>Link e backup</h4><p>Nel modulo <b>Modifica</b> metti l'ora, il link del gruppo WhatsApp e del canale Telegram: compaiono sulla scheda e nel messaggio di benvenuto del bot. Il <b>backup cifrato</b> di tutti i tornei è nel pannello Archivio: senza la password non si apre.</p>" +
       "<p>Il numero di versione accanto al titolo apre le novità di tutte le versioni.</p>" },
     inizio: { t: "Come si inizia", h:
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +

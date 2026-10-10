@@ -4,6 +4,16 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.5.2", d: "2026-10-10", t: "Bot sempre accesi, backup cifrato di tutti i tornei", items: [
+      "Tutti i bot Telegram partono con il programma e rispondono per tutti i tornei che li usano, anche se non sono aperti: iscrizioni, immagini e avvisi compresi.",
+      "Interruttore acceso/spento per ogni bot nella schermata dei tornei, con le iscrizioni da confermare.",
+      "Le immagini mandate su Telegram hanno una filigrana con il banner del torneo, la data e l'ora.",
+      "Backup cifrato con password (AES-256) di tutti i tornei e dei bot, oppure del solo torneo aperto; il ripristino chiede la password.",
+      "Titolo e sottotitolo si modificano cliccandoli nel banner; cliccando il logo lo cambi.",
+      "Nel torneo: ora di inizio, link al gruppo WhatsApp e al canale Telegram; il bot li mostra con /start insieme al proprio link.",
+      "Impostazioni nell'ingranaggio in alto.",
+      "Free for all con più campi (posizione, uccisioni…): i nomi non finiscono più sotto le caselle, i gironi si adattano alla larghezza dello schermo."
+    ] },
     { v: "3.5.1", d: "2026-10-10", t: "Rinomina, duplica, annulla cancellazione, ricerca", items: [
       "Rinomina giocatori e squadre cliccando sul nome: cambia ovunque, anche nei tabelloni, nei risultati e nel bot.",
       "Duplica un gioco o un torneo intero, con o senza risultati.",

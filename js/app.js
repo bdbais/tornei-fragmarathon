@@ -26,9 +26,9 @@ function applyUi(){
 }
 initS();registerCustom();normGames();
 if(!DEF[S.cur])S.cur="quake";
-var hist=[],lastJ=null;
+var hist=[],lastJ=null,SWAP=false;
 function nk(j){return j.replace(/"cur":"[^"]*"/,"")}
-function save(){var j=JSON.stringify(S);if(lastJ!==null&&nk(j)!==nk(lastJ)){hist.push(lastJ);if(hist.length>60)hist.shift()}lastJ=j;try{localStorage.setItem(KEY,j)}catch(e){}afterSave()}
+function save(){if(SWAP)return;var j=JSON.stringify(S);if(lastJ!==null&&nk(j)!==nk(lastJ)){hist.push(lastJ);if(hist.length>60)hist.shift()}lastJ=j;try{localStorage.setItem(KEY,j)}catch(e){}afterSave()}
 /* Cancellazioni: prima si fotografa lo stato; per un minuto compare "Annulla cancellazione". */
 var lastDel=null,delT=null;
 function delSnap(label){
@@ -476,12 +476,13 @@ function ffaPodium(g,top,tposArr){
   return h+'</div>';
 }
 function renderFfa(g){
-  var fxF=!!ffaFx(g),FF=ffaFields(g),frCols="grid-template-columns:28px minmax(0,1fr) repeat("+FF.length+",58px) 58px 34px";
+  var fxF=!!ffaFx(g),FF=ffaFields(g),frCols="grid-template-columns:28px minmax(7.5em,1fr) repeat("+FF.length+",minmax(46px,58px)) 54px 26px",grMin=40+130+FF.length*58+62+34+8*(FF.length+3);
   var F=g.ffa,h="",team=g.team!==undefined?g.team:!!DEF[S.cur].t,res=result(g,S.cur);
   if(res.status==="Concluso")h+=ffaPodium(g,res.top,res.tpos);
   F.rounds.forEach(function(rd,ri){
     var fin=rd.groups.length===1,last=ri===F.rounds.length-1,ev=rd.groups.map(function(gr){return gEval(gr,fin,F.adv)});
-    h+='<section class="panel"><h2>'+(fin?"Finale":"Turno "+(ri+1))+'</h2><div class="groups">';
+    /* con più campi i gironi diventano più larghi: ne stanno meno per riga, senza sovrapporsi */
+    h+='<section class="panel"><h2>'+(fin?"Finale":"Turno "+(ri+1))+'</h2><div class="groups"'+(fxF?' style="grid-template-columns:repeat(auto-fill,minmax(min(100%,'+grMin+'px),1fr))"':'')+'>';
     rd.groups.forEach(function(gr,gi){
       var e=ev[gi],rk={};e.sorted.forEach(function(x,i){rk[x.n]=i+1});
       h+='<div class="gbox"'+(last?' data-dz="f" data-g="'+gi+'"':'')+'><h3>'+(fin?"Finale · primi 3 vincitori":"Girone "+String.fromCharCode(65+gi)+" · passano i primi "+e.na)+'</h3>';
@@ -937,21 +938,58 @@ function botResults(g,k){
 function botVM(){
   var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
   function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
-  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,draft:!!(S.ev&&S.ev.draft),roster:S.roster.slice(),
+  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",when:evWhen(),place:(S.ev&&S.ev.place)||""},roster:S.roster.slice(),
     tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,draft:!!g.draft,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
     hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
 }
 var botT=null;
-function botPush(){if(!DESK||!DESK.botState||WALL)return;clearTimeout(botT);botT=setTimeout(function(){try{DESK.botState(botVM())}catch(e){}},700)}
-function botJoin(m){
-  var g=S.games[m.k],nm=String(m.name||"").trim();if(!nm)return;
+function botPush(){if(!DESK||!DESK.botState||WALL||SWAP)return;clearTimeout(botT);botT=setTimeout(function(){if(SWAP)return botPush();try{var vm=botVM();if(window.__app&&window.__app.pushVM)window.__app.pushVM(vm);else DESK.botState({events:[{id:(S.ev&&S.ev.id)||"cur",bot:(S.ev&&S.ev.bot)||"",vm:vm}]})}catch(e){}},700)}
+/* Lavorare per un attimo su un altro torneo (non aperto): il bot chiede dati, iscrizioni e immagini di tutti.
+   Sincrono quando si può; per le immagini (asincrone) la pagina resta bloccata finché non torna il torneo aperto. */
+function swapIn(st){var keep=S;SWAP=true;S=st;initS();registerCustom();normGames();return keep}
+function swapOut(keep){S=keep;registerCustom();SWAP=false}
+function withSync(st,fn){var keep=swapIn(st);try{return fn()}finally{swapOut(keep)}}
+async function withState(st,fn){
+  var cover=document.createElement("div");cover.className="swapcover";cover.setAttribute("aria-hidden","true");document.body.appendChild(cover);
+  var keep=swapIn(st);try{return await fn()}finally{swapOut(keep);cover.remove()}
+}
+/* filigrana per le immagini mandate su Telegram: banner del torneo, data e ora */
+function evWhen(){var ev=S.ev||{},d=/^\d{4}-\d{2}-\d{2}$/.test(ev.date||"")?new Date(ev.date+"T12:00:00").toLocaleDateString("it-IT",{day:"numeric",month:"long",year:"numeric"}):"";return (d+(ev.time?(d?", ore ":"Ore ")+ev.time:"")).trim()}
+async function watermark(cv){
+  var W=cv.width,H=cv.height,band=Math.max(64,Math.round(W*0.075)),out=document.createElement("canvas");out.width=W;out.height=H+band;
+  var c=out.getContext("2d"),acc=getComputedStyle(document.documentElement).getPropertyValue("--acc").trim()||"#FF5A1F",title=S.ui.title||UI0.title,when=evWhen()||("Immagine del "+new Date().toLocaleString("it-IT",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"}));
+  c.drawImage(cv,0,0);
+  c.save();c.globalAlpha=0.07;c.fillStyle="#fff";c.strokeStyle="#000";c.lineWidth=2;c.font="700 "+Math.round(W/30)+'px "FragDisplay","Arial Black",Impact,sans-serif';
+  c.translate(W/2,H/2);c.rotate(-0.42);var txt=(title+"  ·  "+when).toUpperCase(),step=Math.round(W/9);
+  for(var y=-H;y<H;y+=step)for(var x=-W*1.2;x<W*1.2;x+=c.measureText(txt).width+W/12){c.strokeText(txt,x,y);c.fillText(txt,x,y)}
+  c.restore();
+  c.fillStyle="#111";c.fillRect(0,H,W,band);c.fillStyle=acc;c.fillRect(0,H,W,Math.max(3,band/16));
+  var lg=await loadImg(S.ui.logo||applyUi.def.em),pad=Math.round(band*0.14),ls=band-pad*2,tx=pad;
+  if(lg){var k=Math.min(ls/lg.width,ls/lg.height);c.fillStyle="#fff";c.fillRect(pad-2,H+pad-2,Math.round(lg.width*k)+4,Math.round(lg.height*k)+4);c.drawImage(lg,pad,H+pad,Math.round(lg.width*k),Math.round(lg.height*k));tx=pad*2+Math.round(lg.width*k)}
+  c.fillStyle="#fff";c.textBaseline="middle";c.font="400 "+Math.round(band*0.38)+'px "FragDisplay","Arial Black",Impact,sans-serif';c.fillText(title,tx,H+band/2,W*0.55);
+  c.textAlign="right";c.font="600 "+Math.round(band*0.27)+"px Inter,'Segoe UI',Arial,sans-serif";c.fillStyle="#ddd";c.fillText(when,W-pad,H+band/2,W*0.4);
+  return out;
+}
+async function pngFor(key){
+  var p=String(key).split(":"),k=p.pop(),ev=p.join(":");
+  if(!ev||(S.ev&&S.ev.id===ev)||!window.HOME)return watermark(await makePng(k));
+  var st=await window.HOME.readState(ev);
+  return withState(st,async function(){if(!S.games[k])throw new Error("gioco non trovato");return watermark(await makePng(k))});
+}
+function joinInto(k,name){
+  var g=S.games[k],nm=String(name||"").trim();if(!nm)return false;
   if(!S.roster.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))S.roster.push(nm);
-  if(g&&g.phase==="setup"&&!isTeam(g,m.k)&&!g.players.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))g.players.push(nm);
-  save();renderRoster();render();toast("Iscritto dal bot Telegram: "+nm+(DEF[m.k]?" ("+DEF[m.k].l+")":"")+".");
+  if(g&&g.phase==="setup"&&!isTeam(g,k)&&!g.players.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))g.players.push(nm);
+  return true;
+}
+function botJoin(m){
+  var p=String(m.k||"").split(":"),k=p.pop(),ev=p.join(":"),nm=String(m.name||"").trim();if(!nm)return;
+  if(ev&&!(S.ev&&S.ev.id===ev)&&window.HOME){window.HOME.joinOther(ev,k,nm);return}
+  joinInto(k,nm);save();renderRoster();render();toast("Iscritto dal bot Telegram: "+nm+(DEF[k]?" ("+DEF[k].l+")":"")+".");
 }
 if(window.desk&&window.desk.onBot)window.desk.onBot(function(m){
   if(m.type==="join")botJoin(m);
-  else if(m.type==="png"){makePng(m.k).then(function(cv){window.desk.botPng(m.id,cv.toDataURL("image/png"))}).catch(function(){window.desk.botPng(m.id,null)})}
+  else if(m.type==="png"){pngFor(m.k).then(function(cv){window.desk.botPng(m.id,cv.toDataURL("image/png"))}).catch(function(){window.desk.botPng(m.id,null)})}
   else if(m.type==="status"&&$("botbox"))botRefresh();
 });
 function botHtml(st){
@@ -1360,7 +1398,9 @@ function bmsg(t){$("bmsg").textContent=t}
 function showTa(j){var t=$("bta");t.hidden=false;t.value=j;t.select();bmsg("Copia tutto il testo e salvalo in un file .json.")}
 $("backup").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
-  if(b.id==="exp"){
+  if(b.id==="bpwshow"){var pi=$("bpw"),sh=pi.type==="password";pi.type=sh?"text":"password";b.textContent=sh?"Nascondi":"Mostra";b.setAttribute("aria-pressed",String(sh));return}
+  if(b.id==="exp"){backupExport();return}
+  if(b.id==="exp-old"){
     var json=JSON.stringify(S,null,1);
     if(DL)DL.save({filename:"tornei-fragmarathon-backup.json",data:json}).then(function(){bmsg("Backup salvato.")}).catch(function(err){
       if(err&&err.code==="declined"){bmsg("Salvataggio annullato.");return}
@@ -1379,11 +1419,53 @@ $("backup").onclick=function(e){
   if(b.dataset.lres!==undefined){var li=+b.dataset.lres;if(!arm("l"+li,b,"Conferma: ripristina"))return;try{restoreState(JSON.parse(localStorage.getItem(KEY+"-auto")||"[]")[li].data)}catch(e){toast("Backup non leggibile.")}}
 };
 $("tf").onchange=function(){var f=this.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){loadTorneo(rd.result,null)};rd.readAsText(f);this.value=""};
+/* Backup cifrato: tutti i tornei (e i bot) oppure solo quello aperto. */
+function backupFile(name,text){
+  if(DL)return DL.save({filename:name,data:text}).then(function(){bmsg("Backup salvato: "+name+".")}).catch(function(err){if(err&&err.code==="declined")bmsg("Salvataggio annullato.");else bmsg("Salvataggio non riuscito.")});
+  dlBlob(new Blob([text],{type:"application/octet-stream"}),name);bmsg("Backup cifrato scaricato nella cartella Download: "+name+".");
+}
+function backupExport(){
+  var pw=$("bpw").value,all=(document.querySelector('input[name=bwhat]:checked')||{}).value!=="uno",wb=$("bbots")&&$("bbots").checked&&DESK&&DESK.botsExport;
+  if(pw.length<6){bmsg("Scrivi una password di almeno 6 caratteri: servirà per riaprire il backup.");$("bpw").focus();return}
+  bmsg("Preparo il backup…");
+  var data=all&&window.HOME?window.HOME.exportAll():Promise.resolve(null);
+  Promise.all([data,wb?DESK.botsExport():null]).then(function(r){
+    var o={app:"tornei-fragmarathon",kind:all?"tutti":"torneo",v:1,savedAt:new Date().toISOString(),version:(window.VERSION||{}).v||""};
+    if(all)o.events=r[0];else o.state=S;
+    if(r[1])o.bots=r[1];
+    return CRYPT.encrypt(o,pw).then(function(txt){
+      var d=new Date(),p=function(n){return String(n).padStart(2,"0")},nm="tornei-fragmarathon-"+(all?"tutti":String(S.ui.title||"torneo").replace(/[^\w-]+/g,"-").slice(0,40))+"-"+d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+".tfbak";
+      backupFile(nm,txt);toast("Backup cifrato pronto"+(all?": "+o.events.length+" tornei":"")+(o.bots?" e "+o.bots.list.length+" bot":"")+".");
+    });
+  }).catch(function(e){bmsg("Backup non riuscito: "+((e&&e.message)||e))});
+}
+function restoreDecoded(o){
+  if(o&&o.kind==="tutti"&&Array.isArray(o.events)){
+    if(!window.HOME){bmsg("Questo backup contiene più tornei: aprilo dall'app.");return}
+    return window.HOME.importAll(o.events).then(function(n){
+      var bp=o.bots&&DESK&&DESK.botsImport?DESK.botsImport(o.bots):null;
+      return Promise.resolve(bp).then(function(){bmsg("Ripristinati "+n+" tornei"+(o.bots?" e "+o.bots.list.length+" bot":"")+". Quelli sostituiti sono nel cestino.");toast("Backup ripristinato.")});
+    });
+  }
+  var p=o&&o.kind==="torneo"?o.state:o;
+  if(!p||typeof p.games!=="object"||Array.isArray(p.games)||(p.roster&&!Array.isArray(p.roster))||(p.teams&&!Array.isArray(p.teams)))throw new Error("file non valido");
+  delSnap("dati prima del ripristino");var id=S.ev&&S.ev.id;
+  S=p;initS();if(id){S.ev=S.ev||{};S.ev.id=id}registerCustom();normGames();applyUi();
+  if(!DEF[S.cur])S.cur=Object.keys(DEF)[0];save();render();renderRoster();bmsg("Backup ripristinato nel torneo aperto.");
+  if(o&&o.bots&&DESK&&DESK.botsImport)DESK.botsImport(o.bots);
+}
 $("bf").onchange=function(){
   var f=this.files[0];if(!f)return;var rd=new FileReader();
   rd.onload=function(){
+    var txt=rd.result;
+    if(CRYPT.isEnc(txt)){
+      var pw=$("bpw").value;if(!pw){bmsg("Il backup è cifrato: scrivi la password qui sopra e premi di nuovo Ripristina.");$("bpw").focus();return}
+      bmsg("Apro il backup…");
+      CRYPT.decrypt(txt,pw).then(restoreDecoded).catch(function(e){bmsg((e&&e.message)||"Backup non leggibile.")});
+      return;
+    }
     try{
-      var p=JSON.parse(rd.result);if(!p||typeof p.games!=="object"||Array.isArray(p.games)||(p.roster&&!Array.isArray(p.roster))||(p.teams&&!Array.isArray(p.teams)))throw 0;
+      var p=JSON.parse(txt);if(p&&(p.kind==="tutti"||p.kind==="torneo")){restoreDecoded(p);return}if(!p||typeof p.games!=="object"||Array.isArray(p.games)||(p.roster&&!Array.isArray(p.roster))||(p.teams&&!Array.isArray(p.teams)))throw 0;
       S=p;initS();registerCustom();normGames();applyUi();
       if(!DEF[S.cur])S.cur="quake";save();render();renderRoster();bmsg("Backup importato.");
     }catch(e){bmsg("File non valido: scegli un backup esportato da questa pagina.")}
@@ -2037,11 +2119,39 @@ window.addEventListener("resize",fitProj);
 document.addEventListener("fullscreenchange",fitProj);
 /* Ponte per la schermata dei tornei (js/home.js): legge lo stato e ne carica un altro. */
 window.openHelp=function(k){openHelp(k)};
+/* Titolo, sottotitolo e logo si cambiano anche direttamente dal banner. */
+(function(){
+  if(WALL)return;
+  var h=document.querySelector(".brand h1"),tg=document.querySelector(".brand .tag"),em=document.querySelector(".brand img.emblem");
+  function inline(el,key,def){
+    if(!el)return;el.classList.add("bedit");el.title="Clicca per modificare";el.tabIndex=0;el.setAttribute("role","button");
+    function go(){
+      if(el.isContentEditable)return;var old=el.textContent;el.contentEditable="plaintext-only";el.removeAttribute("role");el.focus();
+      var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);
+      function fin(ok){el.removeEventListener("keydown",kd);el.removeEventListener("blur",bl);el.contentEditable="false";el.setAttribute("role","button");
+        var v=el.textContent.replace(/\s+/g," ").trim();
+        if(ok&&v&&v!==old){S.ui[key]=v.slice(0,120);save();applyUi();toast((key==="title"?"Titolo":"Sottotitolo")+" aggiornato.")}else el.textContent=old}
+      function kd(e){if(e.key==="Enter"){e.preventDefault();fin(true)}else if(e.key==="Escape"){e.preventDefault();fin(false)}}
+      function bl(){fin(true)}
+      el.addEventListener("keydown",kd);el.addEventListener("blur",bl);
+    }
+    el.addEventListener("click",go);el.addEventListener("keydown",function(e){if(!el.isContentEditable&&(e.key==="Enter"||e.key===" ")){e.preventDefault();go()}});
+  }
+  inline(h,"title");inline(tg,"sub");
+  if(em){
+    var fi=document.createElement("input");fi.type="file";fi.accept="image/*";fi.hidden=true;document.body.appendChild(fi);
+    fi.onchange=function(){if(fi.files[0])readLogo(fi.files[0]);fi.value=""};
+    em.classList.add("bedit");em.title="Clicca per cambiare il logo";em.tabIndex=0;em.setAttribute("role","button");em.setAttribute("aria-label","Cambia il logo del torneo");
+    em.addEventListener("click",function(){fi.click()});em.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click()}});
+  }
+})();
 window.__app={
   S:function(){return S},
   WALL:WALL,DESK:DESK,esc:esc,toast:toast,dl:dlBlob,fresh:fresh,
   load:function(p){S=p;initS();registerCustom();normGames();if(!DEF[S.cur])S.cur="quake";hist=[];lastJ=null;applyUi();lastStat=statusMap();save();renderRoster();render();renderArch();botPush()},
   touch:function(){save()},
+  vmOf:function(st){return withSync(st,function(){return botVM()})},
+  applyJoin:function(st,k,name){return withSync(st,function(){return joinInto(k,name)})},
   ui0:UI0,
   games:function(st){
     var keep=S;S=st;initS();registerCustom();normGames();var out=[];

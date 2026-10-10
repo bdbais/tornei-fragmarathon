@@ -129,14 +129,24 @@ module.exports = function createBot(opts) {
     const L = T(); q = norm(q);
     if (!q) return null;
     if (/^\d+$/.test(q) && L[+q - 1]) return L[+q - 1];
-    return L.find((t) => t.k === q) || L.find((t) => norm(t.l) === q || norm(t.name) === q)
+    return L.find((t) => t.k === q) || L.find((t) => baseK(t.k) === q) || L.find((t) => norm(t.l) === q || norm(t.name) === q)
       || L.find((t) => norm(t.l).includes(q) || norm(t.name).includes(q) || norm(t.l + " " + t.name).includes(q)) || null;
   }
+  function linksInfo() {
+    const L = (vm && vm.links) || {}, a = [];
+    if (L.when) a.push("📅 " + esc(L.when) + (L.place ? ", " + esc(L.place) : ""));
+    if (L.wa) a.push("💬 Gruppo WhatsApp: " + esc(L.wa));
+    if (L.tg) a.push("📣 Canale Telegram: " + esc(L.tg));
+    return a.length ? "\n\n" + a.join("\n") : "";
+  }
   function tTitle(t) { return "<b>" + esc(t.l) + "</b>" + (t.name ? " – " + esc(t.name) : "") + (t.draft || (vm && vm.draft) ? " 🛠 <i>in lavorazione</i>" : ""); }
-  function followers(k) { return Object.keys(cfg.chats).filter((id) => { const f = cfg.chats[id].follow || {}; return f.all || (f.games || []).includes(k); }); }
+  /* chiave "torneo:gioco"; seguiti e ruoli salvati prima valgono per quel gioco in ogni torneo */
+  const baseK = (k) => String(k || "").split(":").pop();
+  const hasK = (L, k) => (L || []).some((x) => x === k || x === baseK(k));
+  function followers(k) { return Object.keys(cfg.chats).filter((id) => { const f = cfg.chats[id].follow || {}; return f.all || hasK(f.games, k); }); }
   function podium(t) { const m = ["🥇", "🥈", "🥉"]; return t.top.map((n, i) => m[Math.min(i, 2)] + " " + esc(n)).join("\n"); }
   function tKb(t, chatId) {
-    const f = (cfg.chats[chatId] && cfg.chats[chatId].follow) || {}, on = f.all || (f.games || []).includes(t.k);
+    const f = (cfg.chats[chatId] && cfg.chats[chatId].follow) || {}, on = f.all || hasK(f.games, t.k);
     const r1 = [{ text: "Classifica", callback_data: "S:" + t.k }, { text: "Partite", callback_data: "P:" + t.k }];
     const r2 = [{ text: on ? "Non seguire" : "Segui", callback_data: (on ? "U:" : "F:") + t.k }, { text: "Immagine", callback_data: "G:" + t.k }];
     const rows = [r1, r2];
@@ -269,7 +279,7 @@ module.exports = function createBot(opts) {
      Il ruolo sta nella chat (assegnato dall'app o con /admin); per username si può assegnare a chi
      non ha ancora scritto al bot (cfg.userRoles): lo prende appena scrive in privato. */
   function roleOf(id) { const c = cfg.chats[id]; return c && (c.role === "admin" || c.role === "org") ? c.role : ""; }
-  function canManage(id, k) { const r = roleOf(id); if (r === "admin") return true; if (r !== "org") return false; const g = cfg.chats[id].games || []; return !g.length || !k || g.includes(k); }
+  function canManage(id, k) { const r = roleOf(id); if (r === "admin") return true; if (r !== "org") return false; const g = cfg.chats[id].games || []; return !g.length || !k || hasK(g, k); }
   function managers(k) { return Object.keys(cfg.chats).filter((id) => canManage(id, k)); }
   function chat(id, from) {
     const c = cfg.chats[id] || (cfg.chats[id] = { follow: { all: false, games: [] } });
@@ -315,7 +325,7 @@ module.exports = function createBot(opts) {
     if (cfg.pending.some((p) => p.k === t.k && norm(p.name) === norm(name))) return send(chatId, "C'è già una richiesta per «" + esc(name) + "»: aspetta la conferma dell'organizzatore.");
     const req = { id: Math.random().toString(36).slice(2, 10), chatId, user: (from && (from.username ? "@" + from.username : from.first_name)) || "", name, k: t.k, l: t.l, team: !!t.team, ts: Date.now() };
     cfg.chats[chatId].player = name;
-    const f = cfg.chats[chatId].follow; if (!f.games.includes(t.k)) f.games.push(t.k);
+    const f = cfg.chats[chatId].follow; if (!hasK(f.games, t.k)) f.games.push(t.k);
     if (cfg.join === "auto") { opts.onJoin(req); persist(); return send(chatId, "✅ Sei iscritto a " + tTitle(t) + " come <b>" + esc(name) + "</b>." + (t.team ? " L'organizzatore ti metterà in una squadra." : "") + "\nRiceverai gli avvisi del torneo."); }
     cfg.pending.push(req); persist(); opts.onChange && opts.onChange();
     managers(t.k).forEach((a) => send(a, "📝 Richiesta di iscrizione a " + tTitle(t) + ": <b>" + esc(name) + "</b>" + (req.user ? " (" + esc(req.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + req.id }, { text: "Rifiuta", callback_data: "X:" + req.id }]]));
@@ -375,7 +385,7 @@ module.exports = function createBot(opts) {
       case "start": case "aiuto": case "help": {
         const m = listMsg();
         const kb = c.player || isOrg ? m.kb : [[{ text: "🎮 Sono un giocatore: collega il mio nome", callback_data: "ME" }]].concat(m.kb || []);
-        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + (cfg.welcome ? "\n\n" + esc(cfg.welcome) : "") + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
+        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + linksInfo() + (cfg.welcome ? "\n\n" + esc(cfg.welcome) : "") + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
       }
       case "tornei": { const m = listMsg(); return send(chatId, m.text, m.kb); }
       case "torneo": { const t = find(arg); if (!t) { const m = listMsg(); return send(chatId, (arg ? "Non trovo «" + esc(arg) + "».\n\n" : "") + m.text, m.kb); } const d = detailMsg(t, chatId); return send(chatId, d.text, d.kb); }

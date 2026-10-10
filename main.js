@@ -184,10 +184,13 @@ ipcMain.handle("ev:untrash", (_e, id) => {
   fs.renameSync(path.join(DIRS.cestino, c), f); return true;
 });
 
-/* Bot Telegram: gira qui, con i dati che la pagina gli manda già calcolati.
-   Si possono avere più bot (ognuno col suo file: token, ruoli, iscritti, impostazioni);
-   ne gira uno alla volta, quello scelto dal torneo aperto. */
-let bot = null, botId = "", lastBotDel = null;
+/* Bot Telegram: girano qui, con i dati che la pagina manda già calcolati.
+   Si possono avere più bot (ognuno col suo file: token, ruoli, iscritti, impostazioni). Tutti quelli
+   accesi partono con il programma; ognuno risponde per tutti i tornei che lo hanno scelto, anche se
+   non sono aperti. Le impostazioni della pagina valgono per il bot del torneo aperto ("selezionato"). */
+const bots = {};
+let selId = "", lastBotDel = null, lastEvents = [];
+const pngOwner = {};
 const BOTS_FILE = path.join(app.getPath("userData"), "bots.json");
 function botsLoad() {
   let b = null; try { b = JSON.parse(fs.readFileSync(BOTS_FILE, "utf8")); } catch {}
@@ -200,38 +203,61 @@ function makeBot(entry) {
   const b = createBot({
     file: botPath(entry),
     onJoin: (req) => toPage({ type: "join", name: req.name, k: req.k }),
-    onPng: (r) => toPage({ type: "png", id: r.id, k: r.k }),
+    onPng: (r) => { pngOwner[r.id] = entry.id; toPage({ type: "png", id: r.id, k: r.k }); },
     onChange: () => {
-      toPage({ type: "status" });
+      toPage({ type: "status", bot: entry.id });
       const u = b.status().username; if (u) { const L = botsLoad(), x = L.list.find((y) => y.id === entry.id); if (x && x.username !== u) { x.username = u; botsSave(L); } }
     },
     /* rete di Chromium: rispetta proxy e certificati di sistema (il fetch di Node no) */
     fetch: (url, o) => require("electron").net.fetch(url, o)
   });
+  if (streamer) b.setStreamer(streamer);
   return b;
 }
-function botUse(id) {
-  const L = botsLoad(), e = L.list.find((x) => x.id === id) || L.list[0];
-  if (bot && botId === e.id) return bot.status();
-  if (bot) bot.stop();
-  botId = e.id; bot = makeBot(e);
-  if (streamer) bot.setStreamer(streamer);
-  bot.start().catch(() => {});
-  return bot.status();
+function botStart(entry) {
+  if (bots[entry.id]) return bots[entry.id];
+  const b = (bots[entry.id] = makeBot(entry));
+  b.start().catch(() => {});
+  return b;
+}
+function botsStartAll() { const L = botsLoad(); L.list.forEach(botStart); if (!bots[selId]) selId = L.list[0].id; distribute(); }
+const selBot = () => bots[selId] || null;
+/* Un bot che serve più tornei vede un solo elenco: i giochi di tutti, con la chiave "torneo:gioco". */
+function mergeVM(parts) {
+  if (!parts.length) return null;
+  const multi = parts.length > 1, vis = parts.filter((p) => !p.vm.draft), head = (vis[0] || parts[0]).vm, T = [];
+  parts.forEach((p) => (p.vm.tournaments || []).forEach((t) => T.push(Object.assign({}, t, {
+    k: p.id + ":" + t.k, ev: p.id, draft: !!(t.draft || p.vm.draft),
+    name: multi ? [t.name, p.vm.title].filter(Boolean).join(" – ") : t.name
+  }))));
+  return {
+    title: multi ? (vis.length ? vis : parts).map((p) => p.vm.title).join(", ") : head.title, sub: multi ? "" : head.sub,
+    draft: parts.every((p) => p.vm.draft), roster: [...new Set([].concat(...parts.map((p) => p.vm.roster || [])))],
+    tournaments: T, hof: head.hof, links: head.links || {}
+  };
+}
+function distribute() {
+  const L = botsLoad(), ids = L.list.map((e) => e.id), def = ids[0];
+  L.list.forEach((e) => {
+    const b = bots[e.id]; if (!b) return;
+    b.setVM(mergeVM(lastEvents.filter((ev) => ((ev.bot && ids.includes(ev.bot)) ? ev.bot : def) === e.id)));
+  });
 }
 function botsInfo() {
   const L = botsLoad();
   return L.list.map((e) => {
-    let c = {}; try { c = JSON.parse(fs.readFileSync(botPath(e), "utf8")); } catch {}
-    const st = e.id === botId && bot ? bot.status() : null;
-    return { id: e.id, label: e.label, color: e.color || "", username: (st && st.username) || e.username || "", hasToken: !!c.token, people: Object.keys(c.chats || {}).length, active: e.id === botId, running: !!(st && st.running) };
+    const st = bots[e.id] ? bots[e.id].status() : {};
+    return { id: e.id, label: e.label, color: e.color || "", username: st.username || e.username || "", hasToken: !!st.hasToken, enabled: !!st.enabled,
+      people: st.chats || 0, pending: (st.pending || []).length, active: e.id === selId, running: !!st.running, err: st.lastErr || "" };
   });
 }
 ipcMain.handle("bots:list", () => botsInfo());
-ipcMain.handle("bots:use", (_e, id) => { botUse(String(id || "")); return botsInfo(); });
+/* il torneo aperto sceglie quale bot si configura dalle impostazioni; gli altri restano accesi */
+ipcMain.handle("bots:use", (_e, id) => { const L = botsLoad(); selId = (L.list.find((x) => x.id === id) || L.list[0]).id; return botsInfo(); });
+ipcMain.handle("bots:enable", async (_e, id, on) => { if (bots[id]) await bots[id].configure({ enabled: !!on }); return botsInfo(); });
 ipcMain.handle("bots:add", (_e, label) => {
-  const L = botsLoad(), id = "b" + Date.now().toString(36);
-  L.list.push({ id, label: String(label || "Nuovo bot").slice(0, 60), file: "telegram-" + id + ".json" }); botsSave(L); return id;
+  const L = botsLoad(), id = "b" + Date.now().toString(36), e = { id, label: String(label || "Nuovo bot").slice(0, 60), file: "telegram-" + id + ".json" };
+  L.list.push(e); botsSave(L); botStart(e); return id;
 });
 ipcMain.handle("bots:edit", (_e, id, o) => {
   const L = botsLoad(), e = L.list.find((x) => x.id === id); if (!e) return botsInfo();
@@ -244,25 +270,48 @@ ipcMain.handle("bots:undoRemove", () => {
   if (!lastBotDel) return botsInfo();
   const L = botsLoad(); L.list.push(lastBotDel.entry); botsSave(L);
   try { if (fs.existsSync(lastBotDel.moved)) fs.renameSync(lastBotDel.moved, botPath(lastBotDel.entry)); } catch {}
-  lastBotDel = null; return botsInfo();
+  botStart(lastBotDel.entry); lastBotDel = null; distribute(); return botsInfo();
+});
+/* backup completo: elenco e file dei bot (con i token: il backup che li contiene è sempre cifrato) */
+ipcMain.handle("bots:export", () => {
+  const L = botsLoad(), files = {};
+  L.list.forEach((e) => { try { files[e.id] = fs.readFileSync(botPath(e), "utf8"); } catch {} });
+  return { list: L.list, files };
+});
+ipcMain.handle("bots:import", (_e, p) => {
+  if (!p || !Array.isArray(p.list)) return botsInfo();
+  const L = botsLoad(), dir = path.join(app.getPath("userData"), "bot-rimossi");
+  p.list.forEach((e) => {
+    if (!e || !/^b[a-z0-9]{0,20}$/.test(String(e.id)) || !/^telegram(-[a-z0-9]+)?\.json$/.test(String(e.file))) return;
+    const txt = p.files && p.files[e.id]; if (typeof txt !== "string") return;
+    try { JSON.parse(txt); } catch { return; }
+    if (bots[e.id]) { bots[e.id].stop(); delete bots[e.id]; }
+    const entry = { id: e.id, label: String(e.label || "Bot").slice(0, 60), file: e.file, color: e.color || "", username: e.username || "" };
+    if (fs.existsSync(botPath(entry))) { fs.mkdirSync(dir, { recursive: true }); try { fs.renameSync(botPath(entry), path.join(dir, stamp() + "_" + entry.file)); } catch {} }
+    writeAtomic(botPath(entry), txt);
+    const i = L.list.findIndex((x) => x.id === entry.id); if (i >= 0) L.list[i] = entry; else L.list.push(entry);
+  });
+  botsSave(L); L.list.forEach(botStart); distribute(); return botsInfo();
 });
 ipcMain.handle("bots:remove", (_e, id) => {
   const L = botsLoad(); if (L.list.length < 2) return botsInfo();
   const e = L.list.find((x) => x.id === id); if (!e) return botsInfo();
+  if (bots[id]) { bots[id].stop(); delete bots[id]; }
   L.list = L.list.filter((x) => x !== e); botsSave(L);
   const dir = path.join(app.getPath("userData"), "bot-rimossi"); fs.mkdirSync(dir, { recursive: true });
   const moved = path.join(dir, stamp() + "_" + path.basename(e.file));
   try { fs.renameSync(botPath(e), moved); } catch {}
   lastBotDel = { entry: e, moved };
-  if (botId === id) { if (bot) bot.stop(); bot = null; botId = ""; botUse(L.list[0].id); }
-  return botsInfo();
+  if (selId === id) selId = L.list[0].id;
+  distribute(); return botsInfo();
 });
 function toPage(msg) { if (win) win.webContents.send("bot", msg); }
-ipcMain.handle("bot:state", (_e, vm) => { if (bot) bot.setVM(vm); });
-ipcMain.handle("bot:status", () => (bot ? bot.status() : null));
-ipcMain.handle("bot:config", (_e, c) => (bot ? bot.configure(c) : null));
-ipcMain.handle("bot:decide", (_e, id, ok) => (bot ? bot.decide(id, ok) : false));
-ipcMain.handle("bot:png", (_e, id, data) => { if (bot) bot.pngReply(id, data); });
+/* la pagina manda la vista di ogni torneo: { events: [{ id, bot, vm }] } */
+ipcMain.handle("bot:state", (_e, s) => { lastEvents = (s && Array.isArray(s.events) ? s.events : []).filter((x) => x && x.id && x.vm); distribute(); });
+ipcMain.handle("bot:status", () => { const b = selBot(); return b ? b.status() : null; });
+ipcMain.handle("bot:config", (_e, c) => { const b = selBot(); return b ? b.configure(c) : null; });
+ipcMain.handle("bot:decide", (_e, id, ok) => { const b = selBot(); return b ? b.decide(id, ok) : false; });
+ipcMain.handle("bot:png", (_e, id, data) => { const b = bots[pngOwner[id]] || selBot(); delete pngOwner[id]; if (b) b.pngReply(id, data); });
 /* Diretta: la finestra nascosta compone, ffmpeg trasmette (streamer.js) */
 let streamer = null;
 ipcMain.handle("stream:status", () => (streamer ? streamer.status() : null));
@@ -288,7 +337,6 @@ app.whenReady().then(() => {
   try { ensureDirs(); } catch {}
   createWindow();
   initUpdater();
-  botUse(botsLoad().list[0].id);
   /* telecamere, microfono e cattura di finestre: solo per le pagine del programma */
   const own = (u) => String(u || "").startsWith("file://");
   session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(own(wc.getURL()) && (perm === "media" || perm === "display-capture")));
@@ -301,10 +349,11 @@ app.whenReady().then(() => {
     getMain: () => win,
     getWall: () => new Promise((res) => { const had = !!wall; const w = openWall(); if (had) return res(w); w.webContents.once("did-finish-load", () => setTimeout(() => res(w), 1200)); }),
     onStatus: (s) => { if (win) win.webContents.send("stream", s); },
-    onLive: (links) => { if (bot) bot.liveStarted(links); },
-    onEnd: () => { if (bot) bot.liveEnded(); }
+    /* la diretta è del torneo aperto: la annuncia il suo bot */
+    onLive: (links) => { const b = selBot(); if (b) b.liveStarted(links); },
+    onEnd: () => { Object.values(bots).forEach((b) => b.liveEnded()); }
   });
-  bot.setStreamer(streamer);
+  botsStartAll();
 });
-app.on("before-quit", () => { if (bot) bot.stop(); if (streamer) streamer.dispose(); });
+app.on("before-quit", () => { Object.values(bots).forEach((b) => b.stop()); if (streamer) streamer.dispose(); });
 app.on("window-all-closed", () => app.quit());

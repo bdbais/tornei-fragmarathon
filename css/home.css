@@ -204,3 +204,30 @@ input.rnin{padding:2px 6px;border:1px solid var(--acc);border-radius:6px;backgro
 #apptools #secbtn{order:1;margin:0}
 #apptools #homebtn{order:2;margin:0}
 #apptools .verbtn{order:3}
+.swt{display:inline-flex;align-items:center;gap:8px}
+.swt i{position:relative;width:34px;height:20px;border-radius:999px;background:var(--line);transition:background .15s}
+.swt i::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s}
+.swt[aria-checked=true]{border-color:#2e7d32}
+.swt[aria-checked=true] i{background:#2e7d32}
+.swt[aria-checked=true] i::after{transform:translateX(14px)}
+.bt-err{color:#e57373!important}
+.swapcover{position:fixed;inset:0;z-index:100;cursor:progress}
+@media (prefers-reduced-motion:reduce){.swt i,.swt i::after{transition:none}}
+.bt-pend{margin-top:4px!important}
+.linkbtn{padding:0;border:0;background:none;color:var(--acc);font:600 .86rem Inter,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* banner modificabile, link del torneo */
+.bedit{cursor:pointer;border-radius:6px;outline-offset:4px}
+.bedit:hover{outline:2px dashed color-mix(in srgb,var(--acc) 70%,transparent)}
+.bedit[contenteditable=plaintext-only],.bedit[contenteditable=true]{cursor:text;outline:2px solid var(--acc)}
+.ev-links{display:flex;flex-wrap:wrap;gap:6px;margin:0}
+.ev-link{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:.82rem;font-weight:600;text-decoration:none;border:1px solid var(--line);color:var(--ink)}
+.ev-link.tg{border-color:#2AABEE}
+.ev-link.wa{border-color:#25D366}
+.ev-link:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+#apptools #editbtn{order:3;display:inline-grid;place-items:center;width:42px;height:42px;padding:0}
+#apptools #editbtn svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+#apptools .verbtn{order:4}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.fr .fn{min-width:0;overflow-wrap:anywhere;line-height:1.2}
+.gbox{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
