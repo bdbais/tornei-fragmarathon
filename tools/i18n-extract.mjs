@@ -51,7 +51,7 @@ function keep(t) {
 }
 const IT = /\b(il|lo|la|le|gli|di|del|della|che|per|con|un|una|non|si|ai|al|alle|da|nel|sono|tutti|torneo|giocatori?|squadr[ae]|partit[ae]|turno|gironi?)\b|[àèéìòù]/i;
 const EN = /\b(the|and|with|no|background|icon|style|for a|of the|text|metal|chrome|emblem|badge|flat|mascot)\b/gi;
-const CSSY = /[#.][\w-]+[\s,:[>]|:not\(|\bpx\b|sans-serif|\[name=|%%EOF|%PDF|^[a-z]+[A-Z]\w*$|^[\w-]+\/[\w.-]+$|^\/\*|\bcm\b.*\bDo\b|^[a-z]{2}-[A-Z]{2}$/;
+const CSSY = /[#.][\w-]+[\s,:[>]|:not\(|minmax\(|\d+px\b|\bpx\b|sans-serif|\[name=|%%EOF|%PDF|^[a-z]+[A-Z]\w*$|^[\w-]+\/[\w.-]+$|^\/\*|\bcm\b.*\bDo\b|^[a-z]{2}-[A-Z]{2}$/;
 function clean(t) {
   if (/^\[|="|='|^"|viewBox|data-|class=|^[A-Z][a-z]+[A-Z]\w*$/.test(t) || CSSY.test(t)) return "";
   if ((t.match(EN) || []).length >= 2 && !IT.test(t)) return "";

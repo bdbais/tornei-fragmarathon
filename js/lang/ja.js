@@ -1,6 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ja", name: "日本語",
   s: {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。",
+    "Versione per telefono": "スマートフォン表示",
  "Nome squadra": "チーム名",
  "Aggiungi giocatore": "プレイヤーを追加",
  " (1 sconfitta)": " (1敗)",

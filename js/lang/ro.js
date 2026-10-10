@@ -1,6 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ro", name: "Română",
   s: {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran.",
+    "Versione per telefono": "Versiunea pentru telefon",
  "Nome squadra": "Numele echipei",
  "Aggiungi giocatore": "Adaugă jucător",
  " (1 sconfitta)": " (1 înfrângere)",

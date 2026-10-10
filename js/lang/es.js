@@ -1,6 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "es", name: "Español",
   s: {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "En el móvil el banner es compacto, las pestañas se desplazan en horizontal y los campos de los formularios ocupan todo el ancho: ya nada se sale de la pantalla.",
+    "Versione per telefono": "Versión para móvil",
  "Nome squadra": "Nombre del equipo",
  "Aggiungi giocatore": "Añadir jugador",
  " (1 sconfitta)": " (1 derrota)",

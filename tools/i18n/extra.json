@@ -1,15 +1,85 @@
 {
-  "_nota": "Frasi composte nel codice a pezzi: qui intere, così il traduttore le trova esatte. tools/i18n-extract.mjs le aggiunge a ui.",
-  "ui": ["Aggiungi giocatore", "Aggiungi squadra", "Nome giocatore", "Nome squadra"],
-  "tr": {
-    "en": ["Add player", "Add team", "Player name", "Team name"],
-    "es": ["Añadir jugador", "Añadir equipo", "Nombre del jugador", "Nombre del equipo"],
-    "fr": ["Ajouter un joueur", "Ajouter une équipe", "Nom du joueur", "Nom de l'équipe"],
-    "de": ["Spieler hinzufügen", "Team hinzufügen", "Spielername", "Teamname"],
-    "ro": ["Adaugă jucător", "Adaugă echipă", "Numele jucătorului", "Numele echipei"],
-    "ru": ["Добавить игрока", "Добавить команду", "Имя игрока", "Название команды"],
-    "zh": ["添加选手", "添加队伍", "选手名称", "队伍名称"],
-    "ja": ["プレイヤーを追加", "チームを追加", "プレイヤー名", "チーム名"],
-    "vec": ["Zonta zogador", "Zonta squadra", "Nome del zogador", "Nome de la squadra"]
-  }
+ "_nota": "Frasi composte nel codice a pezzi: qui intere, così il traduttore le trova esatte. tools/i18n-extract.mjs le aggiunge a ui.",
+ "ui": [
+  "Aggiungi giocatore",
+  "Aggiungi squadra",
+  "Nome giocatore",
+  "Nome squadra",
+  "Versione per telefono",
+  "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo."
+ ],
+ "tr": {
+  "en": [
+   "Add player",
+   "Add team",
+   "Player name",
+   "Team name",
+   "Phone layout",
+   "On phones the banner is compact, tabs scroll sideways and form fields use the full width: nothing spills off the screen any more."
+  ],
+  "es": [
+   "Añadir jugador",
+   "Añadir equipo",
+   "Nombre del jugador",
+   "Nombre del equipo",
+   "Versión para móvil",
+   "En el móvil el banner es compacto, las pestañas se desplazan en horizontal y los campos de los formularios ocupan todo el ancho: ya nada se sale de la pantalla."
+  ],
+  "fr": [
+   "Ajouter un joueur",
+   "Ajouter une équipe",
+   "Nom du joueur",
+   "Nom de l'équipe",
+   "Version mobile",
+   "Sur téléphone, la bannière est compacte, les onglets défilent horizontalement et les champs des formulaires prennent toute la largeur : plus rien ne dépasse de l'écran."
+  ],
+  "de": [
+   "Spieler hinzufügen",
+   "Team hinzufügen",
+   "Spielername",
+   "Teamname",
+   "Handy-Ansicht",
+   "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus."
+  ],
+  "ro": [
+   "Adaugă jucător",
+   "Adaugă echipă",
+   "Numele jucătorului",
+   "Numele echipei",
+   "Versiunea pentru telefon",
+   "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran."
+  ],
+  "ru": [
+   "Добавить игрока",
+   "Добавить команду",
+   "Имя игрока",
+   "Название команды",
+   "Версия для телефона",
+   "На телефоне баннер компактный, вкладки прокручиваются по горизонтали, а поля форм занимают всю ширину: ничего больше не выходит за край экрана."
+  ],
+  "zh": [
+   "添加选手",
+   "添加队伍",
+   "选手名称",
+   "队伍名称",
+   "手机版布局",
+   "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。"
+  ],
+  "ja": [
+   "プレイヤーを追加",
+   "チームを追加",
+   "プレイヤー名",
+   "チーム名",
+   "スマートフォン表示",
+   "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。"
+  ],
+  "vec": [
+   "Zonta zogador",
+   "Zonta squadra",
+   "Nome del zogador",
+   "Nome de la squadra",
+   "Version par telefonin",
+   "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo."
+  ]
+ }
 }

@@ -1,6 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "de", name: "Deutsch",
   s: {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus.",
+    "Versione per telefono": "Handy-Ansicht",
    "Nome squadra": "Teamname",
    "Aggiungi giocatore": "Spieler hinzufügen",
    " (1 sconfitta)": " (1 Niederlage)",

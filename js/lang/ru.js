@@ -2,6 +2,8 @@
  "code": "ru",
  "name": "Русский",
  "s": {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "На телефоне баннер компактный, вкладки прокручиваются по горизонтали, а поля форм занимают всю ширину: ничего больше не выходит за край экрана.",
+    "Versione per telefono": "Версия для телефона",
   "Nome squadra": "Название команды",
   "Aggiungi giocatore": "Добавить игрока",
   " (1 sconfitta)": " (1 поражение)",

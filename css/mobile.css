@@ -1,0 +1,54 @@
+/* Tornei Fragmarathon: telefono e finestre strette. Caricato per ultimo: sistema banner, schede,
+   moduli e barra in alto sotto i 640 pixel, per tutti i temi. */
+@media (max-width:640px){
+  html,body{overflow-x:hidden}
+  main{padding:10px 10px 40px}
+
+  /* barra in alto: una riga sola, solo icone dove serve */
+  #apptools{flex-wrap:nowrap;gap:6px;margin-bottom:8px;overflow-x:auto;scrollbar-width:none}
+  #apptools::-webkit-scrollbar{display:none}
+  #apptools button,#apptools select{flex:0 0 auto;padding:7px 9px;font-size:.82rem}
+  #secbtn span,#secbtn kbd{display:none}
+  #apptools #editbtn{width:36px;height:36px}
+  #langsel{max-width:104px}
+
+  /* banner: logo piccolo a sinistra, titolo accanto, sottotitolo sotto senza uscire */
+  .brand{flex-wrap:nowrap;align-items:center;gap:10px;padding:10px 46px 10px 10px!important;margin-bottom:10px}
+  .brand img.emblem,.brand img{height:62px!important;max-width:24vw!important}
+  .brand .bt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding:8px 10px!important}
+  .brand h1{font-size:clamp(1.05rem,5.6vw,1.6rem)!important;-webkit-text-stroke:1px #000;text-shadow:2px 2px 0 var(--acc);overflow-wrap:normal;word-break:normal;hyphens:none}
+  .brand .tag{display:inline-block;max-width:100%;margin-top:6px!important;padding:2px 10px!important;font-size:.72rem!important;white-space:normal}
+  .brand::before{right:8px;width:30px;clip-path:polygon(22px 0,30px 0,8px 100%,0 100%)}
+
+  /* schede: striscia orizzontale che scorre, non pulsanti a capo */
+  .tabs{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;gap:6px;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto!important;padding:6px 11px!important;font-size:.82rem!important;min-height:0!important;scroll-snap-align:start}
+  .tab img,.tab .ico,.tab svg{width:24px!important;height:24px!important;margin-right:6px!important}
+  #tabs0 .tab svg{width:18px!important;height:18px!important}
+
+  /* pannelli e moduli: i campi vanno a tutta larghezza, niente che sfora */
+  .panel{padding:12px;border-radius:10px}
+  .panel h2{font-size:1.05rem}
+  .panel h2 img.ico,.panel h2 img{width:40px!important;height:40px!important}
+  .row{gap:6px}
+  .row>input[type=text],.row>input[type=search],.row>input[type=url],.row>input[type=password],.row>select,.row>textarea{flex:1 1 100%;min-width:0;max-width:100%}
+  select,input,textarea{max-width:100%}
+  label.row{flex-wrap:wrap;max-width:100%}
+  label.row>select,label.row>input{flex:1 1 140px;min-width:0;max-width:100%}
+  .fr{gap:5px;padding:3px 4px}
+  .fr input{padding:5px 2px}
+  .row>button{flex:0 1 auto}
+  #setup .row>input[type=number]{width:72px}
+  .chips{gap:6px}
+
+  /* tabelle, gironi e tabelloni scorrono dentro il loro riquadro */
+  .gbox,.bracket,table{max-width:100%}
+  .res{display:block;overflow-x:auto}
+  #toast{max-width:calc(100vw - 24px)}
+
+  /* schermata dei tornei */
+  .hm-tools{width:100%}
+  .hm-tools input[type=search]{flex:1 1 100%;min-width:0}
+  .hm-title h1{font-size:2.4rem}
+}

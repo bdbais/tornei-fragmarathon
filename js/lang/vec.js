@@ -1,6 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "vec", name: "Vèneto",
   s: {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo.",
+    "Versione per telefono": "Version par telefonin",
  "Nome squadra": "Nome de la squadra",
  "Aggiungi giocatore": "Zonta zogador",
  " (1 sconfitta)": " (1 sconfita)",

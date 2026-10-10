@@ -2,6 +2,8 @@
  "code": "fr",
  "name": "Français",
  "s": {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Sur téléphone, la bannière est compacte, les onglets défilent horizontalement et les champs des formulaires prennent toute la largeur : plus rien ne dépasse de l'écran.",
+    "Versione per telefono": "Version mobile",
   "Nome squadra": "Nom de l'équipe",
   "Aggiungi giocatore": "Ajouter un joueur",
   " (1 sconfitta)": " (1 défaite)",

@@ -4,6 +4,9 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.6.2", d: "2026-10-10", t: "Versione per telefono", items: [
+      "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo."
+    ] },
     { v: "3.6.1", d: "2026-10-10", t: "Elenco giocatori con Excel e Google Sheets", items: [
       "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.",
       "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.",

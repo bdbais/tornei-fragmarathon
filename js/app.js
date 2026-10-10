@@ -521,7 +521,7 @@ function ffaPodium(g,top,tposArr){
   return h+'</div>';
 }
 function renderFfa(g){
-  var fxF=!!ffaFx(g),FF=ffaFields(g),frCols="grid-template-columns:28px minmax(7.5em,1fr) repeat("+FF.length+",minmax(46px,58px)) 54px 26px",grMin=40+130+FF.length*58+62+34+8*(FF.length+3);
+  var fxF=!!ffaFx(g),FF=ffaFields(g),frCols="grid-template-columns:24px minmax(5.5em,1fr) repeat("+FF.length+",minmax(40px,58px)) minmax(38px,54px) 22px",grMin=36+110+FF.length*58+62+30+8*(FF.length+3);
   var F=g.ffa,h="",team=g.team!==undefined?g.team:!!DEF[S.cur].t,res=result(g,S.cur);
   if(res.status==="Concluso")h+=ffaPodium(g,res.top,res.tpos);
   F.rounds.forEach(function(rd,ri){

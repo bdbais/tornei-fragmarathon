@@ -1,6 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "zh", name: "中文",
   s: {
+    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。",
+    "Versione per telefono": "手机版布局",
  "Nome squadra": "队伍名称",
  "Aggiungi giocatore": "添加选手",
  " (1 sconfitta)": " (1 负)",
