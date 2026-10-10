@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "de", name: "Deutsch",
   s: {
-    "Nome squadra": "Teamname",
-    "Aggiungi giocatore": "Spieler hinzufügen",
+   "Nome squadra": "Teamname",
+   "Aggiungi giocatore": "Spieler hinzufügen",
    " (1 sconfitta)": " (1 Niederlage)",
    " (cambia dopo ogni uso). ": " (ändert sich nach jeder Verwendung). ",
    " (controlla la connessione a internet)": " (prüfe die Internetverbindung)",
@@ -1240,7 +1240,30 @@
    "Dieci lingue": "Zehn Sprachen",
    "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.": "Das Programm spricht Italienisch, Englisch, Spanisch, Französisch, Deutsch, Rumänisch, Russisch, Chinesisch, Japanisch und Venezianisch: die Sprache der Oberfläche wählst du oben, sie wird auf diesem PC gespeichert.",
    "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.": "Jedes Turnier hat seine eigene Sprache (im Formular Bearbeiten): sie gilt für Beamer, Livestream, Bilder, PDFs und Telegram-Bot, auch für die Befehle des Bots.",
-   "Anche la guida e le novità sono tradotte.": "Auch die Hilfe und die Neuigkeiten sind übersetzt."
+   "Anche la guida e le novità sono tradotte.": "Auch die Hilfe und die Neuigkeiten sind übersetzt.",
+   " giocatori. Si apre con Excel o Google Sheets (File, Importa).": " Spieler. Lässt sich mit Excel oder Google Sheets öffnen (Datei, Importieren).",
+   " messi in squadra": " einem Team zugeteilt",
+   " nomi: ": " Namen: ",
+   " nuovi": " neu",
+   " squadre nuove": " neue Teams",
+   "Elenco esportato: ": "Liste exportiert: ",
+   "Esporta CSV": "CSV exportieren",
+   "Esporta per Excel (.xlsx)": "Für Excel exportieren (.xlsx)",
+   "Giochi": "Spiele",
+   "Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.": "Die Tabelle braucht eine Spalte mit den Namen (Überschrift wie Name, Nick oder Player) und, wenn du willst, eine Spalte Team. Google Sheets: Teilen, Jeder mit dem Link kann ansehen, dann den Link kopieren. Du kannst auch die Zellen kopieren und oben einfügen.",
+   "Importa da Excel o Google Sheets…": "Aus Excel oder Google Sheets importieren…",
+   "Importa dal link": "Über den Link importieren",
+   "Importati ": "Importiert: ",
+   "Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).": "Füge den Link einer Google-Sheets-Tabelle ein (docs.google.com/spreadsheets/…).",
+   "L'elenco dei partecipanti è vuoto.": "Die Teilnehmerliste ist leer.",
+   "Link del foglio Google Sheets": "Link der Google-Sheets-Tabelle",
+   "Nel foglio non ci sono nomi.": "In der Tabelle stehen keine Namen.",
+   "Non riesco a leggere il file: ": "Die Datei kann nicht gelesen werden: ",
+   "Non riesco a leggere il foglio: ": "Die Tabelle kann nicht gelesen werden: ",
+   "Elenco giocatori con Excel e Google Sheets": "Spielerliste mit Excel und Google Sheets",
+   "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Exportiere die Teilnehmerliste für Excel (.xlsx) oder als CSV, mit Team und Spielen jedes Teilnehmers.",
+   "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importiere aus einer .xlsx- oder .csv-Datei, über den Link einer Google-Sheets-Tabelle oder durch Einfügen kopierter Zellen: mit einer Spalte Team werden die Teams erstellt und gefüllt, ohne doppelte Namen.",
+   "L'app installata parte in italiano finché non scegli un'altra lingua.": "Die installierte App startet auf Italienisch, bis du eine andere Sprache wählst."
   },
   help: {
    "tornei": {
@@ -1253,7 +1276,7 @@
    },
    "partecipanti": {
     "t": "Teilnehmer und feste Teams",
-    "h": "<p>Hier erstellst du die Liste aller Teilnehmer des Events. Du gibst sie einmal ein und verwendest sie in allen Spielen wieder.</p><h4>Namen hinzufügen</h4><p>Schreib einen Namen pro Zeile oder trenne sie mit einem Komma und drücke <b>Zur Liste hinzufügen</b>. Doppelte Namen werden ignoriert, auch wenn sich nur Groß- und Kleinschreibung unterscheidet.</p><h4>Feste Teams</h4><p>Erstelle die Teams einmal: <b>Zufällige Teams erstellen</b> bildet sie automatisch mit der gewählten Größe, <b>Übrige zufällig zuteilen</b> vervollständigt die bestehenden. In Teamspielen drückst du <b>Teams zuordnen</b>, um sie anzumelden.</p><h4>Drucken</h4><p>Die Druckschaltfläche erstellt ein A4-PDF mit der Liste, praktisch für den Check-in.</p>"
+    "h": "<p>Hier erstellst du die Liste aller Teilnehmer des Events. Du gibst sie einmal ein und verwendest sie in allen Spielen wieder.</p><h4>Namen hinzufügen</h4><p>Schreib einen Namen pro Zeile oder trenne sie mit einem Komma und drücke <b>Zur Liste hinzufügen</b>. Doppelte Namen werden ignoriert, auch wenn sich nur Groß- und Kleinschreibung unterscheidet.</p><h4>Feste Teams</h4><p>Erstelle die Teams einmal: <b>Zufällige Teams erstellen</b> bildet sie automatisch mit der gewählten Größe, <b>Übrige zufällig zuteilen</b> vervollständigt die bestehenden. In Teamspielen drückst du <b>Teams zuordnen</b>, um sie anzumelden.</p><h4>Drucken</h4><p>Die Druckschaltfläche erstellt ein A4-PDF mit der Liste, praktisch für den Check-in.</p><h4>Excel und Google Sheets</h4><p><b>Für Excel exportieren</b> speichert eine .xlsx-Datei mit Spieler, Team und Spielen; <b>CSV exportieren</b> eine Datei, die sich auch in Google Sheets öffnen lässt (Datei, Importieren). <b>Aus Excel oder Google Sheets importieren</b> liest eine .xlsx- oder .csv-Datei oder den Link einer Google-Tabelle, die für alle mit dem Link freigegeben ist. Nötig ist eine Spalte mit den Namen (Überschrift Name, Nick oder Player); gibt es eine Spalte Team, werden die Teams erstellt und gefüllt. Bereits vorhandene Namen werden nicht doppelt angelegt. Du kannst auch die Zellen aus der Tabelle kopieren und in das Namensfeld einfügen.</p>"
    },
    "squadre": {
     "t": "Seite Teams",

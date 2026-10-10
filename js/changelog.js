@@ -4,6 +4,11 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.6.1", d: "2026-10-10", t: "Elenco giocatori con Excel e Google Sheets", items: [
+      "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.",
+      "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.",
+      "L'app installata parte in italiano finché non scegli un'altra lingua."
+    ] },
     { v: "3.6.0", d: "2026-10-10", t: "Dieci lingue", items: [
       "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.",
       "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.",

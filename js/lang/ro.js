@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ro", name: "Română",
   s: {
-    "Nome squadra": "Numele echipei",
-    "Aggiungi giocatore": "Adaugă jucător",
+ "Nome squadra": "Numele echipei",
+ "Aggiungi giocatore": "Adaugă jucător",
  " (1 sconfitta)": " (1 înfrângere)",
  " (cambia dopo ogni uso). ": " (se schimbă după fiecare utilizare). ",
  " (controlla la connessione a internet)": " (verifică conexiunea la internet)",
@@ -1240,7 +1240,30 @@
  "Dieci lingue": "Zece limbi",
  "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.": "Programul vorbește italiană, engleză, spaniolă, franceză, germană, română, rusă, chineză, japoneză și venetă: limba interfeței se alege în partea de sus și este reținută pe acest PC.",
  "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.": "Fiecare turneu are propria limbă (în formularul Modifică): o folosesc proiectorul, transmisiunea live, imaginile, PDF-urile și botul Telegram, inclusiv comenzile botului.",
- "Anche la guida e le novità sono tradotte.": "Și ghidul, și noutățile sunt traduse."
+ "Anche la guida e le novità sono tradotte.": "Și ghidul, și noutățile sunt traduse.",
+ " giocatori. Si apre con Excel o Google Sheets (File, Importa).": " jucători. Se deschide cu Excel sau Google Sheets (File, Import).",
+ " messi in squadra": " puși în echipe",
+ " nomi: ": " nume: ",
+ " nuovi": " noi",
+ " squadre nuove": " echipe noi",
+ "Elenco esportato: ": "Listă exportată: ",
+ "Esporta CSV": "Exportă CSV",
+ "Esporta per Excel (.xlsx)": "Exportă pentru Excel (.xlsx)",
+ "Giochi": "Jocuri",
+ "Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.": "Foaia trebuie să aibă o coloană cu numele (titlu de tipul Name, Player, Nick, Nome sau Giocatore) și, dacă vrei, o coloană Team (sau Squadra). Google Sheets: Share, Oricine are linkul poate vedea, apoi copiază linkul. Poți și să copiezi celulele și să le lipești mai sus.",
+ "Importa da Excel o Google Sheets…": "Importă din Excel sau Google Sheets…",
+ "Importa dal link": "Importă din link",
+ "Importati ": "Importați ",
+ "Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).": "Lipește linkul unei foi Google Sheets (docs.google.com/spreadsheets/…).",
+ "L'elenco dei partecipanti è vuoto.": "Lista participanților este goală.",
+ "Link del foglio Google Sheets": "Linkul foii Google Sheets",
+ "Nel foglio non ci sono nomi.": "În foaie nu există nume.",
+ "Non riesco a leggere il file: ": "Nu pot citi fișierul: ",
+ "Non riesco a leggere il foglio: ": "Nu pot citi foaia: ",
+ "Elenco giocatori con Excel e Google Sheets": "Lista jucătorilor cu Excel și Google Sheets",
+ "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Exportă lista participanților pentru Excel (.xlsx) sau în CSV, cu echipa și jocurile fiecăruia.",
+ "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importă dintr-un fișier .xlsx sau .csv, din linkul unei foi Google Sheets sau lipind celulele copiate: cu o coloană Team (sau Squadra) creează și completează echipele, fără a dubla numele.",
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "Aplicația instalată pornește în italiană până când alegi altă limbă."
 },
   help: {
  "tornei": {
@@ -1253,7 +1276,7 @@
  },
  "partecipanti": {
   "t": "Participanți și echipe fixe",
-  "h": "<p>Aici creezi lista celor care participă la eveniment. O introduci o singură dată și o refolosești în toate jocurile.</p><h4>Adăugarea numelor</h4><p>Scrie un nume pe fiecare rând sau separă-le prin virgulă și apasă <b>Adaugă în listă</b>. Dublurile sunt ignorate, chiar dacă diferă doar literele mari și mici.</p><h4>Echipe fixe</h4><p>Creează echipele o singură dată: <b>Creează echipe aleatorii</b> le formează singur cu mărimea aleasă, <b>Atribuie aleatoriu restul</b> le completează pe cele existente. În jocurile pe echipe apasă <b>Asociază echipe</b> pentru a le înscrie.</p><h4>Tipărire</h4><p>Butonul de tipărire creează un PDF A4 cu lista, util pentru check-in.</p>"
+  "h": "<p>Aici creezi lista celor care participă la eveniment. O introduci o singură dată și o refolosești în toate jocurile.</p><h4>Adăugarea numelor</h4><p>Scrie un nume pe fiecare rând sau separă-le prin virgulă și apasă <b>Adaugă în listă</b>. Dublurile sunt ignorate, chiar dacă diferă doar literele mari și mici.</p><h4>Echipe fixe</h4><p>Creează echipele o singură dată: <b>Creează echipe aleatorii</b> le formează singur cu mărimea aleasă, <b>Atribuie aleatoriu restul</b> le completează pe cele existente. În jocurile pe echipe apasă <b>Asociază echipe</b> pentru a le înscrie.</p><h4>Tipărire</h4><p>Butonul de tipărire creează un PDF A4 cu lista, util pentru check-in.</p><h4>Excel și Google Sheets</h4><p><b>Exportă pentru Excel</b> salvează un fișier .xlsx cu jucătorul, echipa și jocurile; <b>Exportă CSV</b> un fișier care se deschide și în Google Sheets (File, Import). <b>Importă din Excel sau Google Sheets</b> citește un fișier .xlsx sau .csv, sau linkul unei foi Google distribuite cu oricine are linkul. E nevoie de o coloană cu numele (titlu Name, Player, Nick, Nome sau Giocatore); dacă există o coloană Team (sau Squadra), echipele sunt create și completate. Numele deja prezente nu sunt dublate. Poți și să copiezi celulele din foaie și să le lipești în caseta numelor.</p>"
  },
  "squadre": {
   "t": "Fișa Echipe",

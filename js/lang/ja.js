@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ja", name: "日本語",
   s: {
-    "Nome squadra": "チーム名",
-    "Aggiungi giocatore": "プレイヤーを追加",
+ "Nome squadra": "チーム名",
+ "Aggiungi giocatore": "プレイヤーを追加",
  " (1 sconfitta)": " (1敗)",
  " (cambia dopo ogni uso). ": " (使うたびに変わります)。 ",
  " (controlla la connessione a internet)": " (インターネット接続を確認してください)",
@@ -1240,7 +1240,30 @@
  "Dieci lingue": "10の言語",
  "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.": "プログラムはイタリア語、英語、スペイン語、フランス語、ドイツ語、ルーマニア語、ロシア語、中国語、日本語、ヴェネト語に対応しています。インターフェースの言語は上部で選択でき、このPCに記憶されます。",
  "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.": "各トーナメントに独自の言語があります (編集フォームで設定): プロジェクター、配信、画像、PDF、Telegram ボット (ボットのコマンドを含む) で使われます。",
- "Anche la guida e le novità sono tradotte.": "ヘルプと新機能も翻訳されています。"
+ "Anche la guida e le novità sono tradotte.": "ヘルプと新機能も翻訳されています。",
+ " giocatori. Si apre con Excel o Google Sheets (File, Importa).": " プレイヤー。Excel または Google Sheets (ファイル、インポート) で開けます。",
+ " messi in squadra": " 人をチームに割り当て",
+ " nomi: ": " 件の名前: ",
+ " nuovi": " 人を新規追加",
+ " squadre nuove": " チームを新規作成",
+ "Elenco esportato: ": "一覧をエクスポートしました: ",
+ "Esporta CSV": "CSV をエクスポート",
+ "Esporta per Excel (.xlsx)": "Excel 用にエクスポート (.xlsx)",
+ "Giochi": "ゲーム",
+ "Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.": "シートには名前の列 (見出しは Nome、Giocatore、Nick、Player など) が必要です。必要に応じて Squadra (チーム) の列も使えます。Google Sheets: 「共有」で「リンクを知っている全員が閲覧可」にしてから、リンクをコピーしてください。セルをコピーして上の欄に貼り付けることもできます。",
+ "Importa da Excel o Google Sheets…": "Excel または Google Sheets からインポート…",
+ "Importa dal link": "リンクからインポート",
+ "Importati ": "インポートしました: ",
+ "Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).": "Google Sheets のシートのリンク (docs.google.com/spreadsheets/…) を貼り付けてください。",
+ "L'elenco dei partecipanti è vuoto.": "参加者一覧が空です。",
+ "Link del foglio Google Sheets": "Google Sheets のシートのリンク",
+ "Nel foglio non ci sono nomi.": "シートに名前がありません。",
+ "Non riesco a leggere il file: ": "ファイルを読み込めません: ",
+ "Non riesco a leggere il foglio: ": "シートを読み込めません: ",
+ "Elenco giocatori con Excel e Google Sheets": "Excel と Google Sheets でプレイヤー一覧を管理",
+ "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "参加者一覧を Excel (.xlsx) または CSV でエクスポート。各参加者のチームとゲームも含みます。",
+ "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": ".xlsx または .csv ファイル、Google Sheets のシートのリンク、コピーしたセルの貼り付けからインポート: Squadra の列があればチームを作成して埋め、名前は重複しません。",
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "インストール版アプリは、別の言語を選ぶまでイタリア語で起動します。"
 },
   help: {
  "tornei": {
@@ -1253,7 +1276,7 @@
  },
  "partecipanti": {
   "t": "参加者と固定チーム",
-  "h": "<p>ここでイベントの参加者リストを作成します。一度入力すれば、すべてのゲームで再利用できます。</p><h4>名前の追加</h4><p>1行に1人ずつ、またはカンマ区切りで名前を入力し、<b>リストに追加</b> を押します。重複は無視されます (大文字と小文字の違いだけでも重複とみなします)。</p><h4>固定チーム</h4><p>チームは一度だけ作成します: <b>ランダムにチームを作成</b> は選んだ人数で自動的にチームを作り、<b>残りをランダムに割り当てる</b> は既存のチームを埋めます。チーム戦のゲームでは <b>チームを割り当て</b> を押してエントリーさせます。</p><h4>印刷</h4><p>印刷ボタンで一覧の A4 PDF を作成できます。受付 (チェックイン) に便利です。</p>"
+  "h": "<p>ここでイベントの参加者リストを作成します。一度入力すれば、すべてのゲームで再利用できます。</p><h4>名前の追加</h4><p>1行に1人ずつ、またはカンマ区切りで名前を入力し、<b>リストに追加</b> を押します。重複は無視されます (大文字と小文字の違いだけでも重複とみなします)。</p><h4>固定チーム</h4><p>チームは一度だけ作成します: <b>ランダムにチームを作成</b> は選んだ人数で自動的にチームを作り、<b>残りをランダムに割り当てる</b> は既存のチームを埋めます。チーム戦のゲームでは <b>チームを割り当て</b> を押してエントリーさせます。</p><h4>印刷</h4><p>印刷ボタンで一覧の A4 PDF を作成できます。受付 (チェックイン) に便利です。</p><h4>Excel と Google Sheets</h4><p><b>Excel 用にエクスポート</b> で、プレイヤー、チーム、ゲームを含む .xlsx ファイルを保存します。<b>CSV をエクスポート</b> では、Google Sheets でも開けるファイル (ファイル、インポート) を保存します。<b>Excel または Google Sheets からインポート</b> は、.xlsx または .csv ファイル、あるいは「リンクを知っている全員」と共有した Google のシートのリンクを読み込みます。名前の列 (見出しは Nome、Giocatore、Nick、Player) が必要です。Squadra (チーム) の列があれば、チームが作成されてメンバーが割り当てられます。すでにある名前は重複しません。シートのセルをコピーして、名前の入力欄に貼り付けることもできます。</p>"
  },
  "squadre": {
   "t": "チームタブ",

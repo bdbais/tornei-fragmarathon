@@ -30,7 +30,8 @@ window.HELP = {
       "<p>Qui crei l'elenco di chi partecipa all'evento. Lo inserisci una volta e lo riusi in tutti i giochi.</p>" +
       "<h4>Aggiungere nomi</h4><p>Scrivi un nome per riga, oppure separali con una virgola, e premi <b>Aggiungi alla lista</b>. I doppioni vengono ignorati, anche se cambia solo maiuscolo e minuscolo.</p>" +
       "<h4>Squadre fisse</h4><p>Crea le squadre una volta: <b>Crea squadre casuali</b> le forma da sole con la dimensione scelta, <b>Assegna i rimanenti a caso</b> completa quelle esistenti. Nei giochi a squadre premi <b>Abbina team</b> per iscriverle.</p>" +
-      "<h4>Stampa</h4><p>Il pulsante di stampa crea un PDF A4 con l'elenco, utile per il check-in.</p>" },
+      "<h4>Stampa</h4><p>Il pulsante di stampa crea un PDF A4 con l'elenco, utile per il check-in.</p>" +
+      "<h4>Excel e Google Sheets</h4><p><b>Esporta per Excel</b> salva un file .xlsx con giocatore, squadra e giochi; <b>Esporta CSV</b> un file che si apre anche in Google Sheets (File, Importa). <b>Importa da Excel o Google Sheets</b> legge un file .xlsx o .csv, oppure il link di un foglio Google condiviso con chiunque abbia il link. Serve una colonna con i nomi (titolo Nome, Giocatore, Nick o Player); se c'è una colonna Squadra, le squadre vengono create e riempite. I nomi già presenti non vengono duplicati. Puoi anche copiare le celle dal foglio e incollarle nel riquadro dei nomi.</p>" },
 
     squadre: { t: "Scheda Squadre", h:
       "<p>Mostra tutte le squadre di tutti i giochi con i loro componenti, per controllare chi gioca con chi. Puoi stamparle in PDF A4.</p>" +

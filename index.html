@@ -185,6 +185,9 @@ body.proj::before{display:none}
     <div class="row"><button class="p" id="radd">Aggiungi alla lista</button></div>
     <div class="chips" id="rchips"></div>
     <div class="row" style="margin-top:12px"><button data-print="roster">Stampa elenco partecipanti (PDF A4)</button><span class="hint pmsg" style="margin:0"></span></div>
+    <div class="row" style="margin-top:8px"><button id="rimp">Importa da Excel o Google Sheets…</button><button id="rxlsx">Esporta per Excel (.xlsx)</button><button id="rcsv">Esporta CSV</button><input type="file" id="rfile" accept=".xlsx,.csv,.tsv,.txt" hidden></div>
+    <div class="row" id="rgs" hidden style="margin-top:8px"><input type="text" id="rgsurl" inputmode="url" placeholder="Link del foglio Google Sheets" aria-label="Link del foglio Google Sheets"><button id="rgsgo">Importa dal link</button><button id="rgsfile">Scegli un file .xlsx o .csv</button></div>
+    <p class="hint" id="rgshint" hidden>Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.</p>
     <h2 style="margin-top:24px">Squadre fisse</h2>
     <p class="hint" style="margin-top:0">Crea le squadre qui una sola volta: in ogni gioco a squadre le abbini con il pulsante "Abbina team" e restano le stesse in tutti i tornei.</p>
     <div id="rteams"></div>
@@ -219,6 +222,7 @@ body.proj::before{display:none}
 <script src="js/tokens.js"></script>
 <script src="js/changelog.js"></script>
 <script src="js/crypt.js"></script>
+<script src="js/sheets.js"></script>
 <script src="js/home.js"></script>
 <script src="js/sections.js"></script>
 <script src="js/pwa.js"></script>

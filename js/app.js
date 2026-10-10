@@ -362,10 +362,16 @@ $("rosterBox").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.print){printDoc(b.dataset.print,b.parentNode.querySelector(".pmsg"));return}
   if(b.id==="radd"){
+    /* celle copiate da Excel o Google Sheets: colonne separate da tabulazioni */
+    if(/\t/.test($("rta").value)&&window.SHEETS){importRows(SHEETS.parseCsv($("rta").value));$("rta").value="";return}
     $("rta").value.split(/[\n,;]+/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(n){
       if(!S.roster.some(function(p){return p.toLowerCase()===n.toLowerCase()}))S.roster.push(n)});
     $("rta").value="";save();renderRoster();render();
-  }else if(b.id==="rtrand"){
+  }else if(b.id==="rimp"){var gs=$("rgs");gs.hidden=!gs.hidden;$("rgshint").hidden=gs.hidden;if(!gs.hidden)$("rgsurl").focus()}
+  else if(b.id==="rgsfile"){$("rfile").click()}
+  else if(b.id==="rgsgo"){sheetFromLink($("rgsurl").value)}
+  else if(b.id==="rxlsx"||b.id==="rcsv"){exportRoster(b.id==="rxlsx")}
+  else if(b.id==="rtrand"){
     var sz=+$("rtsize").value||2,nm=shuffle(S.roster),nt=Math.max(1,Math.round(nm.length/sz));
     S.tsize=sz;S.teams=[];for(var i=0;i<nt;i++)S.teams.push({n:nextTeamName(),m:[]});
     nm.forEach(function(n,i){S.teams[i%nt].m.push(n)});save();renderRoster();
@@ -412,6 +418,43 @@ function fillAll(g){
 }
 function teamIdx(n){for(var i=0;i<S.teams.length;i++)if(S.teams[i].m.some(function(x){return x.toLowerCase()===n.toLowerCase()}))return i;return -1}
 function nextTeamName(){for(var i=0;i<500;i++){var nm=TEAMS[i%TEAMS.length]+(i>=TEAMS.length?" "+(Math.floor(i/TEAMS.length)+1):"");if(!S.teams.some(function(t){return t.n===nm}))return nm}}
+/* ---- elenco giocatori da e verso Excel / Google Sheets ---- */
+function T_(s){return window.I18N?I18N.tr(s):s}
+function importRows(rows){
+  rows=(rows||[]).filter(function(r){return r&&r.some(Boolean)});
+  if(!rows.length){toast("Nel foglio non ci sono nomi.");return}
+  var H=rows[0].map(function(x){return String(x).toLowerCase()}),NAME=/^(nome|nick|nickname|giocatore|giocatori|player|players|name|partecipante|gamertag|nombre|jugador|jugadores|nom|joueur|joueurs|pseudo|spieler|spielername|teilnehmer|nume|jucător|jucator|participant|имя|игрок|ник|участник|姓名|名字|选手|玩家|名前|プレイヤー|選手|zogador|zogadori)(?![\p{L}\p{N}])/u,TEAM=/^(squadra|team|clan|gruppo|equipo|équipe|equipe|mannschaft|teamname|echipă|echipa|команда|клан|队伍|战队|チーム|squadra)(?![\p{L}\p{N}])/u;
+  var head=H.some(function(x){return NAME.test(x)||TEAM.test(x)}),ni=head?Math.max(0,H.findIndex(function(x){return NAME.test(x)})):0,ti=head?H.findIndex(function(x){return TEAM.test(x)}):-1;
+  var added=0,teamsNew=0,inTeam=0,seen={};
+  rows.slice(head?1:0).forEach(function(r){
+    var n=String(r[ni]||"").replace(/\s+/g," ").trim().slice(0,40);if(!n||seen[n.toLowerCase()])return;seen[n.toLowerCase()]=1;
+    var ex=S.roster.filter(function(p){return p.toLowerCase()===n.toLowerCase()})[0];
+    if(!ex){S.roster.push(n);added++;ex=n}
+    var tn=ti>=0?String(r[ti]||"").replace(/\s+/g," ").trim().slice(0,40):"";
+    if(tn){var t=S.teams.filter(function(x){return x.n.toLowerCase()===tn.toLowerCase()})[0];if(!t){t={n:tn,m:[]};S.teams.push(t);teamsNew++}
+      if(!S.teams.some(function(x){return x.m.some(function(m){return m.toLowerCase()===ex.toLowerCase()})})){t.m.push(ex);inTeam++}}
+  });
+  save();renderRoster();render();
+  toast("Importati "+Object.keys(seen).length+" nomi: "+added+" nuovi"+(teamsNew?", "+teamsNew+" squadre nuove":"")+(inTeam?", "+inTeam+" messi in squadra":"")+".");
+}
+function sheetFromLink(link){
+  var u=window.SHEETS&&SHEETS.gsheetCsvUrl(link);
+  if(!u){toast("Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).");return}
+  if(DESK&&DESK.sheetFetch){DESK.sheetFetch(u).then(function(r){if(r&&r.text)importRows(SHEETS.parseCsv(r.text));else toast("Non riesco a leggere il foglio: "+((r&&r.error)||"errore")+".")});return}
+  fetch(u).then(function(r){return r.text()}).then(function(t){if(/^\s*</.test(t))throw 0;importRows(SHEETS.parseCsv(t))}).catch(function(){toast("Dal browser Google non permette di leggere il foglio: scaricalo (File, Scarica, .xlsx o .csv) e usa Scegli un file.")});
+}
+function exportRoster(xlsx){
+  if(!S.roster.length){toast("L'elenco dei partecipanti è vuoto.");return}
+  var rows=[[T_("Giocatore"),T_("Squadra"),T_("Giochi")]];
+  S.roster.forEach(function(n){
+    var t=S.teams.filter(function(x){return x.m.indexOf(n)>=0})[0],tn=t?t.n:"";
+    var g=Object.keys(DEF).filter(function(k){var gg=S.games[k];return gg&&(gg.players.indexOf(n)>=0||(tn&&gg.players.indexOf(tn)>=0)||Object.keys(gg.members||{}).some(function(m){return(gg.members[m]||[]).indexOf(n)>=0}))}).map(function(k){return DEF[k].l});
+    rows.push([n,tn,g.join(", ")]);
+  });
+  var base="giocatori-"+String(S.ui.title||UI0.title).replace(/[^\w-]+/g,"-").replace(/^-|-$/g,"").slice(0,40);
+  if(xlsx)dlBlob(SHEETS.toXlsx(rows,T_("Giocatori")),base+".xlsx");else dlBlob(new Blob([SHEETS.toCsv(rows)],{type:"text/csv;charset=utf-8"}),base+".csv");
+  toast("Elenco esportato: "+S.roster.length+" giocatori. Si apre con Excel o Google Sheets (File, Importa).");
+}
 function renderTeams(){
   var free=S.roster.filter(function(n){return teamIdx(n)<0}),h='<div class="row"><label class="row" style="gap:6px;color:var(--mut)">Giocatori per squadra <select id="rtsize">';
   for(var i=1;i<=8;i++)h+='<option'+((S.tsize||2)===i?" selected":"")+'>'+i+'</option>';
@@ -1435,6 +1478,7 @@ $("backup").onclick=function(e){
   if(b.dataset.bres){var fb=b.dataset.bres;if(!arm("b"+fb,b,"Conferma: ripristina"))return;DESK.readBackup(fb).then(restoreState).catch(function(){toast("Non riesco a leggere il backup.")})}
   if(b.dataset.lres!==undefined){var li=+b.dataset.lres;if(!arm("l"+li,b,"Conferma: ripristina"))return;try{restoreState(JSON.parse(localStorage.getItem(KEY+"-auto")||"[]")[li].data)}catch(e){toast("Backup non leggibile.")}}
 };
+$("rfile").onchange=function(){var f=this.files[0];if(!f||!window.SHEETS)return;SHEETS.readFile(f).then(importRows).catch(function(e){toast("Non riesco a leggere il file: "+((e&&e.message)||e)+".")});this.value=""};
 $("tf").onchange=function(){var f=this.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){loadTorneo(rd.result,null)};rd.readAsText(f);this.value=""};
 /* Backup cifrato: tutti i tornei (e i bot) oppure solo quello aperto. */
 function backupFile(name,text){

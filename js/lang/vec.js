@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "vec", name: "Vèneto",
   s: {
-    "Nome squadra": "Nome de la squadra",
-    "Aggiungi giocatore": "Zonta zogador",
+ "Nome squadra": "Nome de la squadra",
+ "Aggiungi giocatore": "Zonta zogador",
  " (1 sconfitta)": " (1 sconfita)",
  " (cambia dopo ogni uso). ": " (la cambia dopo ogni uso). ",
  " (controlla la connessione a internet)": " (controla la conession a internet)",
@@ -1240,7 +1240,30 @@
  "Dieci lingue": "Diese lengue",
  "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.": "El programa el parla italian, inglese, spagnolo, franzese, tedesco, romeno, russo, cinese, giaponese e vèneto: la lengua de l'interfacia se la sielze in alto e la resta ricordada su sto PC.",
  "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.": "Ogni torneo el ga la so lengua (nel modulo Modifica): la dopara proietor, direta, imagini, PDF e bot Telegram, anca i comandi del bot.",
- "Anche la guida e le novità sono tradotte.": "Anca la guida e le novità le xe tradote."
+ "Anche la guida e le novità sono tradotte.": "Anca la guida e le novità le xe tradote.",
+ " giocatori. Si apre con Excel o Google Sheets (File, Importa).": " zogadori. Se lo verze co Excel o Google Sheets (File, Importa).",
+ " messi in squadra": " messi in squadra",
+ " nomi: ": " nomi: ",
+ " nuovi": " novi",
+ " squadre nuove": " squadre nove",
+ "Elenco esportato: ": "Elenco esportà: ",
+ "Esporta CSV": "Esporta CSV",
+ "Esporta per Excel (.xlsx)": "Esporta par Excel (.xlsx)",
+ "Giochi": "Zoghi",
+ "Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.": "El foglio el ga da aver na colona coi nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se te vol, na colona Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, dopo copia el link. Te pol anca copiar le cele e incolarle qua sora.",
+ "Importa da Excel o Google Sheets…": "Importa da Excel o Google Sheets…",
+ "Importa dal link": "Importa dal link",
+ "Importati ": "Importà ",
+ "Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).": "Incola el link de un foglio Google Sheets (docs.google.com/spreadsheets/…).",
+ "L'elenco dei partecipanti è vuoto.": "L'elenco dei partecipanti el xe vodo.",
+ "Link del foglio Google Sheets": "Link del foglio Google Sheets",
+ "Nel foglio non ci sono nomi.": "Nel foglio no ghe xe nomi.",
+ "Non riesco a leggere il file: ": "No riesso a lezer el file: ",
+ "Non riesco a leggere il foglio: ": "No riesso a lezer el foglio: ",
+ "Elenco giocatori con Excel e Google Sheets": "Elenco zogadori co Excel e Google Sheets",
+ "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Esporta l'elenco dei partecipanti par Excel (.xlsx) o in CSV, co la squadra e i zoghi de ognun.",
+ "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importa da un file .xlsx o .csv, dal link de un foglio Google Sheets o incolando le cele copiade: co na colona Squadra el crea e el impinisse le squadre, sensa dopiar i nomi.",
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "L'app instalada la parte in italian fin che no te sielzi n'altra lengua."
 },
   help: {
  "tornei": {
@@ -1253,7 +1276,7 @@
  },
  "partecipanti": {
   "t": "Partecipanti e squadre fisse",
-  "h": "<p>Qua te crei l'elenco de chi partecipa a l'evento. Te lo meti na volta e te lo dopari de novo in tuti i zoghi.</p><h4>Zontar nomi</h4><p>Scrivi un nome par riga, o separili co na virgola, e struca <b>Zonta a la lista</b>. I dopioni i vien ignorà, anca se cambia solo maiuscolo e minuscolo.</p><h4>Squadre fisse</h4><p>Crea le squadre na volta: <b>Crea squadre a caso</b> le forma da sole co la dimension sielta, <b>Assegna quei che resta a caso</b> el completa quele che ghe xe. Nei zoghi a squadre struca <b>Abina team</b> par iscriverle.</p><h4>Stampa</h4><p>El boton de stampa el crea un PDF A4 co l'elenco, comodo par el check-in.</p>"
+  "h": "<p>Qua te crei l'elenco de chi partecipa a l'evento. Te lo meti na volta e te lo dopari de novo in tuti i zoghi.</p><h4>Zontar nomi</h4><p>Scrivi un nome par riga, o separili co na virgola, e struca <b>Zonta a la lista</b>. I dopioni i vien ignorà, anca se cambia solo maiuscolo e minuscolo.</p><h4>Squadre fisse</h4><p>Crea le squadre na volta: <b>Crea squadre a caso</b> le forma da sole co la dimension sielta, <b>Assegna quei che resta a caso</b> el completa quele che ghe xe. Nei zoghi a squadre struca <b>Abina team</b> par iscriverle.</p><h4>Stampa</h4><p>El boton de stampa el crea un PDF A4 co l'elenco, comodo par el check-in.</p><h4>Excel e Google Sheets</h4><p><b>Esporta par Excel</b> el salva un file .xlsx co zogador, squadra e zoghi; <b>Esporta CSV</b> un file che se verze anca in Google Sheets (File, Importa). <b>Importa da Excel o Google Sheets</b> el lese un file .xlsx o .csv, o el link de un foglio Google condiviso co chiunque gabia el link. Ghe vol na colona coi nomi (titolo Nome, Giocatore, Nick o Player); se ghe xe na colona Squadra, le squadre le vien creade e impinìe. I nomi che ghe xe zà no i vien dopià. Te pol anca copiar le cele dal foglio e incolarle nel riquadro dei nomi.</p>"
  },
  "squadre": {
   "t": "Scheda Squadre",

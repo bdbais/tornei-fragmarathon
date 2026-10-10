@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "zh", name: "中文",
   s: {
-    "Nome squadra": "队伍名称",
-    "Aggiungi giocatore": "添加选手",
+ "Nome squadra": "队伍名称",
+ "Aggiungi giocatore": "添加选手",
  " (1 sconfitta)": " (1 负)",
  " (cambia dopo ogni uso). ": " (每次使用后更换)。 ",
  " (controlla la connessione a internet)": " (请检查网络连接)",
@@ -1240,7 +1240,30 @@
  "Dieci lingue": "十种语言",
  "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.": "程序支持意大利语、英语、西班牙语、法语、德语、罗马尼亚语、俄语、中文、日语和威尼斯语:界面语言在顶部选择,并会保存在这台电脑上。",
  "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.": "每个锦标赛都有自己的语言 (在“编辑”表单中):投影仪、直播、图片、PDF 和 Telegram 机器人都会使用它,包括机器人的命令。",
- "Anche la guida e le novità sono tradotte.": "帮助和新功能也已翻译。"
+ "Anche la guida e le novità sono tradotte.": "帮助和新功能也已翻译。",
+ " giocatori. Si apre con Excel o Google Sheets (File, Importa).": " 名选手。可用 Excel 或 Google Sheets 打开 (文件,导入)。",
+ " messi in squadra": " 人已分入队伍",
+ " nomi: ": " 个名字: ",
+ " nuovi": " 个新的",
+ " squadre nuove": " 支新队伍",
+ "Elenco esportato: ": "名单已导出: ",
+ "Esporta CSV": "导出 CSV",
+ "Esporta per Excel (.xlsx)": "导出为 Excel (.xlsx)",
+ "Giochi": "游戏",
+ "Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.": "表格中需要有一列名字 (标题如 Nome、Giocatore、Nick 或 Player),如有需要还可以有一列 Squadra (队伍)。Google Sheets:共享,任何获得链接的人均可查看,然后复制链接。也可以复制单元格并粘贴到上方。",
+ "Importa da Excel o Google Sheets…": "从 Excel 或 Google Sheets 导入…",
+ "Importa dal link": "从链接导入",
+ "Importati ": "已导入 ",
+ "Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).": "粘贴一个 Google Sheets 表格的链接 (docs.google.com/spreadsheets/…)。",
+ "L'elenco dei partecipanti è vuoto.": "参赛者列表为空。",
+ "Link del foglio Google Sheets": "Google Sheets 表格链接",
+ "Nel foglio non ci sono nomi.": "表格中没有名字。",
+ "Non riesco a leggere il file: ": "无法读取文件: ",
+ "Non riesco a leggere il foglio: ": "无法读取表格: ",
+ "Elenco giocatori con Excel e Google Sheets": "使用 Excel 和 Google Sheets 管理选手名单",
+ "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "将参赛者列表导出为 Excel (.xlsx) 或 CSV,包含每个人的队伍和游戏。",
+ "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "可从 .xlsx 或 .csv 文件、Google Sheets 表格链接导入,或直接粘贴复制的单元格:如果有 Squadra (队伍) 列,会自动创建并填充队伍,不会重复添加名字。",
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "在你选择其他语言之前,已安装的应用默认使用意大利语。"
 },
   help: {
  "tornei": {
@@ -1253,7 +1276,7 @@
  },
  "partecipanti": {
   "t": "参赛者和固定队伍",
-  "h": "<p>在这里创建参加活动的人员名单。只需录入一次,即可在所有游戏中重复使用。</p><h4>添加名字</h4><p>每行写一个名字,或用逗号分隔,然后点击 <b>添加到列表</b>。重复的名字会被忽略,即使只是大小写不同。</p><h4>固定队伍</h4><p>只需创建一次队伍:<b>随机组队</b> 会按所选人数自动组队,<b>随机分配剩余的</b> 会补齐现有队伍。在团队游戏中点击 <b>匹配队伍</b> 为它们报名。</p><h4>打印</h4><p>打印按钮会生成一份 A4 PDF 名单,方便签到。</p>"
+  "h": "<p>在这里创建参加活动的人员名单。只需录入一次,即可在所有游戏中重复使用。</p><h4>添加名字</h4><p>每行写一个名字,或用逗号分隔,然后点击 <b>添加到列表</b>。重复的名字会被忽略,即使只是大小写不同。</p><h4>固定队伍</h4><p>只需创建一次队伍:<b>随机组队</b> 会按所选人数自动组队,<b>随机分配剩余的</b> 会补齐现有队伍。在团队游戏中点击 <b>匹配队伍</b> 为它们报名。</p><h4>打印</h4><p>打印按钮会生成一份 A4 PDF 名单,方便签到。</p><h4>Excel 和 Google Sheets</h4><p><b>导出为 Excel</b> 会保存一个包含选手、队伍和游戏的 .xlsx 文件;<b>导出 CSV</b> 会保存一个也能在 Google Sheets 中打开的文件 (文件,导入)。<b>从 Excel 或 Google Sheets 导入</b> 可读取 .xlsx 或 .csv 文件,或者共享给“任何获得链接的人”的 Google 表格链接。需要有一列名字 (标题为 Nome、Giocatore、Nick 或 Player);如果有 Squadra (队伍) 列,会自动创建并填充队伍。已有的名字不会重复添加。也可以从表格中复制单元格,粘贴到名字输入框中。</p>"
  },
  "squadre": {
   "t": "队伍标签页",

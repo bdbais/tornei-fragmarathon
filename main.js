@@ -171,6 +171,16 @@ ipcMain.handle("ev:list", () => {
   });
 });
 ipcMain.handle("ev:read", (_e, id) => fs.readFileSync(evFile(id), "utf8"));
+/* elenco giocatori da Google Sheets: solo l'esportazione CSV di un foglio condiviso con il link */
+ipcMain.handle("sheets:fetch", async (_e, url) => {
+  if (!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]{20,}\/export\?format=csv(&gid=\d+)?$/.test(String(url || ""))) return { error: "link non valido" };
+  try {
+    const r = await require("electron").net.fetch(url, { redirect: "follow" });
+    const t = await r.text();
+    if (!r.ok || /^\s*<(!doctype|html)/i.test(t)) return { error: "il foglio non è condiviso con chiunque abbia il link" };
+    return { text: t.slice(0, 2000000) };
+  } catch (e) { return { error: String(e.message || e).slice(0, 200) }; }
+});
 ipcMain.handle("ev:write", (_e, id, data) => { ensureDirs(); JSON.parse(data); writeAtomic(evFile(id), data); return true; });
 ipcMain.handle("ev:trash", (_e, id) => {
   const f = evFile(id); if (!fs.existsSync(f)) return false;

@@ -2,8 +2,8 @@
  "code": "ru",
  "name": "Русский",
  "s": {
-    "Nome squadra": "Название команды",
-    "Aggiungi giocatore": "Добавить игрока",
+  "Nome squadra": "Название команды",
+  "Aggiungi giocatore": "Добавить игрока",
   " (1 sconfitta)": " (1 поражение)",
   " (cambia dopo ogni uso). ": " (меняется после каждого использования). ",
   " (controlla la connessione a internet)": " (проверьте подключение к интернету)",
@@ -1241,7 +1241,30 @@
   "Dieci lingue": "Десять языков",
   "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.": "Программа говорит на итальянском, английском, испанском, французском, немецком, румынском, русском, китайском, японском и венецианском: язык интерфейса выбирается вверху и запоминается на этом ПК.",
   "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.": "У каждого турнира свой язык (в форме «Изменить»): его используют проектор, трансляция, изображения, PDF и Telegram-бот, включая команды бота.",
-  "Anche la guida e le novità sono tradotte.": "Справка и список изменений тоже переведены."
+  "Anche la guida e le novità sono tradotte.": "Справка и список изменений тоже переведены.",
+  " giocatori. Si apre con Excel o Google Sheets (File, Importa).": " игроков. Открывается в Excel или Google Sheets (Файл, Импорт).",
+  " messi in squadra": " распределены по командам",
+  " nomi: ": " имён: ",
+  " nuovi": " новых",
+  " squadre nuove": " новых команд",
+  "Elenco esportato: ": "Список экспортирован: ",
+  "Esporta CSV": "Экспорт CSV",
+  "Esporta per Excel (.xlsx)": "Экспорт для Excel (.xlsx)",
+  "Giochi": "Игры",
+  "Il foglio deve avere una colonna con i nomi (titolo tipo Nome, Giocatore, Nick o Player) e, se vuoi, una colonna Squadra. Google Sheets: Condividi, Chiunque abbia il link può visualizzare, poi copia il link. Puoi anche copiare le celle e incollarle qui sopra.": "В таблице должен быть столбец с именами (заголовок вроде Имя, Игрок, Nick или Player) и, при желании, столбец «Команда». Google Sheets: «Поделиться», «Все, у кого есть ссылка» с правом просмотра, затем скопируйте ссылку. Можно также скопировать ячейки и вставить их в поле выше.",
+  "Importa da Excel o Google Sheets…": "Импорт из Excel или Google Sheets…",
+  "Importa dal link": "Импортировать по ссылке",
+  "Importati ": "Импортировано ",
+  "Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).": "Вставьте ссылку на таблицу Google Sheets (docs.google.com/spreadsheets/…).",
+  "L'elenco dei partecipanti è vuoto.": "Список участников пуст.",
+  "Link del foglio Google Sheets": "Ссылка на таблицу Google Sheets",
+  "Nel foglio non ci sono nomi.": "В таблице нет имён.",
+  "Non riesco a leggere il file: ": "Не удаётся прочитать файл: ",
+  "Non riesco a leggere il foglio: ": "Не удаётся прочитать таблицу: ",
+  "Elenco giocatori con Excel e Google Sheets": "Список игроков с Excel и Google Sheets",
+  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Экспорт списка участников для Excel (.xlsx) или в CSV, с командой и играми каждого.",
+  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Импорт из файла .xlsx или .csv, по ссылке на таблицу Google Sheets или вставкой скопированных ячеек: при наличии столбца «Команда» команды создаются и заполняются, без дублирования имён.",
+  "L'app installata parte in italiano finché non scegli un'altra lingua.": "Установленное приложение запускается на итальянском, пока вы не выберете другой язык."
  },
  "help": {
   "tornei": {
@@ -1254,7 +1277,7 @@
   },
   "partecipanti": {
    "t": "Участники и постоянные команды",
-   "h": "<p>Здесь создаётся список участников мероприятия. Он вводится один раз и используется во всех играх.</p><h4>Добавление имён</h4><p>Введите по одному имени в строке или через запятую и нажмите <b>Добавить в список</b>. Повторы игнорируются, даже если отличаются только регистром букв.</p><h4>Постоянные команды</h4><p>Создайте команды один раз: <b>Создать случайные команды</b> сформирует их автоматически с выбранным размером, <b>Распределить оставшихся случайно</b> дополнит существующие. В командных играх нажмите <b>Привязать команды</b>, чтобы зарегистрировать их.</p><h4>Печать</h4><p>Кнопка печати создаёт PDF A4 со списком — удобно для регистрации на входе.</p>"
+   "h": "<p>Здесь создаётся список участников мероприятия. Он вводится один раз и используется во всех играх.</p><h4>Добавление имён</h4><p>Введите по одному имени в строке или через запятую и нажмите <b>Добавить в список</b>. Повторы игнорируются, даже если отличаются только регистром букв.</p><h4>Постоянные команды</h4><p>Создайте команды один раз: <b>Создать случайные команды</b> сформирует их автоматически с выбранным размером, <b>Распределить оставшихся случайно</b> дополнит существующие. В командных играх нажмите <b>Привязать команды</b>, чтобы зарегистрировать их.</p><h4>Печать</h4><p>Кнопка печати создаёт PDF A4 со списком — удобно для регистрации на входе.</p><h4>Excel и Google Sheets</h4><p><b>Экспорт для Excel</b> сохраняет файл .xlsx с игроком, командой и играми; <b>Экспорт CSV</b> — файл, который открывается и в Google Sheets (Файл, Импорт). <b>Импорт из Excel или Google Sheets</b> читает файл .xlsx или .csv либо ссылку на таблицу Google, открытую для всех, у кого есть ссылка. Нужен столбец с именами (заголовок Имя, Игрок, Nick или Player); если есть столбец «Команда», команды создаются и заполняются. Уже имеющиеся имена не дублируются. Можно также скопировать ячейки из таблицы и вставить их в поле для имён.</p>"
   },
   "squadre": {
    "t": "Вкладка «Команды»",

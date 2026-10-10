@@ -13,7 +13,8 @@
   var OUT = /[?&]wall=1/.test(location.search) || /stream\.html$/.test(location.pathname);
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function evFromStore() { try { var p = JSON.parse(lsGet(KEY) || "{}"); return C.pick(p.ev && p.ev.lang) || "it"; } catch (e) { return "it"; } }
-  var ui = C.pick(lsGet(LK)) || (navigator.languages || [navigator.language]).map(C.pick).filter(Boolean)[0] || "it";
+  /* app installata: italiano finché non si sceglie un'altra lingua; nel browser, la lingua del browser */
+  var ui = C.pick(lsGet(LK)) || (window.desk ? "it" : (navigator.languages || [navigator.language]).map(C.pick).filter(Boolean)[0]) || "it";
   var ev = evFromStore();
   var loading = {}, waiters = [];
   function domLang() { return OUT ? ev : ui; }
