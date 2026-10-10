@@ -20,14 +20,14 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 
 ## Funzioni
 
-- **Schermo proiettore**: finestra separata (sul secondo monitor, a tutto schermo) con testo bianco su nero e righe alte fino a 104 px su 1080p. Si aggiorna in tempo reale e scorre le pagine da solo.
+- **Schermo proiettore**: l'icona su ogni pannello lo manda su una finestra separata (sul secondo monitor, a tutto schermo), da solo e ingrandito al massimo. `PgUp`/`PgDn` cambiano pannello; la **galleria** li fa scorrere da sola ogni N secondi, anche su tutti i giochi. Si aggiorna in tempo reale.
 - **Trascina e rilascia** giocatori e squadre tra gironi e partite, finché non ci sono risultati.
 - **Archivio**: ogni torneo si salva in `Documenti\Tornei Fragmarathon\tornei` e si riprende dall'elenco. Il file si aggiorna da solo a ogni modifica.
 - **Backup automatici** in `Documenti\Tornei Fragmarathon\backup` all'avvio del torneo, a ogni cambio di turno o girone e alla fine.
 - **Guida contestuale**: pulsante `?` in ogni finestra, oppure `F1`.
 - **Hall of Fame** con i punti per ogni gioco, per giocatori e squadre.
 - **Aggiornamenti automatici** dalla release GitHub (versione installata).
-- Scorciatoie: `F1` guida, `Ctrl+S` salva torneo, `Ctrl+Z` annulla, `F5` proiettore.
+- Scorciatoie: `F1` guida, `Ctrl+S` salva torneo, `Ctrl+Z` annulla, `F5` proiettore (`PgUp`/`PgDn` pannelli, `G` galleria).
 
 ## Sviluppo
 

@@ -9,7 +9,7 @@ window.HELP = {
       "<li>Apri la scheda di un gioco, scegli il <b>formato</b> e premi <b>Aggiungi tutti</b> (oppure <b>Abbina team</b>).</li>" +
       "<li>Premi <b>START</b>: il programma fa il sorteggio e crea tabellone o gironi.</li>" +
       "<li>Inserisci i punteggi man mano. Il torneo avanza da solo; quando serve una tua decisione compare un pulsante arancio.</li>" +
-      "<li>Apri il <b>Proiettore</b> per mostrare il torneo in sala.</li></ol>" +
+      "<li>Clicca l'icona del proiettore su un pannello per mostrarlo in sala.</li></ol>" +
       "<p class='note'>Tutto si salva da solo a ogni modifica. In più, a ogni cambio di turno o girone viene creato un backup automatico.</p>" +
       "<p>Per aggiungere un gioco che non c'è, usa il pulsante <b>+</b> accanto ai giochi.</p>" },
 
@@ -78,12 +78,13 @@ window.HELP = {
       "<li>Nei giochi a squadre i punti della squadra contano anche per ogni suo componente.</li></ul>" },
 
     proiettore: { t: "Schermo proiettore", h:
-      "<p>Apre una finestra separata da mettere sul proiettore o sul maxischermo. Usa caratteri molto grandi e alto contrasto, così i nomi si leggono anche da più di 5 metri.</p>" +
-      "<ul><li>Con un secondo schermo collegato si apre lì, già a tutto schermo. Con uno schermo solo usa <kbd>F</kbd> per il tutto schermo.</li>" +
-      "<li>Mostra la scheda che hai aperto nella finestra principale e si aggiorna da solo appena inserisci un punteggio.</li>" +
-      "<li>Se il contenuto non sta in una pagina, le pagine scorrono da sole ogni 12 secondi.</li>" +
-      "<li>Comandi: <kbd>←</kbd> <kbd>→</kbd> cambiano pagina, <kbd>Spazio</kbd> mette in pausa lo scorrimento, <kbd>F</kbd> schermo intero, <kbd>Esc</kbd> chiude. Muovi il mouse per vedere i pulsanti.</li></ul>" +
-      "<p>Si apre dal pulsante <b>Proiettore</b> o con <kbd>F5</kbd>.</p>" },
+      "<p>Ogni pannello (un girone, un tabellone, una classifica, il podio) ha in alto a destra l'icona del proiettore. Cliccala: si apre una finestra separata che mostra <b>solo quel pannello</b>, ingrandito al massimo che lo schermo consente. L'icona del pannello in onda diventa arancio.</p>" +
+      "<ul><li>Con un secondo schermo collegato la finestra si apre lì, già a tutto schermo. Con uno schermo solo usa <kbd>F</kbd> per il tutto schermo.</li>" +
+      "<li><kbd>PgDn</kbd> e <kbd>PgUp</kbd> (o le frecce) passano al pannello successivo o precedente della stessa scheda.</li>" +
+      "<li><b>Galleria</b>: i pannelli scorrono da soli. Scegli ogni quanti secondi (da 3 in su) e se mostrare solo i pannelli della scheda o tutti i giochi, i risultati e la Hall of Fame. Si attiva e si ferma con <kbd>G</kbd>.</li>" +
+      "<li>Il proiettore si aggiorna da solo appena inserisci un punteggio.</li>" +
+      "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
+      "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
 
     archivio: { t: "Archivio tornei e backup", h:
       "<h4>Salvare un torneo</h4><p><b>Salva questo torneo</b> crea un file nella cartella <b>Documenti\\Tornei Fragmarathon\\tornei</b>. Da quel momento il file si aggiorna da solo a ogni modifica. Scorciatoia: <kbd>Ctrl</kbd>+<kbd>S</kbd>.</p>" +
@@ -96,7 +97,7 @@ window.HELP = {
       "<ul><li><kbd>F1</kbd> apre questa guida sull'argomento della finestra in cui sei.</li>" +
       "<li><kbd>Ctrl</kbd>+<kbd>S</kbd> salva il torneo aperto nella cartella tornei.</li>" +
       "<li><kbd>Ctrl</kbd>+<kbd>Z</kbd> annulla l'ultima azione (fino a 60).</li>" +
-      "<li><kbd>F5</kbd> apre lo schermo proiettore.</li>" +
+      "<li><kbd>F5</kbd> apre il proiettore; lì <kbd>PgUp</kbd> <kbd>PgDn</kbd> cambiano pannello e <kbd>G</kbd> avvia la galleria.</li>" +
       "<li><kbd>Invio</kbd> in un punteggio passa al campo successivo.</li>" +
       "<li><kbd>Esc</kbd> chiude la guida.</li></ul>" },
 

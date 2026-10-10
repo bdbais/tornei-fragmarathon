@@ -120,12 +120,11 @@ function renderTabs(){
   var svg='<svg class="ico" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
   var USERS=svg+'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg>';
   var FLAG=svg+'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>';
-  var SCREEN=svg+'<rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/></svg>';
   var STAR=svg+'<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
   var HELPI=svg+'<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.3"/></svg>';
   var TROPHY=svg+'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/></svg>';
   function t(k,ic,l){return'<button class="tab" role="tab" data-k="'+k+'" aria-selected="'+(k===S.cur)+'">'+ic+l+'</button>'}
-  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+'<button class="tab" id="proj" title="Apri lo schermo per il proiettore (F5)">'+SCREEN+'Proiettore</button><button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
+  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
   $("tabs").innerHTML=Object.keys(DEF).map(function(k){return t(k,ico(k),esc(DEF[k].l)+platBadge(k))}).join("")+'<button class="tab" id="plus" aria-label="Aggiungi un gioco" title="Aggiungi un gioco">+</button>';
 }
 function renderSetup(){
@@ -764,7 +763,6 @@ function addPlayer(){
 /* ---- eventi ---- */
 $("tabs0").onclick=$("tabs").onclick=function(e){var b=e.target.closest("button");if(!b)return;
   if(b.id==="undo"){undo();return}
-  if(b.id==="proj"){openWall();return}
   if(b.id==="helpbtn"){openHelp(helpCtx());return}
   if(b.id==="plus"){var ag=$("addgame");ag.hidden=!ag.hidden;if(!ag.hidden)$("agname").focus();return}
   S.cur=b.dataset.k;armed=false;save();render()};
@@ -1240,147 +1238,138 @@ document.addEventListener("keydown",function(e){
   if(e.key==="Escape"&&$("help")&&!$("help").hidden){closeHelp();return}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();if(DEF[S.cur])saveTorneo(S.cur);else toast("Apri la scheda di un gioco per salvarne il torneo.");return}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"&&!typing){e.preventDefault();undo();return}
-  if(e.key==="F5"){e.preventDefault();openWall()}
+  if(e.key==="F5"){e.preventDefault();var s5=wState();s5.view=S.cur;s5.key=null;wSave(s5);openWall()}
 });
 function openWall(){if(DESK)DESK.openWall();else window.open(location.pathname+"?wall=1","tfwall","popup=yes,width=1280,height=720")}
 
 /* ======================================================================
-   Schermo proiettore: finestra separata, leggibile a più di 5 metri.
-   Palco fisso 1920x1080 scalato allo schermo; segue la scheda aperta
-   nella finestra principale e si aggiorna da solo ogni secondo.
+   Proiettore. Ogni pannello ha l'icona del proiettore: un clic lo manda
+   sullo schermo, da solo e ingrandito al massimo che lo schermo consente.
+   PgUp/PgDn passano agli altri pannelli; la galleria li fa scorrere da
+   sola ogni N secondi. Lo stato condiviso tra le due finestre sta in
+   localStorage (KEY-wall): {view,key,gal,sec,scope,t}.
    ====================================================================== */
-var wPg=0,wAuto=true,wT=0,wSig="",wN=0,wHide=null,WSEC=12000;
-function wChunk(a,n){var o=[];for(var i=0;i<a.length;i+=n)o.push(a.slice(i,i+n));return o}
-function wName(n,team,sz){return'<span class="wn">'+(team?tico(n,sz||44)+' ':'')+esc(n)+'</span>'}
-function wRows(rows,opt){
-  var n=Math.max(rows.length,1),rh=Math.min(104,Math.floor(720/n)),fs=Math.round(rh*.58);
-  return'<div class="wrows" style="--rh:'+rh+'px;--fs:'+fs+'px">'+rows.map(function(r){return'<div class="wrow'+(r.hl?' hl':'')+(r.dim?' dim':'')+'"><span class="wpos">'+(r.pos==null?"":r.pos)+'</span>'+wName(r.n,opt.team,fs)+'<span class="wsc">'+(r.sc==null?"–":r.sc)+'</span></div>'}).join("")+'</div>';
+var WKEY=KEY+"-wall",PJI='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/></svg>';
+function wState(){var s={};try{s=JSON.parse(localStorage.getItem(WKEY)||"{}")||{}}catch(e){}if(!(s.sec>=3))s.sec=10;if(s.scope!=="all")s.scope="view";return s}
+function wSave(s){s.t=Date.now();try{localStorage.setItem(WKEY,JSON.stringify(s))}catch(e){}return s}
+function viewName(v){return DEF[v]?DEF[v].l+(S.games[v]&&S.games[v].name?" — "+S.games[v].name:""):{roster:"Partecipanti",squadre:"Squadre",results:"Risultati finali",hof:"Hall of Fame"}[v]||""}
+/* I pannelli che si possono proiettare nella vista aperta. */
+function projEls(){return[].slice.call(document.querySelectorAll("#out>.champ,#out>section.panel,#resbox>section.panel,#hofbox>section.panel,#sqbox>section.panel,#rosterBox")).filter(function(el){return!el.hidden&&!el.closest("[hidden]")})}
+function projTitle(el){
+  if(el.classList.contains("champ"))return"Podio";
+  var h=el.querySelector("h2");if(!h)return"Pannello";
+  var c=h.cloneNode(true);[].forEach.call(c.querySelectorAll("button,.sr"),function(x){x.remove()});return c.textContent.replace(/\s+/g," ").trim()||"Pannello";
 }
-function wCard(title,rows,opt){return'<section class="wcard"><h3>'+esc(title)+'</h3>'+wRows(rows,opt)+'</section>'}
-function wMatch(a,b,sa,sb,w,team){
-  function row(n,s,me){var c=w===undefined||w===null?"":w==="="?"":w===n?" hl":" dim";return'<div class="wrow'+c+'">'+(n==null?'<span class="wn tbd">Da definire</span>':wName(n,team,46))+'<span class="wsc">'+(s==null?"":s)+'</span></div>'}
-  return'<section class="wcard wm">'+row(a,sa)+row(b,sb)+'</section>';
-}
-function wPodium(top,tpos,team,g){
-  var med=["1º","2º","3º"],o='<div class="wpod">';
-  [1,0,2].forEach(function(i){var n=top[i];if(!n)return;var p=((tpos&&tpos[i])||i+1);var mem=team&&g?((g.members||{})[n]||[]):[];
-    o+='<div class="wstep s'+(i+1)+'"><div class="wpn">'+(team?tico(n,i?64:90)+' ':'')+esc(n)+'</div>'+(mem.length?'<div class="wmem">'+mem.map(esc).join(", ")+'</div>':'')+'<div class="wblock">'+med[Math.min(p-1,2)]+'</div></div>'});
-  return o+'</div>';
-}
-function wSlidesGame(k){
-  var g=S.games[k],team=isTeam(g,k),r=result(g,k),T=DEF[k].l+(g.name?" — "+g.name:""),out=[];
-  function add(sub,html,cls){out.push({t:T,s:sub,ic:ico(k,96),h:html,c:cls||""})}
-  if(r.status==="Concluso")add("Podio",wPodium(r.top,r.tpos,team,g),"pod");
-  if(g.phase==="setup"){
-    wChunk(g.players,30).forEach(function(c,i,a){add("Iscritti"+(a.length>1?" ("+(i+1)+"/"+a.length+")":""),'<div class="wlist">'+c.map(function(n){return'<div>'+wName(n,team,40)+'</div>'}).join("")+'</div>')});
-    if(!out.length)add("Iscrizioni aperte",'<p class="wempty">Il torneo non è ancora iniziato.</p>');
-    return out;
-  }
-  if(g.ffa){
-    var F=g.ffa,ri=F.rounds.length-1,rd=F.rounds[ri],fin=rd.groups.length===1,cards=[];
-    rd.groups.forEach(function(gr,gi){
-      var e=gEval(gr,fin,F.adv),rows=e.sorted.map(function(x){return{n:x.n,sc:gr.s[x.n],pos:e.full?x.pos+"º":"",hl:e.full&&e.adv.indexOf(x.n)>=0}});
-      wChunk(rows,14).forEach(function(c,ci,a){cards.push(wCard((fin?"Finale":"Girone "+letter(gi))+(a.length>1?" ("+(ci+1)+"/"+a.length+")":""),c,{team:team}))});
-    });
-    wChunk(cards,3).forEach(function(c){add(fin?"Finale":"Turno "+(ri+1),'<div class="wgrid c'+c.length+'">'+c.join("")+'</div>')});
-  }
-  if(g.groups){
-    var noPO=rrNoPO(g),qs=noPO?[]:qualifiers(g),gc=[],nextM=[];
-    g.groups.forEach(function(x,gi){
-      var rows=standings(x).map(function(s,i){return{n:s.n,sc:s.pt,pos:(i+1)+"º",hl:qs.indexOf(s.n)>=0}});
-      wChunk(rows,14).forEach(function(c){gc.push(wCard(g.groups.length>1?"Girone "+letter(gi):"Classifica",c,{team:team}))});
-      var open=x.matches.filter(function(m){return m.sa==null||m.sb==null});
-      if(open.length){var d=open[0].day;open.filter(function(m){return m.day===d}).forEach(function(m){nextM.push(wMatch(m.a,m.b,m.sa,m.sb,null,team))})}
-    });
-    if(!g.rounds){
-      wChunk(gc,3).forEach(function(c){add(noPO?"Classifica (punti)":"Gironi (punti)",'<div class="wgrid c'+c.length+'">'+c.join("")+'</div>')});
-      wChunk(nextM,8).forEach(function(c){add("Prossime partite",'<div class="wmatches">'+c.join("")+'</div>')});
+function projKeys(){var seen={};projEls().forEach(function(el){var t=projTitle(el);seen[t]=(seen[t]||0)+1;var b0=t.replace(/\s*\(\d+\)$/,"");el.dataset.wk=b0+(seen[t]>1?" #"+seen[t]:"");el.dataset.wt=t});return projEls()}
+function decorateProj(){
+  if(WALL)return;
+  var ws=wState();
+  projKeys().forEach(function(el){
+    var b=el.querySelector(":scope>.pj,:scope>h2>.pj");
+    if(!b){
+      b=document.createElement("button");b.type="button";b.className="pj";b.innerHTML=PJI;
+      b.title="Mostra sul proiettore";b.setAttribute("aria-label","Mostra «"+el.dataset.wt+"» sul proiettore");
+      var h=el.classList.contains("champ")?null:el.querySelector("h2");
+      if(h){var hb=h.querySelector(".hb");if(hb)h.insertBefore(b,hb);else h.appendChild(b)}else el.appendChild(b);
     }
-  }
-  if(g.sw&&!g.rounds){
-    var W=g.sw,st=TF.swStandings(g.players,W.rounds),cur=W.rounds[W.rounds.length-1];
-    var cm=cur.filter(function(m){return m.b}).map(function(m){return wMatch(m.a,m.b,m.sa,m.sb,m.w,team)});
-    if(!cur.every(TF.swDone))wChunk(cm,8).forEach(function(c){add("Turno "+W.rounds.length+" di "+W.nr,'<div class="wmatches">'+c.join("")+'</div>')});
-    var rows=st.map(function(t,i){return{n:t.n,sc:t.pts,pos:(i+1)+"º",hl:W.top>=2&&i<W.top}});
-    wChunk(rows,24).forEach(function(c,i,a){var cs=wChunk(c,12);add("Classifica"+(a.length>1?" ("+(i+1)+"/"+a.length+")":""),'<div class="wgrid c'+cs.length+'">'+cs.map(function(x){return wCard("Punti",x,{team:team})}).join("")+'</div>')});
-  }
-  if(g.rounds){
-    var R=g.rounds,ci=R.findIndex(function(rd){return rd.some(function(m){return m.a&&m.b&&!m.w})});
-    if(ci>=0){var ms=R[ci].filter(function(m){return m.a||m.b}).map(function(m){return wMatch(m.a,m.b,m.sa,m.sb,m.w,team)});
-      wChunk(ms,8).forEach(function(c){add((g.groups||g.sw?"Playoff — ":"")+roundName(ci,R.length),'<div class="wmatches">'+c.join("")+'</div>')})}
-    if(g.third&&g.third.match&&g.third.a&&g.third.b&&!g.third.w)add("Finale 3º posto",'<div class="wmatches">'+wMatch(g.third.a,g.third.b,g.third.sa,g.third.sb,g.third.w,team)+'</div>');
-  }
-  if(g.de){
-    var D=deState(g),open2=Object.keys(D.ev.M).map(function(id){return D.ev.M[id]}).filter(function(m){return m.ready&&m.w===undefined});
-    var lab=function(m){return m.id==="GF"?"Finale":m.id==="GF2"?"Bella":m.id.charAt(0)==="W"?"Vincenti":"Perdenti"};
-    wChunk(open2,8).forEach(function(c){add("Partite da giocare",'<div class="wmatches">'+c.map(function(m){return'<div class="wml"><span>'+lab(m)+'</span>'+wMatch(m.a,m.b,m.sa,m.sb,m.w,team)+'</div>'}).join("")+'</div>')});
-  }
-  if(!out.length)add(r.status,'<p class="wempty">'+esc(r.status)+'</p>');
+    b.classList.toggle("on",ws.view===S.cur&&ws.key===el.dataset.wk);
+  });
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest(".pj");if(!b||WALL)return;
+  e.preventDefault();e.stopPropagation();
+  var el=b.closest("[data-wk]");if(!el)return;
+  var s=wState();s.view=S.cur;s.key=el.dataset.wk;wSave(s);decorateProj();openWall();
+  toast("Sul proiettore: "+el.dataset.wt+".");
+},true);
+window.addEventListener("storage",function(e){if(e.key===WKEY&&!WALL)decorateProj()});
+
+var wS=null,wItems=[],wIdx=0,wT=0,wSig="",wWSig="",wHide=null,wLock=false;
+function wViews(){return wS.scope==="all"?Object.keys(DEF).concat(["results","hof"]):[wS.view&&(DEF[wS.view]||/^(roster|squadre|results|hof)$/.test(wS.view))?wS.view:S.cur]}
+function wCollect(){
+  var out=[];
+  wViews().forEach(function(v){S.cur=v;render();projKeys().forEach(function(el){out.push({view:v,key:el.dataset.wk,title:el.dataset.wt})})});
   return out;
 }
-function wSlides(){
-  var v=S.cur,out=[],ttl=S.ui.title||UI0.title;
-  if(DEF[v])return wSlidesGame(v);
-  if(v==="roster"){
-    wChunk(S.roster,40).forEach(function(c,i,a){out.push({t:ttl,s:"Partecipanti ("+S.roster.length+")"+(a.length>1?" — "+(i+1)+"/"+a.length:""),h:'<div class="wlist">'+c.map(function(n){return'<div>'+wName(n,false)+'</div>'}).join("")+'</div>'})});
-  }else if(v==="squadre"){
-    var tc=(S.teams||[]).filter(function(t){return t.m.length}).map(function(t){return'<section class="wcard"><h3>'+tico(t.n,40)+' '+esc(t.n)+'</h3><div class="wmem big">'+t.m.map(esc).join("<br>")+'</div></section>'});
-    wChunk(tc,6).forEach(function(c){out.push({t:ttl,s:"Squadre",h:'<div class="wgrid c3 wteams">'+c.join("")+'</div>'})});
-  }else if(v==="results"){
-    var pc=[];Object.keys(DEF).forEach(function(k){var g=S.games[k],r=result(g,k);if(!r.top.length)return;
-      pc.push('<section class="wcard wres"><h3>'+ico(k,52)+esc(DEF[k].l)+'</h3>'+wRows(r.top.map(function(n,i){return n?{n:n,pos:["1º","2º","3º"][Math.min(((r.tpos&&r.tpos[i])||i+1)-1,2)],sc:"",hl:i===0}:null}).filter(Boolean),{team:r.team})+'</section>')});
-    wChunk(pc,6).forEach(function(c){out.push({t:ttl,s:"Risultati",h:'<div class="wgrid c3 wresg">'+c.join("")+'</div>'})});
-  }else if(v==="hof"){
-    var P={},Tm={};
-    Object.keys(DEF).forEach(function(k){var g=S.games[k],tm=isTeam(g,k),pts=gamePts(g);Object.keys(pts).forEach(function(n){if(tm){Tm[n]=(Tm[n]||0)+pts[n];((g.members||{})[n]||[]).forEach(function(m){P[m]=(P[m]||0)+pts[n]})}else P[n]=(P[n]||0)+pts[n]})});
-    function top(M){return Object.keys(M).sort(function(a,b){return M[b]-M[a]||a.localeCompare(b)}).slice(0,5).map(function(n,i){return{n:n,sc:M[n],pos:(i+1)+"º",hl:i===0}})}
-    var cs=[];if(Object.keys(P).length)cs.push(wCard("Giocatori",top(P),{team:false}));if(Object.keys(Tm).length)cs.push(wCard("Squadre",top(Tm),{team:true}));
-    if(cs.length)out.push({t:ttl,s:"Hall of Fame (punti totali)",h:'<div class="wgrid c'+cs.length+'">'+cs.join("")+'</div>'});
-  }
-  if(!out.length)out.push({t:ttl,s:S.ui.sub||UI0.sub,h:'<p class="wempty">Apri un gioco nella finestra principale per mostrarlo qui.</p>'});
-  return out;
+function wClone(el){
+  var c=el.cloneNode(true);c.removeAttribute("id");c.hidden=false;
+  [].forEach.call(c.querySelectorAll(".pj,.hb,.grip,p.hint,p.empty+.row,.row,input[type=file],textarea,#rteams>.row,.team>.row,.chip button,label"),function(x){x.remove()});
+  [].forEach.call(c.querySelectorAll("input"),function(i){var s=document.createElement("span");s.className="wv";s.textContent=i.value;i.replaceWith(s)});
+  [].forEach.call(c.querySelectorAll("select"),function(i){var s=document.createElement("span");s.className="wv";s.textContent=i.options[i.selectedIndex]?i.options[i.selectedIndex].text:"";i.replaceWith(s)});
+  [].forEach.call(c.querySelectorAll("button"),function(b){b.disabled=true;b.tabIndex=-1});
+  [].forEach.call(c.querySelectorAll("[data-dz]"),function(x){x.removeAttribute("data-dz")});
+  return c;
 }
-function wFit(){var st=$("wstage");if(st)st.style.transform="translate(-50%,-50%) scale("+Math.min(innerWidth/1920,innerHeight/1080)+")"}
-function wDraw(){
-  var L=wSlides();if(!L.length)L=[{t:S.ui.title||UI0.title,s:"",h:""}];wN=L.length;if(wPg>=wN)wPg=0;var s=L[wPg];
-  $("wtitle").textContent=s.t;$("wsub").textContent=s.s;$("wico").innerHTML=s.ic||"";
-  $("wbody").className=s.c||"";$("wbody").innerHTML=s.h;
-  $("wpg").textContent=wN>1?(wPg+1)+" / "+wN:"";
-  var p=$("wprog");p.style.animation="none";void p.offsetWidth;p.style.animation=wAuto&&wN>1?"wprog "+WSEC+"ms linear":"none";
-  $("wauto").textContent=wAuto?"Pausa":"Riprendi";
+function wFitBox(){
+  var box=$("wbody"),c=$("wfit");if(!box||!c)return;
+  var W=box.clientWidth,H=box.clientHeight;
+  for(var k=4;k>=0.25;k-=0.05){c.style.width=(W/k)+"px";c.style.transform="scale("+k+")";if(c.scrollHeight*k<=H&&c.scrollWidth<=W/k+1)break}
 }
-function wGo(d){wPg=(wPg+d+Math.max(wN,1))%Math.max(wN,1);wT=Date.now();wDraw()}
+function wDraw(fade){
+  if(!wItems.length){$("wtitle").textContent=S.ui.title||UI0.title;$("wsub").textContent="Niente da mostrare";$("wbody").innerHTML='<p class="wempty">Clicca l\'icona del proiettore su un pannello della finestra principale.</p>';$("wpg").textContent="";return}
+  if(wIdx>=wItems.length)wIdx=0;
+  var it=wItems[wIdx];S.cur=it.view;render();
+  var el=projKeys().filter(function(x){return x.dataset.wk===it.key})[0];
+  $("wico").innerHTML=DEF[it.view]?ico(it.view,96):"";
+  $("wtitle").textContent=viewName(it.view);$("wsub").textContent=it.title;
+  $("wpg").textContent=wItems.length>1?(wIdx+1)+" / "+wItems.length:"";
+  var body=$("wbody");body.innerHTML="";
+  if(el){var f=document.createElement("div");f.id="wfit";f.appendChild(wClone(el));body.appendChild(f);wFitBox()}
+  if(fade&&body.animate&&!matchMedia("(prefers-reduced-motion: reduce)").matches)body.animate([{opacity:0},{opacity:1}],{duration:450,easing:"ease-out"});
+  var p=$("wprog");p.style.animation="none";void p.offsetWidth;p.style.animation=wS.gal&&wItems.length>1?"wprog "+(wS.sec*1000)+"ms linear":"none";
+  $("wgal").textContent=wS.gal?"Galleria: attiva":"Galleria: spenta";$("wgal").classList.toggle("on",!!wS.gal);
+  if(document.activeElement!==$("wsec"))$("wsec").value=wS.sec;$("wscope").value=wS.scope;
+}
+function wRebuild(fade){
+  var cur=wItems[wIdx];wItems=wCollect();
+  var want=cur||{view:wS.view,key:wS.key},i=-1;
+  wItems.some(function(x,j){if(x.view===want.view&&x.key===want.key){i=j;return true}});
+  if(i<0)wItems.some(function(x,j){if(x.view===want.view){i=j;return true}});
+  wIdx=Math.max(0,i);wDraw(fade);
+}
+function wGo(d){if(!wItems.length)return;wIdx=(wIdx+d+wItems.length)%wItems.length;wT=Date.now();var it=wItems[wIdx];wS.view=it.view;wS.key=it.key;wSave(wS);wWSig=localStorage.getItem(WKEY);wDraw(true)}
+function wSet(ch){for(var k in ch)wS[k]=ch[k];wSave(wS);try{wWSig=localStorage.getItem(WKEY)}catch(e){}wT=Date.now();wRebuild(false)}
 function wPoll(){
-  var raw=null;try{raw=localStorage.getItem(KEY)}catch(e){}
-  if(raw&&raw!==wSig){var prevCur=S.cur;wSig=raw;try{S=JSON.parse(raw);initS();registerCustom();normGames();applyUi();document.title=(S.ui.title||UI0.title)+" — Proiettore"}catch(e){}if(S.cur!==prevCur){wPg=0;wT=Date.now()}wDraw()}
-  if(wAuto&&wN>1&&Date.now()-wT>=WSEC)wGo(1);
+  var raw=null,ws=null;try{raw=localStorage.getItem(KEY);ws=localStorage.getItem(WKEY)}catch(e){}
+  if(ws&&ws!==wWSig){wWSig=ws;wS=wState();wItems=[];wT=Date.now();wRebuild(true);return}
+  if(raw&&raw!==wSig){wSig=raw;try{S=JSON.parse(raw);initS();registerCustom();normGames();applyUi()}catch(e){}wRebuild(false);document.title=(S.ui.title||UI0.title)+" — Proiettore"}
+  if(wS.gal&&wItems.length>1&&Date.now()-wT>=wS.sec*1000)wGo(1);
 }
 function wallInit(){
   document.body.classList.add("wall");document.title=(S.ui.title||UI0.title)+" — Proiettore";
   var w=document.createElement("div");w.id="wall";
   w.innerHTML='<div id="wstage"><header class="wh"><span id="wico"></span><div class="wht"><h1 id="wtitle"></h1><p id="wsub"></p></div><div class="wpg" id="wpg"></div></header><div id="wbody"></div><div class="wbar"><i id="wprog"></i></div></div>'
-   +'<div class="wctl" id="wctl" role="toolbar" aria-label="Comandi del proiettore"><button data-w="prev" aria-label="Pagina precedente">◀</button><button data-w="auto" id="wauto">Pausa</button><button data-w="next" aria-label="Pagina successiva">▶</button><button data-w="fs">Schermo intero</button><button data-w="close">Chiudi</button><span class="wkeys"><kbd>←</kbd><kbd>→</kbd> pagine <kbd>Spazio</kbd> pausa <kbd>F</kbd> schermo intero <kbd>Esc</kbd> chiudi</span></div>';
+   +'<div class="wctl" id="wctl" role="toolbar" aria-label="Comandi del proiettore"><button data-w="prev" title="Pannello precedente (PgUp)" aria-label="Pannello precedente">◀</button><button data-w="next" title="Pannello successivo (PgDn)" aria-label="Pannello successivo">▶</button>'
+   +'<button data-w="gal" id="wgal" title="Scorri i pannelli da solo (G)">Galleria: spenta</button><label>ogni <input type="number" id="wsec" min="3" max="600" step="1" inputmode="numeric"> secondi</label>'
+   +'<select id="wscope" aria-label="Pannelli da mostrare"><option value="view">Pannelli di questa scheda</option><option value="all">Tutti i giochi e i risultati</option></select>'
+   +'<button data-w="fs">Schermo intero</button><button data-w="close">Chiudi</button>'
+   +'<span class="wkeys"><kbd>PgUp</kbd><kbd>PgDn</kbd> pannelli <kbd>G</kbd> galleria <kbd>F</kbd> schermo intero <kbd>Esc</kbd> chiudi</span></div>';
   document.body.appendChild(w);
+  function fs(){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(function(){})}
   w.addEventListener("click",function(e){var b=e.target.closest("[data-w]");if(!b)return;var a=b.dataset.w;
-    if(a==="prev")wGo(-1);else if(a==="next")wGo(1);else if(a==="auto"){wAuto=!wAuto;wT=Date.now();wDraw()}
-    else if(a==="fs"){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(function(){})}
-    else if(a==="close")window.close()});
+    if(a==="prev")wGo(-1);else if(a==="next")wGo(1);else if(a==="gal")wSet({gal:!wS.gal});else if(a==="fs")fs();else if(a==="close")window.close()});
+  $("wsec").addEventListener("change",function(){var v=parseInt(this.value,10);if(v>=3)wSet({sec:Math.min(600,v)});else this.value=wS.sec});
+  $("wscope").addEventListener("change",function(){wSet({scope:this.value})});
   document.addEventListener("keydown",function(e){
-    if(e.key==="ArrowRight"||e.key==="PageDown")wGo(1);else if(e.key==="ArrowLeft"||e.key==="PageUp")wGo(-1);
-    else if(e.key===" "){e.preventDefault();wAuto=!wAuto;wT=Date.now();wDraw()}
-    else if(e.key==="f"||e.key==="F"||e.key==="F11"){e.preventDefault();if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(function(){})}
+    if(/^(INPUT|SELECT)$/.test(e.target.tagName)&&e.key!=="Escape")return;
+    if(e.key==="PageDown"||e.key==="ArrowRight"||e.key==="ArrowDown"){e.preventDefault();wGo(1)}
+    else if(e.key==="PageUp"||e.key==="ArrowLeft"||e.key==="ArrowUp"){e.preventDefault();wGo(-1)}
+    else if(e.key==="g"||e.key==="G"||e.key===" "){e.preventDefault();wSet({gal:!wS.gal})}
+    else if(e.key==="f"||e.key==="F"||e.key==="F11"){e.preventDefault();fs()}
     else if(e.key==="Escape"){if(document.fullscreenElement)document.exitFullscreen();else window.close()}
   });
-  function showCtl(){var c=$("wctl");c.classList.add("on");document.body.classList.remove("nocur");clearTimeout(wHide);wHide=setTimeout(function(){c.classList.remove("on");document.body.classList.add("nocur")},2500)}
+  function showCtl(){var c=$("wctl");c.classList.add("on");document.body.classList.remove("nocur");clearTimeout(wHide);wHide=setTimeout(function(){if(!c.contains(document.activeElement)||document.activeElement===document.body){c.classList.remove("on");document.body.classList.add("nocur")}},3000)}
   document.addEventListener("mousemove",showCtl);showCtl();
-  window.addEventListener("resize",wFit);wFit();
-  try{wSig=localStorage.getItem(KEY)||""}catch(e){}
-  wT=Date.now();wDraw();setInterval(wPoll,1000);
+  function fitStage(){var st=$("wstage");st.style.transform="translate(-50%,-50%) scale("+Math.min(innerWidth/1920,innerHeight/1080)+")"}
+  window.addEventListener("resize",fitStage);fitStage();
+  try{wSig=localStorage.getItem(KEY)||"";wWSig=localStorage.getItem(WKEY)||""}catch(e){}
+  wS=wState();if(!wS.view)wS.view=S.cur;
+  wT=Date.now();wRebuild(false);setInterval(wPoll,1000);
 }
 
 var _render=render,_renderOut=renderOut;
-render=function(){_render();fitProj()};
-renderOut=function(){_renderOut();fitProj()};
+render=function(){_render();fitProj();decorateProj()};
+renderOut=function(){_renderOut();fitProj();decorateProj()};
 window.addEventListener("resize",fitProj);
 document.addEventListener("fullscreenchange",fitProj);
 lastJ=JSON.stringify(S);
