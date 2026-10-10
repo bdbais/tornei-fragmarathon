@@ -128,7 +128,7 @@
     document.querySelectorAll("#tabs0 .tab, #tabs .tab").forEach(function (b) {
       var t = (b.textContent || b.getAttribute("aria-label") || "").trim(); if (!t || b.id === "undodel") return;
       if (b.id === "plus") t = "Aggiungi un gioco";
-      add({ t: t, g: b.dataset.k && !/^(roster|squadre|results|hof)$/.test(b.dataset.k) ? "Gioco" : "Scheda", run: function () { b.click(); } });
+      add({ t: t, g: b.dataset.k && !/^(roster|squadre|results|hof|sala)$/.test(b.dataset.k) ? "Gioco" : "Scheda", run: function () { b.click(); } });
     });
     document.querySelectorAll("main .panel h2, #editform > .sect > h3").forEach(function (h) {
       var t = headText(h); if (!t) return;

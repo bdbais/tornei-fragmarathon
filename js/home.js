@@ -381,6 +381,7 @@
   function render() {
     return Promise.all([store.list(), D && D.botsList ? D.botsList().catch(function () { return null; }) : Promise.resolve(null)]).then(function (r) {
       list = (r[0] || []).filter(function (e) { return !e.broken || e.meta; }); bots = r[1] && r[1].length ? r[1] : null; paint(); laterOthers();
+      if (bots) { var mine = bots.filter(function (b) { return b.id === ((cur().ev && cur().ev.bot) || bots[0].id); })[0] || bots[0]; window.__botUser = mine.username || ""; }
     });
   }
 

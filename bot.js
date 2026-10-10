@@ -28,6 +28,8 @@ const HELP = [
   "/giocatore <i>nome</i> – dove gioca, posizioni, prossime partite",
   "/io <i>nome</i> – collega il tuo account al tuo giocatore: ti avviso quando tocca a te",
   "/miepartite – le tue partite e posizioni",
+  "/server – il server dove giochi la prossima partita: indirizzo e password",
+  "/mappa – la mappa della sala con la tua postazione",
   "/segui <i>nome</i> o /segui tutti – ricevi gli avvisi",
   "/nonseguire <i>nome</i> o /nonseguire tutti",
   "/seguiti – i tornei che segui",
@@ -39,7 +41,7 @@ const HELP = [
 const COMMANDS = [
   ["tornei", "I tornei e come stanno andando"], ["torneo", "Dettagli di un torneo"], ["classifica", "Classifica o tabellone"],
   ["partite", "Partite da giocare adesso"], ["risultati", "Podi dei tornei conclusi"], ["hof", "Hall of Fame"],
-  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"],
+  ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo giocatore"], ["miepartite", "Le tue prossime partite"], ["server", "Il server della tua prossima partita"], ["mappa", "Mappa della sala e la tua postazione"],
   ["segui", "Ricevi gli avvisi di un torneo"], ["nonseguire", "Smetti di seguire"], ["seguiti", "Tornei che segui"],
   ["iscrivimi", "Iscriviti a un torneo"], ["immagine", "Immagine del torneo"], ["diretta", "Dove guardare la diretta"], ["aiuto", "Elenco dei comandi"], ["stop", "Non ricevere più nulla"]
 ];
@@ -465,6 +467,18 @@ module.exports = function createBot(opts) {
     return true;
   }
   /* l'immagine la disegna la pagina: non si aspetta qui, così il bot continua a rispondere */
+  /* mappa della sala: la disegna la pagina, con la postazione del giocatore evidenziata */
+  async function mapPhoto(chatId, P, seat) {
+    send(chatId, seat ? "📍 La tua postazione è la <b>" + esc(seat) + "</b>. Preparo la mappa…" : "🗺 Preparo la mappa della sala…" + (P ? "" : "\nCollega il tuo giocatore con /io <i>nome</i> per vedere la tua postazione."));
+    const id = Math.random().toString(36).slice(2);
+    const p = new Promise((res) => { pngWait[id] = res; setTimeout(() => { if (pngWait[id]) { delete pngWait[id]; res(null); } }, 25000); });
+    opts.onPng({ id, k: (vm.salaEv ? vm.salaEv + ":" : "") + "sala~" + (P || "") });
+    const data = await p;
+    if (!data) return send(chatId, "Non sono riuscito a creare la mappa, riprova tra poco.");
+    const w = vm.sala && vm.sala.wifi;
+    return sendFile(chatId, "photo", "mappa.png", "image/png", Buffer.from(String(data).split(",")[1] || "", "base64"),
+      (seat ? "📍 " + esc(P) + ": postazione <b>" + esc(seat) + "</b>" : "🗺 Mappa della sala") + (w ? "\n📶 Wi-Fi: " + esc(w.ssid) + (w.pass ? " · password " + esc(w.pass) : "") : ""));
+  }
   function photo(chatId, t) { photoAsync(chatId, t).catch(() => {}); }
   async function photoAsync(chatId, t) {
     if (!t) return send(chatId, "Quale torneo? Usa /tornei.");
@@ -556,6 +570,28 @@ module.exports = function createBot(opts) {
         const mineP = cfg.pending.filter((p) => canManage(chatId, p.k));
         if (!mineP.length) return send(chatId, "Nessuna richiesta da confermare.");
         for (const p of mineP) await send(chatId, "📝 " + esc(p.l) + ": <b>" + esc(p.name) + "</b>" + (p.user ? " (" + esc(p.user) + ")" : ""), [[{ text: "Accetta", callback_data: "A:" + p.id }, { text: "Rifiuta", callback_data: "X:" + p.id }]]);
+        return;
+      }
+      case "server": case "servers": {
+        const P = c.player, all = (vm.sala && vm.sala.servers) || [], out = [];
+        const fmt = (sv) => "🖥 <b>" + esc(sv.name || "Server") + "</b>" + (sv.game ? " (" + esc(sv.game) + ")" : "") +
+          (sv.addr ? "\nIndirizzo: <code>" + esc(sv.addr) + "</code>" : "") + (sv.pass ? "\nPassword: <code>" + esc(sv.pass) + "</code>" : "");
+        if (P) {
+          T().forEach((t) => {
+            const me = [P].concat(Object.keys(t.members || {}).filter((tn) => (t.members[tn] || []).includes(P)));
+            (t.nextP || []).filter((x) => (x.p || []).some((n) => me.includes(n))).forEach((x) => {
+              out.push(tTitle(t) + "\n" + esc(String(x.t).split(" — 🖥 ")[0]) + "\n" + (x.srv ? fmt(x.srv) : "🖥 Server non ancora assegnato: chiedi agli organizzatori."));
+            });
+          });
+          if (!out.length) out.push("Non hai partite da giocare adesso, " + esc(P) + ". Ti avviso quando tocca a te.");
+        } else out.push("Collega prima il tuo giocatore con /io <i>nome</i>: così ti dico su quale server giochi.");
+        if ((isOrg || !P) && all.length) out.push("<b>Tutti i server</b>\n" + all.map((sv) => fmt({ name: sv.name, addr: sv.addr, pass: isOrg ? sv.pass : "", game: "" })).join("\n\n"));
+        return send(chatId, out.join("\n\n"));
+      }
+      case "mappa": case "dove": case "postazione": {
+        if (!vm.sala) return send(chatId, "La mappa della sala non è ancora pronta.");
+        const P = c.player, seat = P && vm.sala.seats && vm.sala.seats[P];
+        mapPhoto(chatId, P, seat).catch(() => {});
         return;
       }
       case "annuncio": {

@@ -4,6 +4,13 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.7.0", d: "2026-10-10", t: "La Sala e i server sugli incontri", items: [
+      "Nuova scheda Sala: pianta della LAN in 2D e in 3D con file di postazioni (anche doppie), giocatori e indirizzi IP, maxischermo, switch, server, Wi-Fi, regia, podio, uscite di sicurezza, estintori, primo soccorso, quadro elettrico, refrigerazione, bagni, bar e altro; si trascina, si ruota, si numera da sola.",
+      "Ping delle postazioni e dei server dall'app installata, anche automatico ogni 30 secondi: verde acceso, rosso non risponde.",
+      "Server dei giochi con il nome che vuoi (Server 1, Server Alpha, Server Linux q3dm1...): si assegnano a ogni incontro e a ogni girone dal menu sopra all'incontro, e si vedono anche sul proiettore.",
+      "Bot Telegram: l'avviso Tocca a te porta il server; /server dice nome, indirizzo e password del server della prossima partita; /mappa manda la mappa con la propria postazione evidenziata.",
+      "Mappa della sala sul proiettore e kit PDF da stampare: mappa con legenda, elenco postazioni, Wi-Fi con QR, server, QR del bot e di WhatsApp, cartellini delle postazioni."
+    ] },
     { v: "3.6.3", d: "2026-10-10", t: "Musica sul proiettore, impostazioni a menu, AI sul PC guidata", items: [
       "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.",
       "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.",

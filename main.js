@@ -171,6 +171,26 @@ ipcMain.handle("ev:list", () => {
   });
 });
 ipcMain.handle("ev:read", (_e, id) => fs.readFileSync(evFile(id), "utf8"));
+/* Sala: ping delle postazioni (IP o nome del PC). Un "ping -n 1" per indirizzo, 16 alla volta, senza shell. */
+function pingOne(host) {
+  return new Promise((res) => {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.:-]{0,252}$/.test(host)) return res({ ok: false, err: "indirizzo non valido" });
+    const win = process.platform === "win32", args = win ? ["-n", "1", "-w", "900", host] : ["-c", "1", "-W", "1", host];
+    require("child_process").execFile("ping", args, { timeout: 4000, windowsHide: true, encoding: "latin1" }, (err, out) => {
+      out = String(out || "");
+      const ok = /TTL=/i.test(out) || (!win && !err && /bytes from/i.test(out)), m = /[=<]\s?(\d+(?:[.,]\d+)?)\s?ms/i.exec(out);
+      res({ ok, ms: ok && m ? Math.round(parseFloat(m[1].replace(",", "."))) : null });
+    });
+  });
+}
+ipcMain.handle("sala:ping", async (_e, hosts) => {
+  const list = [...new Set((Array.isArray(hosts) ? hosts : []).map(String).filter(Boolean))].slice(0, 512), out = {};
+  for (let i = 0; i < list.length; i += 16) {
+    const part = list.slice(i, i + 16), r = await Promise.all(part.map(pingOne));
+    part.forEach((h, j) => { out[h] = r[j]; });
+  }
+  return out;
+});
 /* elenco giocatori da Google Sheets: solo l'esportazione CSV di un foglio condiviso con il link */
 ipcMain.handle("sheets:fetch", async (_e, url) => {
   if (!/^https:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]{20,}\/export\?format=csv(&gid=\d+)?$/.test(String(url || ""))) return { error: "link non valido" };
@@ -243,7 +263,9 @@ function mergeVM(parts) {
   return {
     title: multi ? (vis.length ? vis : parts).map((p) => p.vm.title).join(", ") : head.title, sub: multi ? "" : head.sub,
     draft: parts.every((p) => p.vm.draft), roster: [...new Set([].concat(...parts.map((p) => p.vm.roster || [])))],
-    tournaments: T, hof: head.hof, links: head.links || {}, lang: head.lang || "it"
+    tournaments: T, hof: head.hof, links: head.links || {}, lang: head.lang || "it",
+    /* la sala: del primo torneo che ne ha una */
+    sala: (parts.filter((p) => p.vm.sala)[0] || {}).vm ? (parts.filter((p) => p.vm.sala)[0]).vm.sala : null, salaEv: (parts.filter((p) => p.vm.sala)[0] || {}).id || ""
   };
 }
 function distribute() {

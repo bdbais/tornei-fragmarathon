@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("desk", {
   readTorneo: (file) => ipcRenderer.invoke("tornei:read", file),
   evList: () => ipcRenderer.invoke("ev:list"),
   sheetFetch: (url) => ipcRenderer.invoke("sheets:fetch", url),
+  salaPing: (hosts) => ipcRenderer.invoke("sala:ping", hosts),
   evRead: (id) => ipcRenderer.invoke("ev:read", id),
   evWrite: (id, data) => ipcRenderer.invoke("ev:write", id, data),
   evTrash: (id) => ipcRenderer.invoke("ev:trash", id),

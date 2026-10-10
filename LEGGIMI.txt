@@ -1,8 +1,8 @@
-TORNEI FRAGMARATHON 3.6.3
+TORNEI FRAGMARATHON 3.7.0
 Creato da fragmarathon.net e Lazarus.
 
 INSTALLARE (consigliato)
-1. Scarica "Tornei-Fragmarathon-Setup-3.6.3.exe" da
+1. Scarica "Tornei-Fragmarathon-Setup-3.7.0.exe" da
    https://github.com/bdbais/tornei-fragmarathon/releases/latest
 2. Doppio clic. Il programma si installa, crea l'icona sul desktop e si apre da solo.
    Se Windows mostra "Windows ha protetto il PC": Ulteriori informazioni > Esegui comunque.
@@ -105,3 +105,8 @@ NOVITA 3.6.3
 - Playlist di musica sul proiettore (file o radio), comandabile anche dall'app principale (pulsante con la nota).
 - Impostazioni a schermo intero con menu a sinistra; archivio e backup dentro le impostazioni.
 - Logo con AI sul PC: installazione guidata, ricerca automatica del servizio.
+
+NOVITA 3.7.0
+- Scheda Sala: pianta 2D e 3D con file di postazioni, giocatori, IP, ping e oggetti della sala (maxischermo, switch, server, uscite, estintori, quadro elettrico, podio, refrigerazione, bagni...).
+- Server dei giochi con nome libero, assegnabili a ogni incontro e girone; bot: server nell'avviso Tocca a te, /server e /mappa.
+- Mappa sul proiettore e kit PDF (mappa, postazioni, Wi-Fi con QR, server, cartellini).

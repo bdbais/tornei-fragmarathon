@@ -1,8 +1,17 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "tornei", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "tornei", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "sala", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
   topics: {
+    sala: { t: "Sala: postazioni, oggetti e server", h:
+      "<p>La scheda <b>Sala</b> è la pianta della LAN, in 2D e in 3D. Si salva con il torneo.</p>" +
+      "<ul><li><b>Aggiungi</b> una <b>Fila di postazioni</b> (anche doppia, una di fronte all'altra) e gli oggetti: maxischermo, proiettore, switch, server, access point Wi-Fi, regia, podio, uscite di sicurezza, estintori, primo soccorso, quadro elettrico, refrigerazione, bagni, bar, ingresso, guardaroba, prese, tavoli, muri e zone con un nome.</li>" +
+      "<li>Trascina per spostare (anche nella vista 3D). Sulla pianta: <kbd>R</kbd> ruota di 90°, <kbd>Q</kbd> ed <kbd>E</kbd> di 15°, le frecce spostano, <kbd>Canc</kbd> elimina.</li>" +
+      "<li>Clic su una postazione: scegli il giocatore e l'indirizzo IP (o il nome del PC). Nella fila, <b>Numera gli IP</b> li assegna in ordine e <b>Metti i giocatori in ordine</b> riempie i posti liberi.</li>" +
+      "<li><b>Ping di tutte</b> (solo nell'app installata) colora le postazioni: verde acceso, rosso non risponde. Si può ripetere da solo ogni 30 secondi.</li></ul>" +
+      "<h4>Server dei giochi</h4><p>In <b>Wi-Fi, server dei giochi e informazioni</b> aggiungi i server con il nome che vuoi (Server 1, Server Alpha, Server Linux q3dm1...), il gioco, l'indirizzo con la porta e la password. Poi, nella scheda del gioco, sopra a ogni incontro e a ogni girone compare il menu <b>🖥 Server…</b>: scegli dove si gioca. Il server appare anche sul proiettore.</p>" +
+      "<p>I giocatori collegati al bot ricevono il server insieme all'avviso <b>Tocca a te</b>; con <code>/server</code> chiedono nome, indirizzo e password del server della loro prossima partita, con <code>/mappa</code> la mappa della sala con la loro postazione evidenziata.</p>" +
+      "<h4>Proiettore e stampa</h4><p>Il pannello <b>Mappa della sala</b> si proietta come gli altri. <b>Crea il PDF</b> prepara il kit da stampare: mappa con legenda, elenco delle postazioni, Wi-Fi con il QR per collegarsi, server dei giochi, QR del bot e del gruppo WhatsApp, e i cartellini da mettere sulle postazioni.</p>" },
     tornei: { t: "Elenco dei tornei", h:
       "<p>All'avvio si apre l'elenco dei tornei (una LAN, una serata): ognuno ha giochi, giocatori, tema, logo, formule e bot Telegram suoi. Lo riapri quando vuoi con il pulsante <b>Tornei</b> in alto.</p>" +
       "<ul><li><b>Continua</b> o <b>Apri</b>: scegli quale torneo amministrare. Quello aperto si salva da solo.</li>" +
