@@ -31,11 +31,19 @@
   function timeout(ms) { return typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined; }
   async function asDataUrl(res) {
     if (!res.ok) throw new Error("Il servizio ha risposto " + res.status + (res.statusText ? " " + res.statusText : ""));
-    var type = (res.headers.get("content-type") || "image/png").split(";")[0];
-    if (!/^image\//.test(type)) throw new Error("Il servizio non ha restituito un'immagine (" + type + ")");
+    /* il tipo finisce nel data: URL e da lì nella pagina: solo formati d'immagine noti */
+    var type = (res.headers.get("content-type") || "image/png").split(";")[0].trim().toLowerCase();
+    if (type === "image/jpg") type = "image/jpeg";
+    if (!/^image\/(png|jpeg|webp|gif|avif)$/.test(type)) throw new Error("Il servizio non ha restituito un'immagine (" + type.replace(/[^\w\/+.-]/g, "").slice(0, 40) + ")");
     var buf = await res.arrayBuffer();
     if (buf.byteLength > 15e6) throw new Error("Immagine troppo grande");
     return "data:" + type + ";base64," + b64(buf);
+  }
+  /* immagine in base64 dalla risposta JSON: solo caratteri base64, niente che possa uscire dal data: URL */
+  function b64Png(x) {
+    var b = String(x).replace(/^data:image\/\w+;base64,/, "").replace(/\s+/g, "");
+    if (!/^[A-Za-z0-9+\/]+={0,2}$/.test(b)) throw new Error("Risposta non riconosciuta");
+    return "data:image/png;base64," + b;
   }
   async function json(res) {
     if (!res.ok) { var t = ""; try { t = (await res.text()).slice(0, 160); } catch (e) {} throw new Error("Il servizio ha risposto " + res.status + (t ? ": " + t : "")); }
@@ -70,7 +78,7 @@
         body: JSON.stringify({ prompt: prompt, negative_prompt: NEG, width: size, height: size, steps: 24, cfg_scale: 7, seed: seed, batch_size: 1, n_iter: 1 })
       }));
       if (!r.images || !r.images[0]) throw new Error("Nessuna immagine nella risposta");
-      return "data:image/png;base64," + String(r.images[0]).replace(/^data:image\/\w+;base64,/, "");
+      return b64Png(r.images[0]);
     }
     var h = { "Content-Type": "application/json" };
     if (key) h.Authorization = "Bearer " + key;
@@ -80,7 +88,7 @@
     }));
     var it = o.data && o.data[0];
     if (!it) throw new Error("Nessuna immagine nella risposta");
-    if (it.b64_json) return "data:image/png;base64," + it.b64_json;
+    if (it.b64_json) return b64Png(it.b64_json);
     if (it.url) return asDataUrl(await fetch(it.url, { signal: timeout(120000) }));
     throw new Error("Risposta non riconosciuta");
   }

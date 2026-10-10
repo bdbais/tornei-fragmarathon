@@ -3,8 +3,9 @@
    - lingua dell'interfaccia: la sceglie chi usa il programma (in alto, ricordata su questo PC);
    - lingua del torneo: nelle informazioni del torneo; vale per proiettore, diretta, immagini, PDF e bot.
    La pagina resta scritta in italiano: dopo ogni ridisegno un MutationObserver traduce testi e
-   attributi (placeholder, title, aria-label) con i dizionari di js/lang/, caricati solo quando servono.
-   Le immagini disegnate su canvas (immagini dei tornei, PDF, filigrana) usano la lingua del torneo. */
+   attributi (placeholder, title, aria-label, alt) con i dizionari di js/lang/, caricati solo quando servono.
+   Le immagini disegnate su canvas (immagini dei tornei, PDF, filigrana) usano la lingua del torneo;
+   i nomi scritti dall'utente vanno avvolti con I18N.keep(), così restano come sono. */
 (function () {
   "use strict";
   var C = window.I18NCORE; if (!C) return;
@@ -31,7 +32,7 @@
 
   /* ---------- testi della pagina ---------- */
   var orig = new WeakMap(), last = new WeakMap(), aOrig = new WeakMap();
-  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 }, ATTRS = ["placeholder", "title", "aria-label"];
+  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 }, ATTRS = ["placeholder", "title", "aria-label", "alt"];
   /* testi scritti da chi usa il programma: titolo, nomi di tornei, giocatori e squadre */
   var USER = ".brand h1,.brand .tag,.ev-t,.ev-sub,.ev-games b,button.rnm,.bt-name,.fn,.tn,.pname,.wn";
   function skipEl(el) {
@@ -93,10 +94,22 @@
   }
 
   /* ---------- immagini e PDF disegnati su canvas: lingua del torneo ---------- */
+  /* testo dell'utente (nomi, titoli) tra due U+2060 (word joiner, invisibile): si traduce solo quello fuori,
+     e i segni si tolgono. Se fit() taglia il segno di chiusura, il resto della stringa resta com'è. */
+  var WJ = "\u2060";
+  function keep(s) { return s == null || s === "" ? s : WJ + s + WJ; }
   var P = CanvasRenderingContext2D.prototype;
   ["fillText", "strokeText", "measureText"].forEach(function (f) {
     var o = P[f];
-    P[f] = function (t) { var d = dict(ev); if (d && typeof t === "string") { var a = Array.prototype.slice.call(arguments); a[0] = C.tr(t, d); return o.apply(this, a); } return o.apply(this, arguments); };
+    P[f] = function (t) {
+      var d = dict(ev);
+      if (typeof t === "string" && (d || t.indexOf(WJ) >= 0)) {
+        var a = Array.prototype.slice.call(arguments);
+        a[0] = t.indexOf(WJ) < 0 ? C.tr(t, d) : t.split(WJ).map(function (p, i) { return i % 2 ? p : C.tr(p, d); }).join("");
+        return o.apply(this, a);
+      }
+      return o.apply(this, arguments);
+    };
   });
 
   /* ---------- scelta delle lingue ---------- */
@@ -114,7 +127,7 @@
   window.I18N = {
     LANGS: C.LANGS, ui: function () { return ui; }, ev: function () { return ev; },
     setUi: setUi, setEv: setEv, load: load, refresh: all,
-    tr: function (s, code) { return C.tr(s, dict(code || ui)); },
+    tr: function (s, code) { return C.tr(s, dict(code || ui)); }, keep: keep,
     onChange: function (f) { waiters.push(f); }
   };
   Promise.all([load(ui), load(ev)]).then(function () {

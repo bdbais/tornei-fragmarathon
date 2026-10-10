@@ -11,9 +11,10 @@
 
 # PWA: stili inline nelle tabelle, immagini e font incorporati (data:),
 # file scaricati come blob:. Uniche connessioni esterne: il generatore di loghi
-# (Pollinations, Hugging Face o un servizio sul PC locale).
+# (Pollinations, Hugging Face o un servizio sul PC locale) e "Importa dal link"
+# di Google Sheets (docs.google.com, che rimanda a *.googleusercontent.com).
 /app/*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data: https:; font-src 'self' data:; connect-src 'self' https://gen.pollinations.ai https://router.huggingface.co http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data: https:; font-src 'self' data:; connect-src 'self' https://gen.pollinations.ai https://router.huggingface.co https://docs.google.com https://*.googleusercontent.com http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
 /app/sw.js
   Cache-Control: no-cache

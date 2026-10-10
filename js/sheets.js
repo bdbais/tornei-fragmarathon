@@ -5,9 +5,24 @@
 (function () {
   "use strict";
   /* ---------- CSV ---------- */
-  function parseCsv(text) {
+  /* separatore: si contano tab, ; e , sulla prima riga, fuori dalle virgolette. Un tab vince sempre
+     (quello che si incolla da Excel o Sheets è separato da tab, e i nomi possono contenere virgole);
+     se la prima riga non ne ha nessuno, la colonna è una sola e si usa il tab. */
+  function detectSep(text) {
+    var n = { "\t": 0, ";": 0, ",": 0 }, q = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      /* come parseCsv: le virgolette aprono solo a inizio cella; "" dentro è una virgoletta */
+      if (q) { if (c === '"') { if (text[i + 1] === '"') i++; else q = false; } continue; }
+      if (c === '"' && (i === 0 || text[i - 1] in n)) q = true;
+      else if (c === "\n" || c === "\r") break;
+      else if (c in n) n[c]++;
+    }
+    return n["\t"] || !(n[";"] || n[","]) ? "\t" : n[";"] >= n[","] ? ";" : ",";
+  }
+  function parseCsv(text, forceSep) {
     text = String(text || "").replace(/^﻿/, "");
-    var first = text.split(/\r?\n/)[0] || "", sep = [["\t", 0], [";", 0], [",", 0]].map(function (s) { s[1] = first.split(s[0]).length; return s; }).sort(function (a, b) { return b[1] - a[1]; })[0][0];
+    var sep = forceSep || detectSep(text);
     var rows = [], row = [], cell = "", q = false;
     for (var i = 0; i < text.length; i++) {
       var c = text[i];
@@ -18,11 +33,19 @@
       else cell += c;
     }
     if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
-    return rows.map(function (r) { return r.map(function (x) { return x.trim(); }); }).filter(function (r) { return r.some(Boolean); });
+    /* l'apostrofo davanti a = + - @ lo mette csvCell contro le formule: rileggendo il file si toglie */
+    return rows.map(function (r) { return r.map(function (x) { return x.trim().replace(/^'(?=[=+\-@\t\r])/, "").trim(); }); }).filter(function (r) { return r.some(Boolean); });
+  }
+  /* una cella che comincia con = + - @ (o tab, a capo) Excel la calcola come formula: un nome arrivato dal bot
+     come =HYPERLINK(...) diventerebbe un link attivo. L'apostrofo davanti la fa leggere come testo; i numeri restano numeri. */
+  function csvCell(x) {
+    var s = String(x == null ? "" : x);
+    if (typeof x !== "number" && /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+(?:[.,]\d+)?$/.test(s)) s = "'" + s;
+    return /[";\n\r,\t]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
   function toCsv(rows) {
     /* punto e virgola: è il separatore che Excel in italiano apre direttamente; il BOM fa riconoscere l'UTF-8 */
-    return "﻿" + rows.map(function (r) { return r.map(function (x) { x = String(x == null ? "" : x); return /[";\n\r,]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; }).join(";"); }).join("\r\n");
+    return "﻿" + rows.map(function (r) { return r.map(csvCell).join(";"); }).join("\r\n");
   }
 
   /* ---------- ZIP ---------- */
@@ -56,7 +79,7 @@
       var method = v.getUint16(p + 10, true), csz = v.getUint32(p + 20, true), nl = v.getUint16(p + 28, true), xl = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), lo = v.getUint32(p + 42, true);
       var name = dec.decode(u.subarray(p + 46, p + 46 + nl));
       var ds = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true), data = u.subarray(ds, ds + csz);
-      if (/\.xml$/.test(name)) jobs.push((function (name, method, data) {
+      if (/\.(xml|rels)$/.test(name)) jobs.push((function (name, method, data) {
         var pr = method === 0 ? Promise.resolve(data) : new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer().then(function (b) { return new Uint8Array(b); });
         return pr.then(function (d) { out[name] = dec.decode(d); });
       })(name, method, data));
@@ -85,26 +108,47 @@
       { name: "xl/worksheets/sheet1.xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>' + W.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join("") + "</cols><sheetData>" + sd + "</sheetData></worksheet>" }
     ]);
   }
+  /* per nome locale: alcuni programmi scrivono <x:row>, <x:c>... con un prefisso */
+  function tags(el, n) { return el.getElementsByTagNameNS("*", n); }
+  /* testo di una cella: si saltano le letture fonetiche (<rPh>, i furigana di Excel in giapponese) */
+  function rstText(el) { return Array.prototype.filter.call(tags(el, "t"), function (t) { return !t.parentNode || t.parentNode.localName !== "rPh"; }).map(function (t) { return t.textContent; }).join(""); }
+  /* r:id del foglio, qualunque sia il prefisso del namespace */
+  function relId(el) { for (var i = 0; i < el.attributes.length; i++) { var a = el.attributes[i]; if (a.localName === "id" && a.namespaceURI) return a.value; } return ""; }
+  /* primo foglio di lavoro nell'ordine delle schede (workbook.xml e le sue relazioni), saltando quelli nascosti;
+     se mancano, il foglio con il numero più basso */
+  function firstSheet(f, P) {
+    var wb = f["xl/workbook.xml"] && P.parseFromString(f["xl/workbook.xml"], "application/xml"), rl = f["xl/_rels/workbook.xml.rels"] && P.parseFromString(f["xl/_rels/workbook.xml.rels"], "application/xml"), T = {}, L = [];
+    if (wb && rl) {
+      Array.prototype.forEach.call(tags(rl, "Relationship"), function (r) {
+        var t = r.getAttribute("Target") || "", o = [];
+        (t.charAt(0) === "/" ? t.slice(1) : "xl/" + t).split("/").forEach(function (x) { if (x === "..") o.pop(); else if (x && x !== ".") o.push(x); });
+        if (/\/worksheet$/.test(r.getAttribute("Type") || "")) T[r.getAttribute("Id")] = o.join("/");
+      });
+      Array.prototype.forEach.call(tags(wb, "sheet"), function (s) { var n = T[relId(s)]; if (n && f[n]) L.push({ n: n, h: /hidden/i.test(s.getAttribute("state") || "") }); });
+    }
+    var v = L.filter(function (x) { return !x.h; })[0] || L[0]; if (v) return v.n;
+    var num = function (k) { return +(/(\d+)\.xml$/.exec(k) || [0, 0])[1]; };
+    return Object.keys(f).filter(function (k) { return /^xl\/worksheets\/sheet\d*\.xml$/.test(k); }).sort(function (a, b) { return num(a) - num(b); })[0];
+  }
   function readXlsx(buf) {
     return unzip(buf).then(function (f) {
       var P = new DOMParser(), ss = [];
       if (f["xl/sharedStrings.xml"]) {
         var sd = P.parseFromString(f["xl/sharedStrings.xml"], "application/xml");
-        Array.prototype.forEach.call(sd.getElementsByTagName("si"), function (si) { ss.push(Array.prototype.map.call(si.getElementsByTagName("t"), function (t) { return t.textContent; }).join("")); });
+        Array.prototype.forEach.call(tags(sd, "si"), function (si) { ss.push(rstText(si)); });
       }
-      /* primo foglio: quello indicato da workbook.xml, se no sheet1 */
-      var name = Object.keys(f).filter(function (k) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(k); }).sort()[0];
+      var name = firstSheet(f, P);
       if (!name) throw new Error("nessun foglio nel file");
       var doc = P.parseFromString(f[name], "application/xml"), rows = [];
-      Array.prototype.forEach.call(doc.getElementsByTagName("row"), function (r) {
+      Array.prototype.forEach.call(tags(doc, "row"), function (r) {
         var row = [];
-        Array.prototype.forEach.call(r.getElementsByTagName("c"), function (c) {
+        Array.prototype.forEach.call(tags(r, "c"), function (c) {
           var ref = c.getAttribute("r") || "", m = /^([A-Z]+)/.exec(ref), col = 0;
           if (m) for (var i = 0; i < m[1].length; i++) col = col * 26 + (m[1].charCodeAt(i) - 64);
           col = col ? col - 1 : row.length;
-          var t = c.getAttribute("t"), v = c.getElementsByTagName("v")[0], val = "";
+          var t = c.getAttribute("t"), v = tags(c, "v")[0], val = "";
           if (t === "s" && v) val = ss[+v.textContent] || "";
-          else if (t === "inlineStr") val = Array.prototype.map.call(c.getElementsByTagName("t"), function (x) { return x.textContent; }).join("");
+          else if (t === "inlineStr") val = rstText(c);
           else if (v) val = v.textContent;
           row[col] = String(val).trim();
         });
@@ -117,7 +161,15 @@
   function readFile(file) {
     if (/\.xlsx$/i.test(file.name)) return file.arrayBuffer().then(readXlsx);
     if (/\.xls$/i.test(file.name)) return Promise.reject(new Error("il vecchio formato .xls non è supportato: salvalo come .xlsx o .csv"));
-    return file.text().then(parseCsv);
+    /* Excel in italiano salva CSV e testo in ANSI (Windows-1252), "Testo Unicode" in UTF-16 con BOM:
+       si prova l'UTF-8 (anche i file esportati da qui) e, se i byte non lo sono, Windows-1252 */
+    return file.arrayBuffer().then(function (b) {
+      var u = new Uint8Array(b), t;
+      if (u[0] === 0xFF && u[1] === 0xFE) t = new TextDecoder("utf-16le").decode(u);
+      else if (u[0] === 0xFE && u[1] === 0xFF) t = new TextDecoder("utf-16be").decode(u);
+      else { try { t = new TextDecoder("utf-8", { fatal: true }).decode(u); } catch (e) { t = new TextDecoder("windows-1252").decode(u); } }
+      return parseCsv(t);
+    });
   }
   /* link di Google Sheets -> indirizzo dell'esportazione CSV del foglio (serve "chiunque abbia il link") */
   function gsheetCsvUrl(link) {
@@ -125,5 +177,5 @@
     var g = /[#&?]gid=(\d+)/.exec(link);
     return "https://docs.google.com/spreadsheets/d/" + m[1] + "/export?format=csv" + (g ? "&gid=" + g[1] : "");
   }
-  window.SHEETS = { zip: zipStore, parseCsv: parseCsv, toCsv: toCsv, toXlsx: toXlsx, readXlsx: readXlsx, readFile: readFile, gsheetCsvUrl: gsheetCsvUrl };
+  window.SHEETS = { zip: zipStore, parseCsv: parseCsv, toCsv: toCsv, csvCell: csvCell, toXlsx: toXlsx, readXlsx: readXlsx, readFile: readFile, gsheetCsvUrl: gsheetCsvUrl };
 })();

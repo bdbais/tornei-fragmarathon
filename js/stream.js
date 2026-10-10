@@ -102,10 +102,13 @@
     rec.ondataavailable = function (e) { if (e.data && e.data.size) e.data.arrayBuffer().then(function (b) { desk.streamChunk(g, b); }); };
     rec.start(250);
   }
+  var run = 0; /* ogni stop() lo incrementa: un avvio rimasto in attesa capisce di essere stato fermato */
   async function start(c, g) {
-    stop(); cfg = c; gen = g; scene = c.scene || "pip"; camIdx = c.cam || 0;
+    stop(); var my = run; cfg = c; gen = g; scene = c.scene || "pip"; camIdx = c.cam || 0;
     cv.width = c.w; cv.height = c.h; readMeta();
-    var errs = [];
+    var errs = [], CUT = "fermata";
+    /* fermata durante un'attesa (Ferma subito dopo Avvia): si chiude lo stream appena ottenuto e si rinuncia */
+    function gone(s) { if (my === run) return false; if (s) s.getTracks().forEach(function (t) { t.stop(); }); return true; }
     try {
       if (c.sourceId === "offscreen") {
         /* fotogrammi JPEG dal processore principale (schermo del proiettore disegnato fuori schermo) */
@@ -113,32 +116,40 @@
         offTarget = o; win = o;
       } else if (c.sourceId) {
         var s = await navigator.mediaDevices.getUserMedia({ audio: false, video: { mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: c.sourceId, maxWidth: 1920, maxHeight: 1080, maxFrameRate: c.fps } } });
+        if (gone(s)) return { ok: false, err: CUT };
         streams.push(s); win = video(s);
       }
     } catch (e) { errs.push("finestra: " + e.message); }
     for (var i = 0; i < (c.cams || []).length; i++) {
-      try { var cs = await navigator.mediaDevices.getUserMedia({ audio: false, video: { deviceId: { exact: c.cams[i] }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } }); streams.push(cs); cams.push(video(cs)); }
+      if (gone()) return { ok: false, err: CUT };
+      try { var cs = await navigator.mediaDevices.getUserMedia({ audio: false, video: { deviceId: { exact: c.cams[i] }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } } }); if (gone(cs)) return { ok: false, err: CUT }; streams.push(cs); cams.push(video(cs)); }
       catch (e) { errs.push("telecamera " + (i + 1) + ": " + e.message); }
     }
+    if (gone()) return { ok: false, err: CUT };
     audioCtx = new AudioContext({ sampleRate: 48000 }); audioDest = audioCtx.createMediaStreamDestination(); hasAudio = false;
     if (c.mic) {
-      try { var ms = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: c.mic }, echoCancellation: false, noiseSuppression: true, autoGainControl: true }, video: false }); streams.push(ms); audioCtx.createMediaStreamSource(ms).connect(audioDest); hasAudio = true; }
+      try { var ms = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: c.mic }, echoCancellation: false, noiseSuppression: true, autoGainControl: true }, video: false }); if (gone(ms)) return { ok: false, err: CUT }; streams.push(ms); audioCtx.createMediaStreamSource(ms).connect(audioDest); hasAudio = true; }
       catch (e) { errs.push("microfono: " + e.message); }
     }
     if (c.pcAudio) {
+      if (gone()) return { ok: false, err: CUT };
       try {
         var ps = await navigator.mediaDevices.getUserMedia({ audio: { mandatory: { chromeMediaSource: "desktop" } }, video: { mandatory: { chromeMediaSource: "desktop", maxWidth: 16, maxHeight: 16 } } });
+        if (gone(ps)) return { ok: false, err: CUT };
         ps.getVideoTracks().forEach(function (t) { t.stop(); });
         if (ps.getAudioTracks().length) { streams.push(ps); audioCtx.createMediaStreamSource(new MediaStream(ps.getAudioTracks())).connect(audioDest); hasAudio = true; }
       } catch (e) { errs.push("audio del PC: " + e.message); }
     }
+    if (gone()) return { ok: false, err: CUT };
     if (!win && !cams.length) { stop(); return { ok: false, err: "Nessuna immagine: " + (errs.join("; ") || "scegli una finestra o una telecamera") }; }
     timer = setInterval(tick, Math.round(1000 / c.fps));
     await new Promise(function (r) { setTimeout(r, 400); });
+    if (gone()) return { ok: false, err: CUT };
     startRecorder();
     return { ok: true, audio: hasAudio, warn: errs.join("; ") };
   }
   function stop() {
+    run++;
     if (timer) clearInterval(timer); timer = null;
     if (rec) { try { rec.ondataavailable = null; rec.stop(); } catch (e) {} rec = null; }
     [win].concat(cams).forEach(function (v) { if (v && v.stop) v.stop(); });
@@ -159,9 +170,10 @@
     createImageBitmap(new Blob([jpg], { type: "image/jpeg" })).then(function (b) { if (o.frame) o.frame.close(); o.frame = b; o.w = b.width; o.h = b.height; offBusy = false; }).catch(function () { offBusy = false; });
   });
   desk.onStreamCmd(function (m) {
-    if (m.type === "start") start(m.cfg, m.gen).then(function (r) { desk.streamReady(r); }).catch(function (e) { desk.streamReady({ ok: false, err: String(e && e.message || e) }); });
+    /* la risposta porta gen: il processo principale scarta quella di un avvio già annullato */
+    if (m.type === "start") start(m.cfg, m.gen).then(function (r) { r.gen = m.gen; desk.streamReady(r); }).catch(function (e) { desk.streamReady({ ok: false, err: String(e && e.message || e), gen: m.gen }); });
     else if (m.type === "stop") stop();
     else if (m.type === "scene") { scene = m.scene; if (typeof m.cam === "number") camIdx = m.cam; }
-    else if (m.type === "restart" && cfg) { gen = m.gen; startRecorder(); }
+    else if (m.type === "restart" && cfg && timer) { gen = m.gen; startRecorder(); } /* timer nullo: già fermata, non si riparte */
   });
 })();

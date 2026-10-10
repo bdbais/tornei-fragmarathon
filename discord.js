@@ -16,22 +16,38 @@ const READONLY = P.VIEW | P.HISTORY;
 const BOT = P.VIEW | P.SEND | P.HISTORY | P.CONNECT | P.MANAGE_CH | P.MANAGE_ROLES | P.EMBED;
 /* permessi da chiedere quando si aggiunge il bot al server */
 const INVITE_PERMS = (P.VIEW | P.SEND | P.HISTORY | P.CONNECT | P.SPEAK | P.MANAGE_CH | P.MANAGE_ROLES | P.INVITE | P.EMBED | P.ATTACH).toString();
+/* canali al massimo in una categoria (limite di Discord); un account non trovato si cerca di nuovo dopo MISS_MS */
+const MAXCH = 50, MISS_MS = 120000;
 
 function cleanToken(t) { return String(t || "").trim().replace(/^Bot\s+/i, "").replace(/\s+/g, ""); }
+/* lettere di ogni alfabeto (Discord le accetta); gli accenti si tolgono solo alle lettere latine */
 function slug(s) {
-  return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 90) || "partita";
+  const x = String(s || "").toLowerCase().normalize("NFD").replace(/([a-z])[̀-ͯ]+/g, "$1").normalize("NFC").replace(/[^\p{L}\p{M}\p{N}]+/gu, "-").replace(/^-+/, "");
+  return Array.from(x).slice(0, 90).join("").replace(/-+$/, "") || "partita";
 }
 function isId(s) { return /^\d{16,21}$/.test(String(s || "").trim()); }
+function same(a, b) { return (a || []).slice().sort().join() === (b || []).slice().sort().join(); }
+/* errori che fermano tutta la sincronizzazione (rete, token, permessi, limiti di frequenza, Discord giù); gli altri riguardano una partita sola */
+function fatal(e) { return !e.status || e.status === 403 || e.status === 429 || e.status >= 500; }
+/* Discord rifiuta il canale perché la categoria ne ha già 50 */
+function isFull(e) { return e.status === 400 && /CHANNEL_PARENT_MAX_CHANNELS|Maximum number of channels in category/i.test(JSON.stringify(e.body || "")); }
+function topic(title, g, m) { return (title + " · " + g.label + " · " + (m.label && m.label !== m.name ? m.label + ": " : "") + m.name).slice(0, 1000); }
 
 module.exports = function createDiscord(opts) {
   const dir = opts.dir, file = path.join(dir, "discord.json"), evDir = path.join(dir, "discord-tornei");
   const doFetch = opts.fetch || fetch, log = opts.log || (() => {});
   let cfg = load(), me = null, lastErr = "";
-  const queue = {}, running = {};
+  /* queue/running: un'operazione per torneo alla volta; gen: sale a ogni «Elimina i canali» e ferma la sincronizzazione in corso;
+     miss: account non trovati di recente (solo in memoria) */
+  const queue = {}, running = {}, gen = {}, miss = {};
 
   function load() {
-    try { return Object.assign({ token: "", users: {} }, JSON.parse(fs.readFileSync(file, "utf8"))); } catch { return { token: "", users: {} }; }
+    let c; try { c = Object.assign({ token: "", users: {} }, JSON.parse(fs.readFileSync(file, "utf8"))); } catch { c = { token: "", users: {} }; }
+    /* uv 2: prima un account poteva essere stato preso per nome visualizzato o soprannome, cioè la persona sbagliata: si cercano di nuovo */
+    if (c.uv !== 2) { c.users = {}; c.uv = 2; }
+    return c;
   }
+  function forget() { cfg.users = {}; for (const k of Object.keys(miss)) delete miss[k]; }
   function persist() { try { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(file + ".tmp", JSON.stringify(cfg, null, 1)); fs.renameSync(file + ".tmp", file); } catch (e) { log("discord salvataggio", e); } }
   function evFile(id) { return path.join(evDir, String(id).replace(/[^a-z0-9-]/gi, "") + ".json"); }
   function evLoad(id) { try { return JSON.parse(fs.readFileSync(evFile(id), "utf8")); } catch { return { guild: "", cats: {}, ch: {} }; } }
@@ -56,8 +72,8 @@ module.exports = function createDiscord(opts) {
     if (!r.ok) {
       const m = (j && j.message) || ("HTTP " + r.status);
       if (r.status === 401) throw new Error("Token del bot Discord non valido: copialo di nuovo dal Developer Portal (Bot, Reset Token).");
-      if (r.status === 403) { log("discord permessi", method + " " + url + ": " + m); throw new Error("Al bot mancano dei permessi sul server Discord: aggiungilo di nuovo con il link della sezione Discord."); }
-      const err = new Error("Discord: " + m); err.status = r.status; throw err;
+      if (r.status === 403) { log("discord permessi", method + " " + url + ": " + m); const e403 = new Error("Al bot mancano dei permessi sul server Discord: aggiungilo di nuovo con il link della sezione Discord."); e403.status = 403; throw e403; }
+      const err = new Error("Discord: " + m); err.status = r.status; err.body = j; throw err;
     }
     return j;
   }
@@ -72,23 +88,26 @@ module.exports = function createDiscord(opts) {
   }
   function inviteUrl() { return me ? "https://discord.com/oauth2/authorize?client_id=" + me.id + "&scope=bot&permissions=" + INVITE_PERMS : ""; }
 
-  /* account Discord → id utente: id numerico usato così com'è, altrimenti ricerca tra i membri del server */
-  async function resolve(guild, acc) {
+  /* account Discord → id utente: id numerico usato così com'è, altrimenti ricerca tra i membri del server.
+     Vale solo il nome utente esatto (unico su Discord), mai il nome visualizzato o il soprannome, che può avere chiunque.
+     fresh: ricerca chiesta a mano, anche se l'account non è stato trovato da poco */
+  async function resolve(guild, acc, fresh) {
     acc = String(acc || "").trim().replace(/^@/, ""); if (!acc) return null;
     if (isId(acc)) return acc;
     const key = guild + ":" + acc.toLowerCase();
     if (cfg.users[key]) return cfg.users[key];
-    const L = await call("GET", "/guilds/" + guild + "/members/search?limit=10&query=" + encodeURIComponent(acc.replace(/#\d{4}$/, "")));
-    const low = acc.toLowerCase().replace(/#\d{4}$/, "");
-    const m = (L || []).find((x) => x.user && (x.user.username.toLowerCase() === low)) ||
-      (L || []).find((x) => x.user && ((x.user.global_name || "").toLowerCase() === low || (x.nick || "").toLowerCase() === low));
-    if (!m) return null;
-    cfg.users[key] = m.user.id; persist();
+    if (!fresh && miss[key] && Date.now() - miss[key] < MISS_MS) return null;
+    const x = acc.match(/^(.*)#(\d{4})$/), name = x ? x[1] : acc, low = name.toLowerCase();
+    const L = await call("GET", "/guilds/" + guild + "/members/search?limit=1000&query=" + encodeURIComponent(name));
+    const m = (L || []).find((e) => e.user && String(e.user.username || "").toLowerCase() === low && (!x || e.user.discriminator === x[2]));
+    if (!m) { miss[key] = Date.now(); return null; }
+    delete miss[key]; cfg.users[key] = m.user.id; persist();
     return m.user.id;
   }
-  async function lookup(guild, accounts) {
+  async function lookup(guild, accounts, fresh) {
     const out = {};
-    for (const a of accounts || []) { try { out[a] = await resolve(guild, a); } catch (e) { out[a] = null; if (e.status !== 404) throw e; } }
+    /* nella sincronizzazione un limite di frequenza sulla ricerca vale come «non trovato»: si riprova la volta dopo */
+    for (const a of accounts || []) { try { out[a] = await resolve(guild, a, fresh); } catch (e) { out[a] = null; if (e.status !== 404 && (fresh || e.status !== 429)) throw e; } }
     return out;
   }
 
@@ -98,10 +117,35 @@ module.exports = function createDiscord(opts) {
     users.forEach((u) => ow.push({ id: u, type: 1, allow: (state === "done" ? READONLY : PLAYER).toString(), deny: (state === "done" ? (P.SEND | P.CONNECT) : 0n).toString() }));
     return ow;
   }
-  async function category(st, guild, g, title) {
-    if (st.cats[g.key]) return st.cats[g.key];
-    const c = await call("POST", "/guilds/" + guild + "/channels", { name: (title + " · " + g.label).slice(0, 100), type: 4, permission_overwrites: overwrites(guild, [], "ready") });
-    st.cats[g.key] = c.id; return c.id;
+  /* canali per categoria del gioco (p: categoria del testo, pv: del vocale; i canali senza p stanno nella prima) */
+  function used(st, gk) {
+    const n = {}, add = (id) => { if (id) n[id] = (n[id] || 0) + 1; };
+    for (const k of Object.keys(st.ch)) { if (!k.startsWith(gk + "|")) continue; const c = st.ch[k], p = c.p || st.cats[gk]; if (c.t) add(p); if (c.v) add(c.pv || p); }
+    return n;
+  }
+  /* categoria del gioco con posto per altri `need` canali: Discord ne tiene al massimo 50, poi se ne apre un'altra
+     (chiavi gioco, gioco#2, gioco#3...). prefer: quella da usare se ha posto (il vocale accanto al suo testo) */
+  async function category(st, guild, g, title, cx, need, prefer) {
+    const n = used(st, g.key), ok = (id) => !!id && !cx.full.has(id) && (n[id] || 0) + need <= MAXCH;
+    /* una categoria cancellata a mano su Discord si rifà al suo posto (controllo una volta per sincronizzazione) */
+    const live = async (id) => { if (cx.seen.has(id)) return true; try { await call("GET", "/channels/" + id); cx.seen.add(id); return true; } catch (e) { if (e.status !== 404) throw e; return false; } };
+    if (ok(prefer) && Object.values(st.cats).includes(prefer) && await live(prefer)) return prefer;
+    for (let i = 1; ; i++) {
+      const ck = i > 1 ? g.key + "#" + i : g.key;
+      if (ok(st.cats[ck])) { if (await live(st.cats[ck])) return st.cats[ck]; delete st.cats[ck]; }
+      if (!st.cats[ck]) {
+        const c = await call("POST", "/guilds/" + guild + "/channels", { name: (title + " · " + g.label + (i > 1 ? " (" + i + ")" : "")).slice(0, 100), type: 4, permission_overwrites: overwrites(guild, [], "ready") });
+        st.cats[ck] = c.id; cx.seen.add(c.id); return c.id;
+      }
+    }
+  }
+  /* crea un canale nella categoria del gioco; se Discord la dice piena (canali aggiunti a mano) se ne prende un'altra e si riprova */
+  async function mkChan(st, guild, g, title, cx, need, prefer, body) {
+    for (let i = 0; ; i++) {
+      const parent = await category(st, guild, g, title, cx, need, prefer);
+      try { const c = await call("POST", "/guilds/" + guild + "/channels", Object.assign({}, body, { parent_id: parent })); c.p = parent; return c; }
+      catch (e) { if (i || !isFull(e)) throw e; cx.full.add(parent); }
+    }
   }
   /* testi nella lingua del torneo, preparati dalla pagina (d.t) */
   function srvText(sv, T) { return "🖥️ " + (T.server || "Server") + ": **" + sv.name + "**" + (sv.addr ? " `" + sv.addr + "`" : "") + (sv.pass ? " · " + (T.pass || "password") + " `" + sv.pass + "`" : ""); }
@@ -112,13 +156,22 @@ module.exports = function createDiscord(opts) {
       (m.server ? "\n" + srvText(m.server, T) : "") +
       "\n" + (T.only || "Questo canale lo vedono solo i giocatori della partita e gli organizzatori.")).slice(0, 1900);
   }
-  async function drop(c) { for (const id of [c.t, c.v]) if (id) await call("DELETE", "/channels/" + id).catch(() => {}); }
+  /* cancella un canale: null se non c'è più (anche se era già stato tolto a mano), altrimenti l'errore. lax: anche quando il bot non ha più accesso */
+  async function del(id, lax) {
+    try { await call("DELETE", "/channels/" + id); return null; } catch (e) { return e.status === 404 || (lax && e.status === 403) ? null : e; }
+  }
+  /* toglie testo e vocale di una partita; dimentica solo quelli che non ci sono più (null, altrimenti l'errore) */
+  async function drop(c) { let err = null; for (const f of ["t", "v"]) if (c[f]) { const e = await del(c[f]); if (e) err = e; else c[f] = null; } return err; }
+  async function dropOrThrow(c) { const e = await drop(c); if (e) throw e; }
 
   /* allinea i canali del torneo a quello che chiede la pagina */
   async function syncNow(d) {
     if (!me) await check(); if (!me) throw new Error(lastErr || "Bot Discord non configurato.");
-    const st = evLoad(d.ev), guild = d.guild, stat = { created: 0, updated: 0, closed: 0, removed: 0, missing: [] };
-    if (st.guild && st.guild !== guild) await removeAll(d.ev, st);
+    const st = evLoad(d.ev), guild = d.guild, stat = { created: 0, updated: 0, closed: 0, removed: 0, missing: [], errors: [] };
+    /* «Elimina i canali» chiesto nel frattempo (gen cambiato): ci si ferma e si lascia fare a lui */
+    const g0 = gen[d.ev] || 0, stop = () => (gen[d.ev] || 0) !== g0, cx = { full: new Set(), seen: new Set() };
+    /* server Discord cambiato: via i canali dal vecchio (quelli dove il bot non ha più accesso si lasciano perdere) */
+    if (st.guild && st.guild !== guild) await removeAll(d.ev, st, true);
     st.guild = guild; st.cats = st.cats || {}; st.ch = st.ch || {};
     const ids = await lookup(guild, d.accounts), T = d.t || {};
     Object.keys(ids).forEach((a) => { if (!ids[a]) stat.missing.push(a); });
@@ -126,37 +179,49 @@ module.exports = function createDiscord(opts) {
     const want = {};
     (d.games || []).forEach((g) => (g.all || []).concat((g.matches || []).map((m) => m.key)).forEach((key) => { want[g.key + "|" + key] = 1; }));
     for (const g of d.games || []) {
+      if (stop()) break;
       for (const m of g.matches || []) {
+        if (stop()) break;
         const k = g.key + "|" + m.key, users = [...new Set((m.accounts || []).map((a) => ids[a]).filter(Boolean))];
-        let cur = st.ch[k];
+        let cur = st.ch[k], fresh = false;
         const mm = Object.assign({}, m, { users });
         try {
-          /* stessa partita ma giocatori diversi (tabellone rifatto): canale nuovo */
-          if (cur && cur.sig !== undefined && m.sig !== undefined && cur.sig !== m.sig) { await drop(cur); delete st.ch[k]; cur = null; stat.removed++; }
+          /* canale tolto a metà (una cancellazione non riuscita): si finisce di toglierlo */
+          if (cur && !cur.t) { await dropOrThrow(cur); delete st.ch[k]; cur = null; }
+          if (cur && cur.sig !== undefined && m.sig !== undefined && cur.sig !== m.sig) {
+            if ((users.length && same(cur.users, users)) || (cur.state === "done" && m.state === "done")) {
+              /* stessi giocatori con un nome nuovo (rinomina), o partita già finita: stesso canale con la sua chat, cambia solo il nome */
+              const no404 = (e) => { if (e.status === 404) throw e; log("discord rinomina", e.message); }, vGone = (e) => { if (e.status === 404) cur.v = null; else no404(e); };
+              await call("PATCH", "/channels/" + cur.t, { name: slug(m.name), topic: topic(d.title, g, m) }).catch(no404);
+              if (cur.v) await call("PATCH", "/channels/" + cur.v, { name: m.name.slice(0, 100) }).catch(vGone);
+              cur.sig = m.sig; cur.name = m.name; stat.updated++;
+            } else {
+              /* stessa partita ma giocatori diversi (tabellone rifatto): canale nuovo */
+              await dropOrThrow(cur); delete st.ch[k]; cur = null; stat.removed++;
+            }
+          }
+          /* aggiornamento chiesto a mano (d.now): un canale cancellato a mano su Discord si rifà */
+          if (cur && d.now && m.state === "ready" && cur.state === "ready") {
+            try { await call("GET", "/channels/" + cur.t); } catch (e) { if (e.status !== 404) throw e; await dropOrThrow(cur); delete st.ch[k]; cur = null; }
+          }
           if (!cur) {
             if (m.state !== "ready") continue;
-            let parent = await category(st, guild, g, d.title);
-            /* categoria cancellata a mano su Discord: se ne crea una nuova */
-            try { await call("GET", "/channels/" + parent); } catch (e) { if (e.status !== 404) throw e; delete st.cats[g.key]; parent = await category(st, guild, g, d.title); }
-            const t = await call("POST", "/guilds/" + guild + "/channels", { name: slug(m.name), type: 0, parent_id: parent, topic: (d.title + " · " + g.label + " · " + (m.label && m.label !== m.name ? m.label + ": " : "") + m.name).slice(0, 1000), permission_overwrites: overwrites(guild, users, "ready") });
-            let v = null;
-            if (d.voice) v = (await call("POST", "/guilds/" + guild + "/channels", { name: m.name.slice(0, 100), type: 2, parent_id: parent, permission_overwrites: overwrites(guild, users, "ready") })).id;
-            st.ch[k] = { t: t.id, v, users, state: "ready", name: m.name, sig: m.sig, server: m.server ? m.server.name : "" };
-            evSave(d.ev, st);
+            const t = await mkChan(st, guild, g, d.title, cx, d.voice ? 2 : 1, null, { name: slug(m.name), type: 0, topic: topic(d.title, g, m), permission_overwrites: overwrites(guild, users, "ready") });
+            /* registrato subito: se dopo qualcosa va storto il canale non resta orfano (il vocale si aggiunge sotto) */
+            cur = st.ch[k] = { t: t.id, p: t.p, v: null, users, state: "ready", name: m.name, sig: m.sig, server: m.server ? m.server.name : "" };
+            evSave(d.ev, st); fresh = true; stat.created++;
             await call("POST", "/channels/" + t.id + "/messages", { content: intro(mm, d.title, g, T), allowed_mentions: { users } }).catch(() => {});
-            stat.created++;
-            continue;
           }
-          const usersChanged = cur.users.slice().sort().join() !== users.slice().sort().join();
+          const usersChanged = !same(cur.users, users);
           if (m.state === "done" && cur.state !== "done") {
             await call("PATCH", "/channels/" + cur.t, { permission_overwrites: overwrites(guild, users, "done") });
-            if (cur.v) { await call("DELETE", "/channels/" + cur.v).catch(() => {}); cur.v = null; }
             if (m.result) await call("POST", "/channels/" + cur.t + "/messages", { content: ("🏁 " + m.result).slice(0, 1900), allowed_mentions: { parse: [] } }).catch(() => {});
             cur.state = "done"; cur.users = users; stat.closed++;
           } else if (usersChanged || (m.state === "ready" && cur.state === "done")) {
             const s = m.state === "done" ? "done" : "ready";
             await call("PATCH", "/channels/" + cur.t, { permission_overwrites: overwrites(guild, users, s) });
-            if (cur.v) await call("PATCH", "/channels/" + cur.v, { permission_overwrites: overwrites(guild, users, s) });
+            /* vocale cancellato a mano: si dimentica e si rifà sotto, il testo con la sua chat resta */
+            if (cur.v) await call("PATCH", "/channels/" + cur.v, { permission_overwrites: overwrites(guild, users, s) }).catch((e) => { if (e.status !== 404) throw e; cur.v = null; });
             cur.users = users; cur.state = s; stat.updated++;
           }
           const srv = m.server ? m.server.name : "";
@@ -164,40 +229,65 @@ module.exports = function createDiscord(opts) {
             await call("POST", "/channels/" + cur.t + "/messages", { content: srvText(m.server, T).slice(0, 1900), allowed_mentions: { parse: [] } }).catch(() => {});
           }
           cur.server = srv;
+          /* vocale solo per le partite da giocare e se richiesto: si crea se manca (partita nuova o riaperta, opzione accesa dopo,
+             creazione non riuscita), si toglie a fine partita o se l'opzione è spenta */
+          const wantV = !!d.voice && cur.state === "ready";
+          if (wantV && !cur.v) {
+            const v = await mkChan(st, guild, g, d.title, cx, 1, cur.p, { name: m.name.slice(0, 100), type: 2, permission_overwrites: overwrites(guild, users, "ready") });
+            cur.v = v.id; cur.pv = v.p; evSave(d.ev, st); if (!fresh) stat.updated++;
+          } else if (!wantV && cur.v && !(await del(cur.v))) { cur.v = null; if (cur.state === "ready") stat.updated++; }
         } catch (e) {
-          if (e.status === 404) { delete st.ch[k]; continue; }
-          evSave(d.ev, st); throw e;
+          /* canale cancellato a mano su Discord: via anche l'altro della coppia, poi si dimentica (se è da giocare si rifà) */
+          if (e.status === 404) { const c = st.ch[k]; if (c && !(await drop(c))) { delete st.ch[k]; stat.removed++; } continue; }
+          if (fatal(e)) { evSave(d.ev, st); throw e; }
+          /* errore di una partita sola: le altre vanno avanti */
+          stat.errors.push(m.name + ": " + e.message);
         }
       }
     }
+    if (stop()) { evSave(d.ev, st); return Object.assign(stat, { channels: Object.keys(st.ch).length, cancelled: true }); }
     /* partite che non esistono più (tabellone rifatto): via i loro canali */
     for (const k of Object.keys(st.ch)) {
       if (want[k]) continue;
-      await drop(st.ch[k]); delete st.ch[k]; stat.removed++;
+      if (!(await drop(st.ch[k]))) { delete st.ch[k]; stat.removed++; }
     }
-    /* categorie rimaste vuote di giochi senza partite */
+    /* categorie rimaste vuote: la prima di un gioco senza più partite, le altre (gioco#2...) appena non hanno più canali */
     for (const gk of Object.keys(st.cats)) {
-      const g = (d.games || []).find((x) => x.key === gk);
-      if (Object.keys(st.ch).some((k) => k.startsWith(gk + "|")) || (g && (g.all || []).length)) continue;
-      await call("DELETE", "/channels/" + st.cats[gk]).catch(() => {}); delete st.cats[gk];
+      const base = gk.replace(/#\d+$/, ""), id = st.cats[gk], g = (d.games || []).find((x) => x.key === base);
+      if (gk === base ? Object.keys(st.ch).some((k) => k.startsWith(base + "|")) || (g && (g.all || []).length) : Object.values(st.ch).some((c) => c.p === id || c.pv === id)) continue;
+      if (!(await del(id))) delete st.cats[gk];
     }
     evSave(d.ev, st);
+    if (stat.errors.length) stat.err = stat.errors[0] + (stat.errors.length > 1 ? " (+" + (stat.errors.length - 1) + ")" : "");
     return Object.assign(stat, { channels: Object.keys(st.ch).length });
   }
-  async function removeAll(evId, st) {
-    st = st || evLoad(evId); let n = 0;
-    for (const k of Object.keys(st.ch || {})) { for (const id of [st.ch[k].t, st.ch[k].v]) if (id) { await call("DELETE", "/channels/" + id).catch(() => {}); n++; } }
-    for (const k of Object.keys(st.cats || {})) { await call("DELETE", "/channels/" + st.cats[k]).catch(() => {}); }
-    st.ch = {}; st.cats = {}; evSave(evId, st);
+  /* cancella tutti i canali del torneo e dimentica solo quelli che non ci sono più: se qualcuno resta, errore (gli id restano per riprovare).
+     lax: anche quelli dove il bot non ha più accesso (server Discord cambiato) */
+  async function removeAll(evId, st, lax) {
+    st = st || evLoad(evId); st.ch = st.ch || {}; st.cats = st.cats || {}; let n = 0, fail = 0, err = null;
+    for (const k of Object.keys(st.ch)) { const c = st.ch[k]; for (const f of ["t", "v"]) if (c[f]) { const e = await del(c[f], lax); if (!e) { c[f] = null; n++; } else { fail++; err = e; } } if (!c.t && !c.v) delete st.ch[k]; }
+    /* le categorie solo a canali tolti: cancellarle prima lascerebbe i canali sparsi nel server */
+    if (!fail) for (const k of Object.keys(st.cats)) { const e = await del(st.cats[k], lax); if (!e) delete st.cats[k]; else { fail++; err = e; } }
+    evSave(evId, st);
+    if (fail) throw new Error("Canali Discord non eliminati: " + fail + ". " + err.message);
     return n;
   }
-  /* una sola sincronizzazione per torneo alla volta; le richieste arrivate nel frattempo si riducono all'ultima */
+  /* un'operazione per torneo alla volta; le sincronizzazioni chieste nel frattempo si riducono all'ultima */
   function sync(d) {
     if (!d || !d.ev || !d.guild) return Promise.resolve({ skipped: true });
     if (running[d.ev]) { queue[d.ev] = d; return running[d.ev]; }
-    const p = syncNow(d).then((r) => { lastErr = ""; return r; }, (e) => { lastErr = e.message; log("discord", e); return { err: e.message }; })
-      .then((r) => { delete running[d.ev]; const next = queue[d.ev]; delete queue[d.ev]; return next ? sync(next) : r; });
+    const p = syncNow(d).then((r) => { lastErr = r.err || ""; return r; }, (e) => { lastErr = e.message; log("discord", e); return { err: e.message }; })
+      .then((r) => next(d.ev, p, r));
     running[d.ev] = p; return p;
+  }
+  /* fine di un'operazione: se intanto è arrivata una sincronizzazione, si fa (a meno che un'altra operazione abbia preso il posto) */
+  function next(ev, p, r) { if (running[ev] !== p) return r; delete running[ev]; const q = queue[ev]; delete queue[ev]; return q ? sync(q) : r; }
+  /* «Elimina i canali»: ferma la sincronizzazione in corso, scarta quella in attesa, aspetta e cancella da solo */
+  function clearEv(evId) {
+    delete queue[evId]; gen[evId] = (gen[evId] || 0) + 1;
+    const done = Promise.resolve(running[evId]).catch(() => {}).then(() => removeAll(evId)).catch((e) => ({ err: e.message }));
+    const p = done.then(() => next(evId, p, { skipped: true }));
+    running[evId] = p; return done;
   }
   async function makeInvite(guild) {
     const chs = await call("GET", "/guilds/" + guild + "/channels");
@@ -210,12 +300,12 @@ module.exports = function createDiscord(opts) {
   return {
     status: () => ({ hasToken: !!cfg.token, user: me ? { id: me.id, name: me.username } : null, err: lastErr, invite: inviteUrl() }),
     configure: async (c) => {
-      if (c.removeToken) { cfg.token = ""; me = null; cfg.users = {}; persist(); return { ok: true }; }
-      if (typeof c.token === "string") { const t = cleanToken(c.token); if (t !== cfg.token) { cfg.token = t; cfg.users = {}; me = null; persist(); } }
+      if (c.removeToken) { cfg.token = ""; me = null; forget(); persist(); return { ok: true }; }
+      if (typeof c.token === "string") { const t = cleanToken(c.token); if (t !== cfg.token) { cfg.token = t; forget(); me = null; persist(); } }
       return check();
     },
-    check, sync, lookup: (guild, acc) => lookup(guild, acc).catch((e) => ({ err: e.message })),
-    clear: (evId) => removeAll(evId).catch((e) => ({ err: e.message })),
+    check, sync, lookup: (guild, acc) => lookup(guild, acc, true).catch((e) => ({ err: e.message })),
+    clear: (evId) => clearEv(evId),
     invite: (guild) => makeInvite(guild).then((url) => ({ url }), (e) => ({ err: e.message })),
     channels: (evId) => { const st = evLoad(evId); return { guild: st.guild, n: Object.keys(st.ch || {}).length }; }
   };

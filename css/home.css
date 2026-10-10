@@ -99,8 +99,8 @@ button.danger{background:#C62828;border-color:#C62828;color:#fff}
 .hm-sechead h2{margin:0;font-size:1.5rem}
 .hm-note{margin:0;flex:1 1 320px;color:var(--mut);font-size:.9rem;max-width:70ch}
 .hm-botlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:12px}
-.bt{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;padding:14px;border:1px solid var(--line);border-left:6px solid var(--bt);border-radius:10px;background:var(--panel)}
-.bt.on{box-shadow:inset 0 0 0 1px var(--bt)}
+.hm-botlist .bt{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;padding:14px;border:1px solid var(--line);border-left:6px solid var(--bt);border-radius:10px;background:var(--panel)}
+.hm-botlist .bt.on{box-shadow:inset 0 0 0 1px var(--bt)}
 .bt-col{width:34px;height:34px;padding:2px;border:1px solid var(--line);border-radius:50%;background:none;cursor:pointer}
 .bt-main{min-width:0}
 .bt-main p{margin:2px 0 0;font-size:.86rem;color:var(--mut)}
@@ -315,7 +315,7 @@ html.set-on body{overflow:hidden}
 .sl-bar{gap:8px 12px;margin-bottom:10px}
 .sl-view{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .sl-view button{border:0;border-radius:0;padding:8px 14px}
-.sl-view button[aria-pressed=true]{background:var(--acc);color:#fff}
+.sl-view button[aria-pressed=true]{background:var(--acc);color:var(--accink)}
 .sl-bar input[type=number]{width:70px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
 .sl-wrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;align-items:start}
 .sl-stage{min-width:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}

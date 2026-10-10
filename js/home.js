@@ -10,12 +10,13 @@
   if (!A || A.WALL) return;
   var LANGS = (window.I18NCORE && window.I18NCORE.LANGS) || [["it", "Italiano"]];
   var D = A.DESK, esc = A.esc, IDXK = "tornei-evidx", EVK = "tornei-ev:", PREFK = "tornei-home";
-  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null, vmCache = {}, curVM = null, othT = null;
+  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null, vmCache = {}, curVM = null, curVMId = null, othT = null, qq = {};
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
   var pref = (function () { try { return JSON.parse(lsGet(PREFK) || "{}"); } catch (e) { return {}; } })();
   function savePref() { lsSet(PREFK, JSON.stringify(pref)); }
+  function trUi(s) { return window.I18N && I18N.tr ? I18N.tr(s) : s; }
 
   /* ---------- dove stanno i tornei ---------- */
   var store = D && D.evList ? {
@@ -34,7 +35,8 @@
     read: function (id) { var t = lsGet(EVK + id); return t ? Promise.resolve(t) : Promise.reject(new Error("torneo non trovato")); },
     write: function (id, txt) {
       if (!lsSet(EVK + id, txt)) return Promise.reject(new Error("spazio del browser esaurito: togli qualche logo o torneo vecchio"));
-      var x = this.idx(); x[id] = { mtime: Date.now(), meta: JSON.parse(txt).meta }; lsSet(IDXK, JSON.stringify(x));
+      var x = this.idx(); x[id] = { mtime: Date.now(), meta: JSON.parse(txt).meta };
+      if (!lsSet(IDXK, JSON.stringify(x))) return Promise.reject(new Error("spazio del browser esaurito: togli qualche logo o torneo vecchio"));
       return Promise.resolve(true);
     },
     trash: function (id) {
@@ -46,6 +48,13 @@
   };
 
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  /* solo questi nomi di file si possono aprire, scrivere ed eliminare (main.js evFile) */
+  function okId(id) { return /^[a-z0-9-]{4,40}$/.test(String(id)); }
+  function okState(st) { return !!st && !!st.games && typeof st.games === "object" && !Array.isArray(st.games); }
+  /* una copia del torneo non deve salvare sopra i file in Archivio dell'originale */
+  function unbind(st) { Object.keys(st.games || {}).forEach(function (k) { var g = st.games[k]; if (g && typeof g === "object") delete g.file; }); return st; }
+  /* letture e modifiche del file di un altro torneo, una alla volta per torneo */
+  function serial(id, fn) { var p = (qq[id] || Promise.resolve()).then(function () { return fn(); }); qq[id] = p.catch(function () {}); return p; }
   function cur() { return A.S(); }
   function curId() { var S = cur(); return S.ev && S.ev.id; }
   function ensureEv() {
@@ -81,11 +90,12 @@
     });
   }
   function wrap(S, meta) { return JSON.stringify({ app: "tornei-fragmarathon", kind: "evento", v: 1, meta: meta, state: S }); }
-  function flush() {
+  /* strict: l'errore passa a chi chiama, che non deve sostituire il torneo aperto (le modifiche non salvate andrebbero perse) */
+  function flush(strict) {
     ensureEv();
     var S = cur();
     return metaOf(S).then(function (m) { return store.write(S.ev.id, wrap(S, m)); })
-      .catch(function (e) { A.toast("Salvataggio del torneo non riuscito: " + ((e && e.message) || e)); });
+      .catch(function (e) { A.toast("Salvataggio del torneo non riuscito: " + ((e && e.message) || e)); if (strict === true) throw e; });
   }
   A.onSave = function () { clearTimeout(saveT); saveT = setTimeout(flush, 1500); };
   window.addEventListener("beforeunload", function () { if (saveT) { clearTimeout(saveT); flush(); } });
@@ -94,57 +104,69 @@
   function sendAll() {
     if (!D || !D.botState) return;
     var S = cur(), id = S.ev && S.ev.id, ev = [];
-    if (curVM && id) ev.push({ id: id, bot: S.ev.bot || "", vm: curVM });
+    /* la vista del torneo aperto solo se è stata calcolata su questo torneo: subito dopo un cambio è ancora quella del precedente */
+    if (curVM && id && curVMId === id) ev.push({ id: id, bot: S.ev.bot || "", vm: curVM });
     Object.keys(vmCache).forEach(function (k) { if (k !== id) ev.push({ id: k, bot: vmCache[k].bot, vm: vmCache[k].vm }); });
     D.botState({ events: ev }).catch(function () {});
   }
-  A.pushVM = function (vm) { curVM = vm; sendAll(); };
+  A.pushVM = function (vm) { curVM = vm; curVMId = curId(); sendAll(); };
   function refreshOthers() {
     if (!D || !D.botState) return Promise.resolve();
     clearTimeout(othT);
     return store.list().then(function (L) {
       var id = curId(), keep = {};
-      return Promise.all(L.filter(function (e) { return e.id !== id; }).map(function (e) {
+      return Promise.all(L.filter(function (e) { return e.id !== id && okId(e.id); }).map(function (e) {
         keep[e.id] = 1;
-        return store.read(e.id).then(function (t) { var j = JSON.parse(t), st = j.state || j; vmCache[e.id] = { bot: (st.ev && st.ev.bot) || "", vm: A.vmOf(st) }; }).catch(function () {});
+        /* si rilegge e ricalcola solo un file cambiato */
+        var ver = e.mtime + ":" + (e.size || 0);
+        if (vmCache[e.id] && vmCache[e.id].ver === ver) return;
+        return (qq[e.id] || Promise.resolve()).then(function () { return store.read(e.id); }).then(function (t) { var j = JSON.parse(t), st = j.state || j; vmCache[e.id] = { ver: ver, bot: (st.ev && st.ev.bot) || "", vm: A.vmOf(st) }; }).catch(function () {});
       })).then(function () { Object.keys(vmCache).forEach(function (k) { if (!keep[k]) delete vmCache[k]; }); sendAll(); });
     });
   }
   /* modifica di un torneo che non è quello aperto: fn(stato) restituisce true se ha cambiato qualcosa */
   function editOther(id, fn) {
-    return store.read(id).then(function (t) {
-      var j = JSON.parse(t), st = j.state || j;
-      if (!fn(st)) return;
-      return store.write(id, wrap(st, j.meta || {})).then(function () { laterOthers(); });
+    return serial(id, function () {
+      return store.read(id).then(function (t) {
+        var j = JSON.parse(t), st = j.state || j;
+        if (!fn(st)) return;
+        return store.write(id, wrap(st, j.meta || {})).then(function () { laterOthers(); });
+      });
     }).catch(function () {});
   }
   function laterOthers() { clearTimeout(othT); othT = setTimeout(refreshOthers, 300); }
   /* iscrizione dal bot a un torneo che non è quello aperto: si scrive nel suo file */
   function joinOther(id, k, name, dc) {
-    return store.read(id).then(function (t) {
-      var j = JSON.parse(t), st = j.state || j;
-      A.applyJoin(st, k, name, dc);
-      var m = j.meta || {}; m.players = (st.roster || []).length;
-      return store.write(id, wrap(st, m)).then(function () { A.toast("Iscritto dal bot Telegram: " + name + " (" + (m.title || "altro torneo") + ")."); laterOthers(); if (root && !root.hidden) render(); });
-    }).catch(function (e) { A.toast("Iscrizione dal bot non salvata: " + ((e && e.message) || e)); });
+    return serial(id, function () {
+      return store.read(id).then(function (t) {
+        var j = JSON.parse(t), st = j.state || j;
+        A.applyJoin(st, k, name, dc);
+        /* scheda dell'elenco: totale e conteggi per gioco */
+        var m = j.meta || {}; m.players = (st.roster || []).length; m.updated = Date.now();
+        try { m.games = A.games(JSON.parse(JSON.stringify(st))); } catch (e) {}
+        return store.write(id, wrap(st, m)).then(function () { return m; });
+      });
+    }).then(function (m) { A.toast("Iscritto dal bot Telegram: " + name + " (" + (m.title || "altro torneo") + ")."); laterOthers(); if (root && !root.hidden) render(); })
+      .catch(function (e) { A.toast("Iscrizione dal bot non salvata: " + ((e && e.message) || e)); });
   }
   function useBot(S) { if (D && D.botsUse) return D.botsUse((S.ev && S.ev.bot) || "").catch(function () {}); return Promise.resolve(); }
 
   /* ---------- azioni ---------- */
   function template(g, keep) {
     var t = { name: g.name || "", mode: g.mode, ng: g.ng || 2, players: keep ? (g.players || []).slice() : [], members: keep ? (g.members || {}) : {}, phase: "setup", groups: null, rounds: null };
-    ["team", "plat", "logo", "calc", "nq", "tsize", "ffaGs", "ffaAdv", "swR", "swTop", "hidden", "cam", "cfg"].forEach(function (k) { if (g[k] !== undefined) t[k] = g[k]; });
+    ["team", "plat", "logo", "calc", "nq", "tsize", "ffaGs", "ffaAdv", "swR", "swTop", "deReset", "hidden", "cam", "draft", "cfg"].forEach(function (k) { if (g[k] !== undefined) t[k] = g[k]; });
     return t;
   }
   function readState(id) {
     if (id === curId()) return Promise.resolve(JSON.parse(JSON.stringify(cur())));
-    return store.read(id).then(function (t) { var j = JSON.parse(t); return j.state || j; });
+    /* aspetta le modifiche in corso su quel file (iscrizioni dal bot, preferiti) */
+    return (qq[id] || Promise.resolve()).then(function () { return store.read(id); }).then(function (t) { var j = JSON.parse(t); return j.state || j; });
   }
   function openEv(id) {
     if (id === curId()) { close(); return; }
     clearTimeout(saveT);
-    flush().then(function () { return readState(id); }).then(function (st) {
-      if (!st || typeof st.games !== "object") throw new Error("file non valido");
+    flush(true).then(function () { return readState(id); }).then(function (st) {
+      if (!okState(st)) throw new Error("file non valido");
       st.ev = st.ev || {}; st.ev.id = id;
       A.load(st); useBot(st); close(); laterOthers();
       A.toast("Torneo aperto: " + ((st.ui && st.ui.title) || A.ui0.title) + ".");
@@ -153,9 +175,10 @@
   function create(f) {
     var from = f.from.split(":"), base = from[1] ? readState(from[1]) : Promise.resolve(null);
     clearTimeout(saveT);
-    flush().then(function () { return base; }).then(function (src) {
+    flush(true).then(function () { return base; }).then(function (src) {
       var keep = from[0] === "tutto", st;
-      if (src && from[0] === "copia") st = src;
+      if (src && !okState(src)) throw new Error("file non valido");
+      if (src && from[0] === "copia") st = unbind(src);
       else if (src) {
         st = src; Object.keys(st.games || {}).forEach(function (k) { st.games[k] = template(st.games[k], keep); });
         if (!keep) { st.roster = []; st.teams = []; }
@@ -174,19 +197,22 @@
       if (f.pinned !== undefined) st.ev.pinned = f.pinned;
     }
     if (id === curId()) {
-      var S = cur(); apply(S); A.load(S); if (f.bot !== undefined) useBot(S);
+      /* titolo, lingua e il resto vanno ridisegnati; la stella e il bot no, e così resta la cronologia di Ctrl+Z */
+      var S = cur(); apply(S); if (f.title !== undefined) A.load(S); else A.touch(); if (f.bot !== undefined) useBot(S);
       clearTimeout(saveT); return flush().then(render);
     }
-    return store.read(id).then(function (t) {
-      var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
-      apply(st);
-      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.discord = st.ev.discord || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
-      m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
-      return store.write(id, wrap(st, m));
+    return serial(id, function () {
+      return store.read(id).then(function (t) {
+        var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
+        apply(st);
+        m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.discord = st.ev.discord || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
+        m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
+        return store.write(id, wrap(st, m));
+      });
     }).then(render).catch(function (e) { A.toast("Modifica non salvata: " + ((e && e.message) || e)); });
   }
   function exportEv(id) {
-    var p = id === curId() ? flush().then(function () { return store.read(id); }) : store.read(id);
+    var p = (id === curId() ? flush(true) : qq[id] || Promise.resolve()).then(function () { return store.read(id); });
     p.then(function (t) {
       var m = JSON.parse(t).meta || {}, name = String(m.title || "torneo").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "");
       A.dl(new Blob([t], { type: "application/json" }), (name || "torneo") + ".torneo.json");
@@ -199,23 +225,37 @@
       var j; try { j = JSON.parse(r.result); } catch (e) { A.toast("Il file non è un torneo."); return; }
       if (j && j.kind === "torneo") { A.toast("Questo file contiene un solo gioco: apri un torneo e riprendilo da Archivio."); return; }
       var st = j && j.kind === "evento" ? j.state : j;
-      if (!st || typeof st.games !== "object" || Array.isArray(st.games)) { A.toast("Il file non è un torneo salvato da questo programma."); return; }
-      st.ev = Object.assign({}, st.ev || {}, { id: newId(), created: Date.now() });
-      var m = Object.assign({}, j.meta || {}, { title: (st.ui && st.ui.title) || (j.meta && j.meta.title) || "Torneo importato", updated: Date.now(), pinned: false });
-      if (!m.games) m.games = A.games(JSON.parse(JSON.stringify(st)));
-      store.write(st.ev.id, wrap(st, m)).then(function () { A.toast("Torneo importato: " + m.title + "."); render(); })
+      if (!okState(st)) { A.toast("Il file non è un torneo salvato da questo programma."); return; }
+      /* la scheda si ricalcola dallo stato (come nel ripristino): la meta di un file condiviso non è affidabile */
+      Object.keys(st.games).forEach(function (k) { var g = st.games[k]; if (!g || typeof g !== "object" || Array.isArray(g)) delete st.games[k]; });
+      try { A.migrateState(st); } catch (e) {}
+      if (!st.ui || typeof st.ui !== "object") st.ui = {};
+      if (!st.ui.title) st.ui.title = String((j.meta && j.meta.title) || "Torneo importato").slice(0, 80);
+      st.ev = Object.assign({}, st.ev && typeof st.ev === "object" ? st.ev : {}, { id: newId(), created: Date.now(), pinned: false });
+      ["wa", "tg", "discord", "maps"].forEach(function (k) { st.ev[k] = linkOk(st.ev[k], k); });
+      unbind(st);
+      var acc = j.meta && j.meta.accent, title = st.ui.title;
+      metaOf(st).then(function (m) {
+        if (typeof acc === "string" && /^(#[0-9a-f]{3,8}|rgba?\([\d.,\s%]+\))$/i.test(acc)) m.accent = acc;
+        return store.write(st.ev.id, wrap(st, m));
+      }).then(function () { A.toast("Torneo importato: " + title + "."); render(); })
         .catch(function (e) { A.toast("Importazione non riuscita: " + ((e && e.message) || e)); });
     };
     r.readAsText(file);
   }
+  /* un torneo eliminato che non si può più rimettere con Annulla: via anche i suoi canali Discord
+     (se lo si recupera a mano dal cestino, la sincronizzazione li ricrea) */
+  function dcGone(d) { if (d && d.type === "ev" && d.dc && D && D.discordClear) D.discordClear(d.id).catch(function () {}); }
   function remember(d) {
-    lastDel = d; clearTimeout(delT); delT = setTimeout(function () { lastDel = null; paint(); }, 60000);
+    if (lastDel && lastDel !== d) dcGone(lastDel);
+    lastDel = d; clearTimeout(delT); delT = setTimeout(function () { dcGone(lastDel); lastDel = null; paint(); }, 60000);
   }
   function undoDel() {
     var d = lastDel; if (!d) return Promise.resolve();
     lastDel = null; clearTimeout(delT);
     var p = d.type === "bot" ? D.botsUndoRemove() : store.untrash(d.id);
-    return p.then(render).then(function () { A.toast("Rimesso: " + d.label + "."); });
+    return p.then(render).then(function () { A.toast("Rimesso: " + d.label + "."); })
+      .catch(function (e) { A.toast("Ripristino non riuscito: " + ((e && e.message) || e)); });
   }
   function trashEv(id, btn) {
     if (!armed[id]) {
@@ -224,21 +264,30 @@
       return;
     }
     delete armed[id];
-    if (id === curId()) {
-      var other = list.filter(function (e) { return e.id !== id; }).sort(function (a, b) { return (b.mtime || 0) - (a.mtime || 0); })[0];
-      if (!other) { A.toast("È l'unico torneo: creane un altro prima di eliminarlo."); return; }
-      clearTimeout(saveT);
-      return readState(other.id).then(function (st) {
-        st.ev = st.ev || {}; st.ev.id = other.id; A.load(st); useBot(st);
-        return store.trash(id);
-      }).then(function () { remember({ type: "ev", id: id, label: (list.filter(function (e) { return e.id === id; })[0] || { meta: {} }).meta.title || "torneo" }); A.toast("Torneo eliminato. Ora è aperto: " + (other.meta.title || "Torneo") + "."); render(); });
-    }
     var gone = (list.filter(function (e) { return e.id === id; })[0] || { meta: {} }).meta.title || "torneo";
-    store.trash(id).then(function () {
-      remember({ type: "ev", id: id, label: gone });
+    /* dc: aveva un server Discord, quindi forse dei canali da togliere quando non si può più annullare */
+    function del(st) { return { type: "ev", id: id, label: gone, dc: !!(st && st.ev && st.ev.dguild) }; }
+    function fail(e) { A.toast("Eliminazione non riuscita: " + ((e && e.message) || e)); }
+    if (id === curId()) {
+      var other = list.filter(function (e) { return e.id !== id && !e.broken && okId(e.id); }).sort(function (a, b) { return (b.mtime || 0) - (a.mtime || 0); })[0];
+      if (!other) { A.toast("È l'unico torneo: creane un altro prima di eliminarlo."); return; }
+      var d0 = del(cur());
+      clearTimeout(saveT);
+      /* prima si salva: Annulla deve rimettere l'ultima versione */
+      return flush(true).then(function () { return readState(other.id); }).then(function (st) {
+        if (!okState(st)) throw new Error("il torneo da aprire al suo posto non è valido");
+        st.ev = st.ev || {}; st.ev.id = other.id; A.load(st); useBot(st);
+        return serial(id, function () { return store.trash(id); });
+      }).then(function () { remember(d0); A.toast("Torneo eliminato. Ora è aperto: " + (other.meta.title || "Torneo") + "."); render(); }, fail);
+    }
+    var st0 = null;
+    return serial(id, function () {
+      return store.read(id).then(function (t) { var j = JSON.parse(t); st0 = j.state || j; }).catch(function () {}).then(function () { return store.trash(id); });
+    }).then(function () {
+      remember(del(st0));
       A.toast("Torneo eliminato: " + gone + ".");
       render();
-    });
+    }, fail);
   }
 
   /* ---------- disegno ---------- */
@@ -258,41 +307,53 @@
     var b = bots.filter(function (x) { return x.id === id; })[0] || bots[0];
     return b ? (b.username ? "@" + b.username : b.label) : "";
   }
+  /* giochi della scheda: la meta di un file vecchio o rovinato può avere voci non valide */
+  function gamesOf(m) { return Array.isArray(m.games) ? m.games.filter(function (x) { return x && typeof x === "object"; }) : []; }
   function progress(m) {
-    var g = m.games || [], n = g.length; if (!n) return 0;
+    var g = gamesOf(m), n = g.length; if (!n) return 0;
     return Math.round(g.reduce(function (a, x) { return a + (stOf(x.st) === "done" ? 1 : stOf(x.st) === "live" ? 0.5 : 0); }, 0) / n * 100);
   }
   function gamesHtml(m, big) {
-    var g = m.games || [];
+    var g = gamesOf(m);
     if (!g.length) return '<p class="ev-empty">Nessun gioco con giocatori, per ora.</p>';
     return '<ul class="ev-games' + (big ? " big" : "") + '">' + g.map(function (x) {
-      var s = stOf(x.st);
-      return '<li class="st-' + s + '"><span class="dot" aria-hidden="true"></span><b>' + esc(x.name || x.l) + '</b><small>' +
-        (s === "done" && x.top ? "vince " + esc(x.top) : esc(x.st)) + (x.n ? ", " + x.n + (x.n === 1 ? " iscritto" : " iscritti") : "") + '</small></li>';
+      var s = stOf(x.st), n = +x.n || 0;
+      return '<li class="st-' + s + '"><span class="dot" aria-hidden="true"></span><b>' + esc(x.name || x.l || "") + '</b><small>' +
+        (s === "done" && x.top ? "vince " + esc(x.top) : esc(x.st || "")) + (n ? ", " + n + (n === 1 ? " iscritto" : " iscritti") : "") + '</small></li>';
     }).join("") + '</ul>';
   }
-  /* solo link veri di WhatsApp e Telegram */
+  /* solo link veri di WhatsApp, Telegram, Discord e Google Maps: si controllano dominio e percorso,
+     la parte dopo ? o # resta (WhatsApp copia gli inviti con ?mode=…, wa.me usa ?text=…) */
   function linkOk(u, kind) {
     u = String(u || "").trim(); if (!u) return "";
     if (!/^https?:\/\//i.test(u)) u = "https://" + u;
-    if (kind === "maps") return /^https:\/\/((www\.)?google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)[\/?]/i.test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
-    return (kind === "wa" ? /^https:\/\/(chat\.whatsapp\.com|wa\.me|whatsapp\.com\/channel)\/[\w\/-]+$/i : kind === "discord" ? /^https:\/\/(discord\.gg|(www\.)?discord(app)?\.com\/invite)\/[\w-]+\/?$/i : /^https:\/\/(t\.me|telegram\.me)\/[\w+\/-]+$/i).test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
+    var x; try { x = new URL(u.replace(/^http:/i, "https:")); } catch (e) { return ""; }
+    if (x.protocol !== "https:" || x.username || x.password || x.port) return "";
+    var h = x.hostname.toLowerCase().replace(/^www\./, ""), p = x.pathname, ok;
+    if (kind === "maps") ok = (/^google\.[a-z.]+$/.test(h) && /^\/maps(\/|$)/.test(p)) || /^maps\.google\.[a-z.]+$/.test(h) || h === "maps.app.goo.gl" || (h === "goo.gl" && /^\/maps(\/|$)/.test(p));
+    else if (kind === "wa") ok = ((h === "chat.whatsapp.com" || h === "wa.me") && /^\/[\w\/-]+$/.test(p)) || (h === "whatsapp.com" && /^\/channel\/[\w-]+\/?$/.test(p));
+    else if (kind === "discord") ok = (h === "discord.gg" && /^\/[\w-]+\/?$/.test(p)) || ((h === "discord.com" || h === "discordapp.com") && /^\/invite\/[\w-]+\/?$/.test(p));
+    else ok = (h === "t.me" || h === "telegram.me") && /^\/[\w+\/-]+$/.test(p);
+    return ok ? x.href : "";
   }
   /* link della mappa: quello incollato, oppure una ricerca di Google Maps con l'indirizzo */
-  function mapsUrl(m) { return m.maps || (m.addr && m.mode !== "online" ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(m.addr) : ""); }
+  function mapsUrl(m) { return linkOk(m.maps, "maps") || (m.addr && m.mode !== "online" ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(m.addr) : ""); }
   function linksHtml(m) {
     var a = [], bu = bots ? (bots.filter(function (x) { return x.id === (m.bot || bots[0].id); })[0] || {}).username : "";
     if (bu) a.push('<a class="ev-link tg" href="https://t.me/' + esc(bu) + '" target="_blank" rel="noopener">Bot @' + esc(bu) + '</a>');
-    if (m.tg) a.push('<a class="ev-link tg" href="' + esc(m.tg) + '" target="_blank" rel="noopener">Canale Telegram</a>');
+    /* i link passano di nuovo dal controllo: la scheda può venire da un file importato con una versione vecchia */
+    var tg = linkOk(m.tg, "tg"), wa = linkOk(m.wa, "wa"), dc = linkOk(m.discord, "discord");
+    if (tg) a.push('<a class="ev-link tg" href="' + esc(tg) + '" target="_blank" rel="noopener">Canale Telegram</a>');
     var mp = mapsUrl(m);
-    if (m.mode === "online") a.push('<span class="ev-link loc">Online' + (m.addr ? ": " + esc(m.addr) : "") + '</span>');
-    else if (mp) a.push('<a class="ev-link loc" href="' + esc(mp) + '" target="_blank" rel="noopener" title="Apri in Google Maps">' + (m.mode === "ibrido" ? "In presenza e online: " : "") + esc(m.addr || "Mappa") + '</a>');
-    if (m.wa) a.push('<a class="ev-link wa" href="' + esc(m.wa) + '" target="_blank" rel="noopener">Gruppo WhatsApp</a>');
-    if (m.discord) a.push('<a class="ev-link dc" href="' + esc(m.discord) + '" target="_blank" rel="noopener">Server Discord</a>');
+    /* indirizzo, luogo e titoli sono testo dell'utente: non si traducono (data-noi18n) */
+    if (m.mode === "online") a.push('<span class="ev-link loc">Online' + (m.addr ? ': <span data-noi18n>' + esc(m.addr) + '</span>' : "") + '</span>');
+    else if (mp) a.push('<a class="ev-link loc" href="' + esc(mp) + '" target="_blank" rel="noopener" title="Apri in Google Maps">' + (m.mode === "ibrido" ? "In presenza e online: " : "") + (m.addr ? '<span data-noi18n>' + esc(m.addr) + '</span>' : "Mappa") + '</a>');
+    if (wa) a.push('<a class="ev-link wa" href="' + esc(wa) + '" target="_blank" rel="noopener">Gruppo WhatsApp</a>');
+    if (dc) a.push('<a class="ev-link dc" href="' + esc(dc) + '" target="_blank" rel="noopener">Server Discord</a>');
     return a.length ? '<p class="ev-links">' + a.join("") + '</p>' : "";
   }
   function whenHtml(m) {
-    var a = []; if (fmtDate(m.date)) a.push('<span>' + esc(fmtDate(m.date)) + (m.time ? ", ore " + esc(m.time) : "") + '</span>'); if (m.place) a.push('<span>' + esc(m.place) + '</span>');
+    var a = []; if (fmtDate(m.date)) a.push('<span>' + esc(fmtDate(m.date)) + (m.time ? ", ore " + esc(m.time) : "") + '</span>'); if (m.place) a.push('<span data-noi18n>' + esc(m.place) + '</span>');
     return a.length ? '<p class="ev-when">' + a.join("") + '</p>' : "";
   }
   function badge(m) {
@@ -301,7 +362,7 @@
   function statsHtml(m, e) {
     var b = botName(m.bot), p = progress(m);
     return '<div class="ev-bar" role="img" aria-label="Avanzamento ' + p + ' per cento"><i style="width:' + p + '%"></i></div>' +
-      '<p class="ev-stats"><span>' + (m.players || 0) + ' giocatori</span><span>' + ((m.games || []).length) + ' giochi</span>' + (b ? '<span>bot ' + esc(b) + '</span>' : "") + '<span>modificato ' + esc(fmtAgo(e.mtime || m.updated)) + '</span></p>';
+      '<p class="ev-stats"><span>' + (+m.players || 0) + ' giocatori</span><span>' + gamesOf(m).length + ' giochi</span>' + (b ? '<span>bot ' + esc(b) + '</span>' : "") + '<span>modificato ' + esc(fmtAgo(e.mtime || m.updated)) + '</span></p>';
   }
   function editForm(m, id) {
     var bo = bots ? '<label>Bot Telegram<select name="bot">' + bots.map(function (b) { return '<option value="' + esc(b.id) + '"' + ((m.bot || bots[0].id) === b.id ? " selected" : "") + '>' + esc(b.label) + (b.username ? " (@" + esc(b.username) + ")" : "") + '</option>'; }).join("") + '</select></label>' : "";
@@ -321,7 +382,8 @@
       '<label class="wide">Server Discord (link di invito, facoltativo)<input type="text" inputmode="url" name="discord" value="' + esc(m.discord || "") + '" placeholder="https://discord.gg/…"><small>In Discord: tasto destro sul server, Invita persone, imposta che non scada e copia il link. I canali per partita si attivano in Impostazioni, Discord.</small></label>' +
       '<label class="wide chk"><span><input type="checkbox" name="draft"' + (m.draft ? " checked" : "") + '> In lavorazione</span><small>Nel bot lo vedono solo amministratori e organizzatori; nessun avviso ai partecipanti finché non lo togli.</small></label>' +
       (id ? "" : '<label class="wide">Parti da<select name="from"><option value="vuoto">Un torneo vuoto</option>' +
-        list.map(function (e) { var t = esc(e.meta.title || "Torneo"); return '<option value="modello:' + esc(e.id) + '">Impostazioni di ' + t + ' (giochi, formule, tema, logo)</option><option value="tutto:' + esc(e.id) + '">' + t + ' con gli stessi giocatori, senza risultati</option>'; }).join("") + '</select></label>') +
+        /* il titolo non si traduce: si traducono solo le parti fisse (un <option> non può contenere uno <span data-noi18n>) */
+        list.map(function (e) { var t = esc((e.meta || {}).title || trUi("Torneo")); return '<option value="modello:' + esc(e.id) + '" data-noi18n>' + esc(trUi("Impostazioni di ")) + t + esc(trUi(" (giochi, formule, tema, logo)")) + '</option><option value="tutto:' + esc(e.id) + '" data-noi18n>' + t + esc(trUi(" con gli stessi giocatori, senza risultati")) + '</option>'; }).join("") + '</select></label>') +
       '<div class="ev-formact"><button class="p" type="submit">' + (id ? "Salva" : "Crea torneo") + '</button><button type="button" data-a="cancel">Chiudi</button></div></form>';
   }
   function card(e, hero) {
@@ -333,14 +395,14 @@
     var pin = '<button class="ev-pin" data-a="pin" aria-pressed="' + (m.pinned ? "true" : "false") + '" title="' + (m.pinned ? "Togli dai preferiti" : "Tieni in cima") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>';
     var body = editing === id ? editForm(m, id) :
       (hero && isCur ? '<p class="ev-kicker">Aperto adesso</p>' : "") +
-      '<h3 class="ev-t">' + esc(m.title || "Torneo senza nome") + (m.lang && m.lang !== "it" ? '<span class="ev-lang" data-noi18n title="' + esc((LANGS.filter(function (l) { return l[0] === m.lang; })[0] || [0, m.lang])[1]) + '">' + esc(m.lang.toUpperCase()) + '</span>' : "") + (m.draft ? '<span class="ev-draft">in lavorazione</span>' : "") + '</h3>' + (m.sub ? '<p class="ev-sub">' + esc(m.sub) + '</p>' : "") + whenHtml(m) +
+      '<h3 class="ev-t">' + (m.title ? '<span data-noi18n>' + esc(m.title) + '</span>' : "Torneo senza nome") + (m.lang && m.lang !== "it" ? '<span class="ev-lang" data-noi18n title="' + esc((LANGS.filter(function (l) { return l[0] === m.lang; })[0] || [0, m.lang])[1]) + '">' + esc(String(m.lang).toUpperCase()) + '</span>' : "") + (m.draft ? '<span class="ev-draft">in lavorazione</span>' : "") + '</h3>' + (m.sub ? '<p class="ev-sub">' + esc(m.sub) + '</p>' : "") + whenHtml(m) +
       linksHtml(m) + gamesHtml(m, hero) + statsHtml(m, e) + acts;
     return '<article class="ev' + (hero ? " hero" : "") + (isCur ? " cur" : "") + (e.broken ? " broken" : "") + '" data-id="' + esc(id) + '" style="--ev:' + esc(evColor(m)) + '">' +
       '<div class="ev-band">' + badge(m) + '</div><div class="ev-body">' + body + '</div>' + (editing === id ? "" : pin) + '</article>';
   }
   function botsHtml() {
     if (!bots) return "";
-    var use = {}; list.forEach(function (e) { var b = (e.meta && e.meta.bot) || bots[0].id; (use[b] = use[b] || []).push(e.meta.title || "Torneo"); });
+    var use = {}; list.forEach(function (e) { var m = e.meta || {}, b = m.bot || bots[0].id; (use[b] = use[b] || []).push(m.title ? '<span data-noi18n>' + esc(m.title) + '</span>' : "Torneo"); });
     return '<section class="hm-bots" id="hm-bots" aria-labelledby="hm-bots-h"><div class="hm-sechead"><h2 id="hm-bots-h">Bot Telegram</h2>' +
       '<p class="hm-note">Ogni bot ha token, ruoli, iscritti e messaggi suoi. Ogni torneo usa il bot che scegli; gira quello del torneo aperto.</p>' +
       '<button data-a="botadd">Nuovo bot</button></div><div class="hm-botlist">' + bots.map(function (b) {
@@ -350,7 +412,7 @@
           '<p>' + (b.username ? "@" + esc(b.username) : (b.hasToken ? "Token salvato" : "Token da impostare")) + ', ' + b.people + (b.people === 1 ? " persona" : " persone") + (b.active ? ", è il bot del torneo aperto" : "") + '</p>' +
           (b.pending ? '<p class="bt-pend"><button class="linkbtn" data-a="botset">' + b.pending + (b.pending === 1 ? " iscrizione da confermare" : " iscrizioni da confermare") + '</button></p>' : "") +
           (b.enabled && b.hasToken && !b.running && b.err ? '<p class="bt-err">' + esc(b.err) + '</p>' : "") +
-          '<p class="bt-use">' + (use[b.id] ? "Usato da: " + use[b.id].map(esc).join(", ") : "Nessun torneo lo usa") + '</p></div>' +
+          '<p class="bt-use">' + (use[b.id] ? "Usato da: " + use[b.id].join(", ") : "Nessun torneo lo usa") + '</p></div>' +
           '<div class="bt-act"><button class="swt" role="switch" data-a="bottog" aria-checked="' + (b.enabled && b.hasToken ? "true" : "false") + '"' + (b.hasToken ? "" : ' disabled title="Prima imposta il token (Impostazioni)"') + '><i aria-hidden="true"></i>' + (b.running ? "Acceso" : b.enabled && b.hasToken ? "Acceso, non collegato" : "Spento") + '</button>' + (b.active ? "" : '<button data-a="botuse">Usa nel torneo aperto</button>') + '<button data-a="botset">Impostazioni</button>' +
           (bots.length > 1 ? '<button data-a="botdel">Rimuovi</button>' : "") + '</div></div>';
       }).join("") + '</div></section>';
@@ -359,7 +421,7 @@
     var s = pref.sort || "recenti", f = q.trim().toLowerCase();
     return list.filter(function (e) {
       if (!f) return true; var m = e.meta || {};
-      return [m.title, m.sub, m.place, fmtDate(m.date)].concat((m.games || []).map(function (g) { return g.name || g.l; })).join(" ").toLowerCase().indexOf(f) >= 0;
+      return [m.title, m.sub, m.place, fmtDate(m.date)].concat(gamesOf(m).map(function (g) { return g.name || g.l; })).join(" ").toLowerCase().indexOf(f) >= 0;
     }).sort(function (a, b) {
       var ma = a.meta || {}, mb = b.meta || {};
       if (!!mb.pinned !== !!ma.pinned) return mb.pinned ? 1 : -1;
@@ -378,19 +440,45 @@
       '<button id="hm-view" aria-pressed="' + (pref.view === "list" ? "true" : "false") + '" title="Schede o elenco compatto">' + (pref.view === "list" ? "Schede" : "Elenco") + '</button>' +
       '<label class="hm-imp"><input type="file" id="hm-file" accept=".json,application/json" hidden>Importa</label>' +
       (lastDel ? '<button class="undodel" data-a="undodel" title="Rimetti: ' + esc(lastDel.label) + ' (Ctrl+Z)">Annulla cancellazione</button>' : "") + '<button class="p" data-a="new">Nuovo torneo</button>' + (id ? '<button id="hm-close" title="Torna al torneo aperto (Esc)">Chiudi</button>' : "") + '</div></header>';
-    if (creating) h += '<section class="ev new" style="--ev:' + esc(evColor({})) + '"><div class="ev-band"><span class="ev-ini">+</span></div><div class="ev-body"><h3 class="ev-t">Nuovo torneo</h3>' + editForm({ date: new Date().toISOString().slice(0, 10) }, "") + '</div></section>';
-    if (heroE && !q) h += card(heroE, true);
+    /* nuovo torneo: oggi secondo l'ora locale (toISOString è UTC: dopo mezzanotte darebbe ieri) e la lingua dell'interfaccia */
+    var d0 = new Date(), p2 = function (n) { return String(n).padStart(2, "0"); };
+    if (creating) h += '<section class="ev new" style="--ev:' + esc(evColor({})) + '"><div class="ev-band"><span class="ev-ini">+</span></div><div class="ev-body"><h3 class="ev-t">Nuovo torneo</h3>' + editForm({ date: d0.getFullYear() + "-" + p2(d0.getMonth() + 1) + "-" + p2(d0.getDate()), lang: window.I18N ? I18N.ui() : "it" }, "") + '</div></section>';
+    if (heroE && !q) h += safeCard(heroE, true);
     var others = q ? all : rest;
-    h += others.length ? '<div class="hm-grid' + (pref.view === "list" ? " list" : "") + '">' + others.map(function (e) { return card(e, false); }).join("") + '</div>'
+    h += others.length ? '<div class="hm-grid' + (pref.view === "list" ? " list" : "") + '">' + others.map(function (e) { return safeCard(e, false); }).join("") + '</div>'
       : (q ? '<p class="hm-none">Nessun torneo corrisponde a “' + esc(q) + '”.</p>' : (list.length < 2 ? '<p class="hm-none">Qui compariranno gli altri tornei. Premi <b>Nuovo torneo</b> per prepararne uno: puoi partire dalle impostazioni di questo.</p>' : ""));
     h += botsHtml() + '</div>';
-    var y = root.scrollTop, fo = document.activeElement && document.activeElement.id;
+    var y = root.scrollTop, ae = document.activeElement, fo = ae && ae.id;
+    /* il modulo aperto (nuovo torneo o modifica) tiene quello che si è scritto anche quando l'elenco si ridisegna */
+    var fm = root.querySelector(".ev-form"), keep = null;
+    if (fm) {
+      keep = { id: fm.getAttribute("data-id") || "", v: {}, fo: fm.contains(ae) ? ae.name : "" };
+      Array.prototype.forEach.call(fm.elements, function (x) { if (x.name) keep.v[x.name] = x.type === "checkbox" ? x.checked : x.value; });
+    }
     root.innerHTML = h; root.scrollTop = y;
+    if (keep) {
+      var nf = Array.prototype.filter.call(root.querySelectorAll(".ev-form"), function (x) { return (x.getAttribute("data-id") || "") === keep.id; })[0];
+      if (nf) {
+        Object.keys(keep.v).forEach(function (n) {
+          var x = nf.elements[n]; if (!x || !x.tagName) return;
+          if (x.type === "checkbox") x.checked = keep.v[n];
+          else if (x.tagName !== "SELECT" || Array.prototype.some.call(x.options, function (o) { return o.value === keep.v[n]; })) x.value = keep.v[n];
+        });
+        if (keep.fo && nf.elements[keep.fo] && nf.elements[keep.fo].focus) nf.elements[keep.fo].focus();
+      }
+    }
     if (fo === "hm-q") { var qi = root.querySelector("#hm-q"); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+  }
+  /* una scheda che non si riesce a disegnare (file rovinato) non deve lasciare la schermata vuota */
+  function safeCard(e, hero) {
+    try { return card(e, hero); } catch (x) {
+      return '<article class="ev broken" data-id="' + esc(e.id) + '"><div class="ev-band"><span class="ev-ini">!</span></div><div class="ev-body"><h3 class="ev-t">Torneo non leggibile</h3><div class="ev-act"><button data-a="trash">Elimina</button></div></div></article>';
+    }
   }
   function render() {
     return Promise.all([store.list(), D && D.botsList ? D.botsList().catch(function () { return null; }) : Promise.resolve(null)]).then(function (r) {
-      list = (r[0] || []).filter(function (e) { return !e.broken || e.meta; }); bots = r[1] && r[1].length ? r[1] : null; window.__bots = bots || []; paint(); laterOthers();
+      /* un file con un nome che non è un codice di torneo (es. "t… - Copia.json") non si può né aprire né eliminare */
+      list = (r[0] || []).filter(function (e) { return e && okId(e.id) && (!e.broken || e.meta); }); bots = r[1] && r[1].length ? r[1] : null; window.__bots = bots || []; paint(); laterOthers();
       if (bots) { var mine = bots.filter(function (b) { return b.id === ((cur().ev && cur().ev.bot) || bots[0].id); })[0] || bots[0]; window.__botUser = mine.username || ""; }
     });
   }
@@ -399,11 +487,18 @@
   function open(section) {
     if (!root) build();
     clearTimeout(saveT);
+    /* le Impostazioni stanno sopra la home (z-index): si chiudono, come con "Chiudi" */
+    var sb = document.getElementById("editbox"); if (sb && !sb.hidden) sb.hidden = true;
     document.documentElement.classList.add("home-on");
     root.hidden = false;
-    return flush().then(render).then(function () {
+    /* useBot: le Impostazioni di un altro bot (botset) non devono restare il bot "attivo" dell'elenco */
+    return flush().then(function () { return useBot(cur()); }).then(render).then(function () {
       var t = section === "bots" ? root.querySelector("#hm-bots") : null;
       if (t) t.scrollIntoView({ block: "start" }); else { var b = root.querySelector(".ev.hero .ev-go") || root.querySelector("[data-a=new]"); if (b) b.focus(); }
+    }).catch(function (e) {
+      /* l'elenco non si disegna: la home non deve restare uno strato vuoto che copre tutto */
+      A.toast("Non riesco a mostrare l'elenco dei tornei: " + ((e && e.message) || e));
+      if (!root.querySelector("#hm-close")) close();
     });
   }
   function close() {
@@ -430,13 +525,16 @@
       if (a === "pin") { var e0 = list.filter(function (e) { return e.id === id; })[0]; return editEv(id, { pinned: !(e0 && e0.meta && e0.meta.pinned) }); }
       if (a === "undodel") return undoDel();
       if (a === "dup") { dupAsk = id; return paint(); }
-      if (a === "dup0" || a === "dup1") { dupAsk = null; var e1 = list.filter(function (e) { return e.id === id; })[0], m1 = (e1 && e1.meta) || {}; return create({ title: (m1.title || "Torneo") + " (copia)", sub: m1.sub || "", date: a === "dup1" ? m1.date || "" : "", place: m1.place || "", color: m1.color || "", bot: m1.bot || "", draft: m1.draft, from: (a === "dup1" ? "copia:" : "tutto:") + id }); }
+      if (a === "dup0" || a === "dup1") { dupAsk = null; var e1 = list.filter(function (e) { return e.id === id; })[0], m1 = (e1 && e1.meta) || {};
+        /* la copia tiene lingua, modalità, indirizzo, ora e link; i canali Discord no (create riparte da un ev nuovo) */
+        return create(Object.assign({}, m1, { title: (m1.title || "Torneo") + " (copia)", sub: m1.sub || "", date: a === "dup1" ? m1.date || "" : "", place: m1.place || "", color: m1.color || "", bot: m1.bot || "", draft: m1.draft, from: (a === "dup1" ? "copia:" : "tutto:") + id })); }
       if (a === "export") return exportEv(id);
       if (a === "trash") return trashEv(id, b);
       if (a === "botadd") return D.botsAdd("Bot " + ((bots || []).length + 1)).then(render).then(function () { var n = root.querySelectorAll(".bt-name"); if (n.length) { n[n.length - 1].focus(); n[n.length - 1].select(); } });
       if (a === "bottog") { var on = b.getAttribute("aria-checked") !== "true"; b.disabled = true; return D.botsEnable(bid, on).then(function (L) { bots = L; paint(); A.toast(on ? "Bot acceso: risponde per tutti i tornei che lo usano." : "Bot spento."); }); }
       if (a === "botuse") { var S = cur(); S.ev = S.ev || {}; S.ev.bot = bid; A.touch(); return D.botsUse(bid).then(function () { clearTimeout(saveT); return flush(); }).then(render).then(function () { A.toast("Il torneo aperto ora usa questo bot."); }); }
-      if (a === "botset") { var S2 = cur(); var go = S2.ev && S2.ev.bot === bid ? Promise.resolve() : (S2.ev = S2.ev || {}, S2.ev.bot = bid, A.touch(), D.botsUse(bid)); return go.then(function () { close(); var eb = document.getElementById("editbtn"); if (eb) eb.click(); setTimeout(function () { var x = document.getElementById("botbox"); if (x) x.scrollIntoView({ block: "start" }); }, 300); }); }
+      /* Impostazioni di un bot (e iscrizioni da confermare): main mostra quel bot, ma il torneo aperto resta sul suo (per cambiarlo c'è "Usa nel torneo aperto") */
+      if (a === "botset") { return (D.botsUse ? D.botsUse(bid) : Promise.resolve()).then(function () { close(); var eb = document.getElementById("editbtn"), box = document.getElementById("editbox"); if (eb && (!box || box.hidden)) eb.click(); setTimeout(function () { var x = document.getElementById("botbox"); if (x) x.scrollIntoView({ block: "start" }); }, 300); }); }
       if (a === "botdel") {
         if (!armed["b" + bid]) { armed["b" + bid] = 1; b.textContent = "Conferma"; b.classList.add("danger"); setTimeout(function () { delete armed["b" + bid]; if (b.isConnected) { b.textContent = "Rimuovi"; b.classList.remove("danger"); } }, 4000); return; }
         delete armed["b" + bid];
@@ -448,6 +546,9 @@
       ev.preventDefault();
       var f = ev.target, o = formData(f), id = f.getAttribute("data-id");
       if (!o.title) { A.toast("Dai un nome al torneo."); return; }
+      /* un link non riconosciuto non sparisce in silenzio: si avvisa e il modulo resta aperto */
+      var bad = [["wa", "Il link del gruppo WhatsApp non è valido."], ["tg", "Il link di Telegram non è valido."], ["discord", "Il link di invito di Discord non è valido."], ["maps", "Il link di Google Maps non è valido."]].filter(function (k) { return o[k[0]] && !linkOk(o[k[0]], k[0]); })[0];
+      if (bad) { A.toast(bad[1]); if (f.elements[bad[0]]) f.elements[bad[0]].focus(); return; }
       if (id) { editing = null; editEv(id, o); } else create(o);
     });
     root.addEventListener("input", function (ev) { if (ev.target.id === "hm-q") { q = ev.target.value; paint(); } });
@@ -478,8 +579,9 @@
   /* backup completo: tutti i tornei; ripristino: quelli con lo stesso codice vanno prima nel cestino */
   function exportAll() {
     clearTimeout(saveT);
-    return flush().then(function () { return store.list(); }).then(function (L) {
-      return Promise.all(L.map(function (e) { return store.read(e.id).then(function (t) { var j = JSON.parse(t); return { id: e.id, meta: j.meta || e.meta || {}, state: j.state || j }; }).catch(function () { return null; }); }));
+    /* flush(true): se il torneo aperto non si salva, il backup non deve contenerne in silenzio una copia vecchia */
+    return flush(true).then(function () { return store.list(); }).then(function (L) {
+      return Promise.all(L.map(function (e) { return (qq[e.id] || Promise.resolve()).then(function () { return store.read(e.id); }).then(function (t) { var j = JSON.parse(t); return { id: e.id, meta: j.meta || e.meta || {}, state: j.state || j }; }).catch(function () { return null; }); }));
     }).then(function (a) { return a.filter(Boolean); });
   }
   /* ripristino: ogni torneo viene migrato al formato attuale; rep dice per ognuno se è nuovo o sostituito,
@@ -491,7 +593,7 @@
       return evs.reduce(function (p, e) {
         return p.then(function () {
           var name = (e && e.state && e.state.ui && e.state.ui.title) || (e && e.meta && e.meta.title) || String((e && e.id) || "?");
-          if (!e || !/^[a-z0-9-]{4,40}$/.test(String(e.id)) || !e.state || typeof e.state.games !== "object" || Array.isArray(e.state.games)) { rep.push({ kind: "Torneo", name: name, status: "saltato", why: "Dati del torneo non validi nel backup." }); return; }
+          if (!e || !okId(e.id) || !okState(e.state)) { rep.push({ kind: "Torneo", name: name, status: "saltato", why: "Dati del torneo non validi nel backup." }); return; }
           var old = have[e.id] ? (e.id === id0 ? Promise.resolve(JSON.parse(JSON.stringify(cur()))) : store.read(e.id).then(function (t) { var j = JSON.parse(t); return j.state || j; }).catch(function () { return null; })) : Promise.resolve(null);
           return old.then(function (prev) {
             var D = [], F = [];
@@ -502,18 +604,26 @@
             /* scheda dell'elenco ricalcolata dallo stato migrato; il colore resta quello del backup */
             return metaOf(e.state).catch(function () { return {}; }).then(function (m) {
               if (e.meta && e.meta.accent) m.accent = e.meta.accent;
-              return (have[e.id] ? store.trash(e.id) : Promise.resolve()).then(function () { n++; return store.write(e.id, wrap(e.state, Object.assign({}, e.meta || {}, m))); });
+              /* quello di prima va nel cestino solo nell'app (cartella cestino). Nel browser si sovrascrive al suo posto:
+                 se lo spazio non basta la scrittura fallisce e il vecchio resta. Se la scrittura fallisce dopo il cestino, si rimette. */
+              var bin = have[e.id] && !store.bin;
+              return serial(e.id, function () {
+                return (bin ? store.trash(e.id) : Promise.resolve()).then(function () { return store.write(e.id, wrap(e.state, Object.assign({}, e.meta || {}, m))); })
+                  .then(function () { n++; }, function (err) { return (bin ? store.untrash(e.id) : Promise.resolve()).then(function () { throw err; }, function () { throw err; }); });
+              });
             });
           });
         });
       }, Promise.resolve());
     }).then(function () {
-      var mine = evs.filter(function (e) { return e && e.id === id0 && e.state && typeof e.state.games === "object"; })[0];
+      var mine = evs.filter(function (e) { return e && e.id === id0 && okState(e.state); })[0];
       if (mine) { A.load(mine.state); useBot(mine.state); }
       laterOthers(); if (root && !root.hidden) render();
       return { n: n, rep: rep };
     });
   }
+  /* cambio di lingua: le parti tradotte qui (opzioni di "Parti da") si ridisegnano */
+  if (window.I18N && I18N.onChange) I18N.onChange(function () { if (root && !root.hidden) paint(); });
   window.HOME = { open: open, close: close, flush: flush, undo: undoDel, readState: readState, joinOther: joinOther, editOther: editOther, exportAll: exportAll, importAll: importAll, isOpen: function () { return !!root && !root.hidden; } };
 
   /* avvio: il torneo aperto si salva nel suo file (anche per chi arriva da una versione senza elenco), poi l'elenco */

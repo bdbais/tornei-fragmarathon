@@ -15,7 +15,7 @@
   /* banner: logo piccolo a sinistra, titolo accanto, sottotitolo sotto senza uscire */
   .brand{flex-wrap:nowrap;align-items:center;gap:10px;padding:10px 46px 10px 10px!important;margin-bottom:10px}
   .brand img.emblem,.brand img{height:62px!important;max-width:24vw!important}
-  .brand .bt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;padding:8px 10px!important}
+  .brand .bt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
   .brand h1{font-size:clamp(1.05rem,5.6vw,1.6rem)!important;-webkit-text-stroke:1px #000;text-shadow:2px 2px 0 var(--acc);overflow-wrap:normal;word-break:normal;hyphens:none}
   .brand .tag{display:inline-block;max-width:100%;margin-top:6px!important;padding:2px 10px!important;font-size:.72rem!important;white-space:normal}
   .brand::before{right:8px;width:30px;clip-path:polygon(22px 0,30px 0,8px 100%,0 100%)}

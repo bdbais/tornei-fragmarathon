@@ -43,10 +43,18 @@ function stamp(d = new Date()) {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
 }
+/* Su Windows il rename fallisce per un attimo (EPERM/EBUSY) se OneDrive o l'antivirus hanno il file aperto:
+   si riprova per circa mezzo secondo, poi si rinuncia senza lasciare il .tmp */
 function writeAtomic(file, data) {
   const tmp = file + ".tmp";
   fs.writeFileSync(tmp, data, "utf8");
-  fs.renameSync(tmp, file);
+  for (let i = 0; ; i++) {
+    try { fs.renameSync(tmp, file); return; }
+    catch (e) {
+      if (i >= 8 || !/^(EPERM|EACCES|EBUSY)$/.test(e && e.code)) { try { fs.unlinkSync(tmp); } catch {} throw e; }
+      try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 60); } catch { const t = Date.now() + 60; while (Date.now() < t); }
+    }
+  }
 }
 function listJson(dir) {
   return fs.readdirSync(dir).filter((f) => /\.json$/i.test(f)).map((f) => {
@@ -178,7 +186,8 @@ ipcMain.handle("ai:image", async (_e, cfg, prompt, seed, size) => {
 });
 /* Elenco dei tornei (uno per file in "eventi"): la pagina lavora su una copia e la salva qui.
    Eliminare un torneo lo sposta in "cestino", da cui si può recuperare a mano. */
-const evFile = (id) => { if (!/^[a-z0-9-]{4,40}$/.test(String(id || ""))) throw new Error("Torneo non valido"); return path.join(DIRS.eventi, id + ".json"); };
+/* anche maiuscole e trattini bassi: un file ripreso a mano dal cestino ("<data>_<id>.json") si apre; punti e separatori restano vietati */
+const evFile = (id) => { if (!/^[A-Za-z0-9_-]{4,80}$/.test(String(id || ""))) throw new Error("Torneo non valido"); return path.join(DIRS.eventi, id + ".json"); };
 ipcMain.handle("ev:list", () => {
   ensureDirs();
   return listJson(DIRS.eventi).map((f) => {
@@ -317,9 +326,14 @@ ipcMain.handle("bots:edit", (_e, id, o) => {
 /* Togliere un bot sposta il suo file tra i dati dell'app ("bot-rimossi"): contiene il token, non va nei Documenti. */
 ipcMain.handle("bots:undoRemove", () => {
   if (!lastBotDel) return botsInfo();
-  const L = botsLoad(); L.list.push(lastBotDel.entry); botsSave(L);
-  try { if (fs.existsSync(lastBotDel.moved)) fs.renameSync(lastBotDel.moved, botPath(lastBotDel.entry)); } catch {}
-  botStart(lastBotDel.entry); lastBotDel = null; distribute(); return botsInfo();
+  /* torna al suo posto: il primo bot dell'elenco è quello predefinito dei tornei senza un bot scelto */
+  const L = botsLoad(), d = lastBotDel;
+  /* nel frattempo un ripristino ha rimesso lo stesso bot: non si sovrascrive */
+  if (L.list.some((x) => x.id === d.entry.id)) { lastBotDel = null; return botsInfo(); }
+  L.list.splice(Math.min(d.index >= 0 ? d.index : L.list.length, L.list.length), 0, d.entry);
+  botsSave(L);
+  try { if (fs.existsSync(d.moved)) fs.renameSync(d.moved, botPath(d.entry)); } catch {}
+  botStart(d.entry); if (d.sel) selId = d.entry.id; lastBotDel = null; distribute(); return botsInfo();
 });
 /* backup completo: elenco e file dei bot (con i token: il backup che li contiene è sempre cifrato) */
 ipcMain.handle("bots:export", () => {
@@ -366,17 +380,41 @@ const GENERIC_FONTS = /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui
 function famName(f) { return String(f || "").split(",")[0].trim().replace(/^["']|["']$/g, "").trim(); }
 function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 function withTimeout(p, ms, msg) { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error(msg)), ms); })]).finally(() => clearTimeout(t)); }
+/* Scaricamento con limiti veri: tempo massimo anche per il corpo della risposta (non solo per le intestazioni) e
+   dimensione massima letta a pezzi, così un sito lento o un file enorme non bloccano né riempiono la memoria.
+   cut: oltre il limite si tiene l'inizio (fogli di stile) invece di rinunciare (caratteri). Solo http e https. */
+async function fetchCapped(ses, url, max, ms, cut) {
+  if (!/^https?:\/\//i.test(String(url))) return null;
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  const run = async () => {
+    const res = await ses.fetch(url, { signal: ac.signal, credentials: "omit" });
+    if (!res.ok || !res.body) return null;
+    if (!cut && +res.headers.get("content-length") > max) return null;
+    const rd = res.body.getReader(), parts = []; let n = 0;
+    try {
+      for (;;) {
+        const { done, value } = await rd.read(); if (done) break;
+        n += value.length; parts.push(Buffer.from(value));
+        if (n > max) { if (!cut) return null; break; }
+      }
+    } finally { try { rd.cancel().catch(() => {}); } catch {} }
+    const buf = Buffer.concat(parts); return cut ? buf.subarray(0, max) : buf;
+  };
+  try { return await withTimeout(run(), ms + 500, "tempo scaduto"); }
+  finally { clearTimeout(t); ac.abort(); }
+}
 /* @font-face dai fogli di stile (anche di altri domini, letti qui) per i caratteri usati da titoli e testo */
 async function siteFonts(r, ses) {
   const want = [famName(r.heading && r.heading.font), famName(r.font)].filter((f, i, a) => f && !GENERIC_FONTS.test(f) && a.indexOf(f) === i);
   if (!want.length) return [];
-  let faces = (r.faces || []).slice();
-  for (const href of r.sheets || []) {
-    if (faces.some((f) => want.includes(famName(f.family)))) break;
+  const until = Date.now() + 25000, wantL = want.map((f) => f.toLowerCase());
+  let faces = (Array.isArray(r.faces) ? r.faces : []).filter((f) => f && typeof f === "object").slice(0, 60);
+  for (const href of (Array.isArray(r.sheets) ? r.sheets : []).slice(0, 12)) {
+    if (faces.some((f) => wantL.includes(famName(f.family).toLowerCase())) || Date.now() > until) break;
     try {
-      const res = await withTimeout(ses.fetch(href), 8000, "css"); if (!res.ok) continue;
-      const txt = (await res.text()).slice(0, 2000000);
-      (txt.match(/@font-face\s*{[^}]*}/gi) || []).forEach((b) => {
+      const buf = await fetchCapped(ses, href, 2000000, 8000, true); if (!buf) continue;
+      const txt = buf.toString("utf8");
+      (txt.match(/@font-face\s*{[^}]*}/gi) || []).slice(0, 200).forEach((b) => {
         const g = (k) => { const m = new RegExp(k + "\\s*:\\s*([^;}]+)", "i").exec(b); return m ? m[1].trim() : ""; };
         faces.push({ family: g("font-family"), src: g("src"), weight: g("font-weight"), style: g("font-style"), base: href });
       });
@@ -393,17 +431,49 @@ async function siteFonts(r, ses) {
       urls.sort((a, b) => rank(a) - rank(b));
       const pick = urls.find((x) => rank(x) < 9); if (!pick) continue;
       try {
-        const abs = new URL(pick.u, f.base).href; if (!/^https?:/i.test(abs)) continue;
-        const res = await withTimeout(ses.fetch(abs), 10000, "font"); if (!res.ok) continue;
-        const buf = Buffer.from(await res.arrayBuffer());
-        if (buf.length > 110 * 1024 || total + buf.length > 200 * 1024) continue;
+        if (Date.now() > until) break;
+        const abs = new URL(pick.u, String(f.base || "")).href; if (!/^https?:/i.test(abs)) continue;
+        const buf = await fetchCapped(ses, abs, 110 * 1024, 10000, false);
+        if (!buf || !buf.length || total + buf.length > 200 * 1024) continue;
         total += buf.length;
         const fmt = ["woff2", "woff", "truetype"][rank(pick)] || "truetype", mime = { woff2: "font/woff2", woff: "font/woff", truetype: "font/ttf" }[fmt];
-        out.push({ family: fam, weight: String(f.weight || "400").split(" ")[0], fmt, data: "data:" + mime + ";base64," + buf.toString("base64") });
+        out.push({ family: fam, weight: (/^\d{3}$/.exec(String(f.weight || "400").split(" ")[0]) || ["400"])[0], fmt, data: "data:" + mime + ";base64," + buf.toString("base64") });
       } catch {}
     }
   }
   return out;
+}
+/* Il risultato viene dalla pagina del sito, che può falsificarlo: alla pagina del programma torna solo ciò che ha la forma
+   attesa (colori, nomi di caratteri, variabili CSS senza url() né caratteri che escono da una regola). */
+const P_COLOR = /^(#[0-9a-f]{3,8}|(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([0-9a-z.,%\s\/+-]{1,90}\))$/i;
+const pColor = (c) => (typeof c === "string" && P_COLOR.test(c.trim()) ? c.trim() : null);
+const pText = (s, n) => (typeof s === "string" ? s.replace(/[\u0000-\u001f<>]/g, "").slice(0, n) : "");
+const pFont = (s) => (typeof s === "string" ? s.replace(/[^\p{L}\p{N} ,'"._-]/gu, "").slice(0, 200) : "");
+function cleanProbe(r) {
+  const o = (x) => x && typeof x === "object" ? x : null, h = o(r.header), hd = o(r.heading), b = o(r.button), vars = {};
+  Object.keys(o(r.vars) || {}).slice(0, 120).forEach((k) => {
+    const v = r.vars[k];
+    if (/^--[\w-]{1,60}$/.test(k) && typeof v === "string" && !/url\(|expression|@import|[<>{};\\]/i.test(v)) vars[k] = v.slice(0, 80);
+  });
+  const href = typeof r.url === "string" && /^https?:\/\//i.test(r.url) ? r.url.slice(0, 500) : "";
+  return {
+    title: pText(r.title, 120), url: href, page: pColor(r.page), bg: pColor(r.bg), ink: pColor(r.ink), font: pFont(r.font),
+    header: h ? { bg: pColor(h.bg), ink: pColor(h.ink) } : null,
+    heading: hd ? { ink: pColor(hd.ink), font: pFont(hd.font), weight: (/^\d{3}$/.exec(String(hd.weight)) || ["700"])[0] } : null,
+    link: pColor(r.link), button: b ? { bg: pColor(b.bg), ink: pColor(b.ink) } : null,
+    freq: (Array.isArray(r.freq) ? r.freq : []).filter((x) => Array.isArray(x) && pColor(x[0]) && isFinite(x[1])).slice(0, 24).map((x) => [pColor(x[0]), +x[1]]),
+    vars, sheets: (Array.isArray(r.sheets) ? r.sheets : []).filter((u) => typeof u === "string" && /^https?:\/\//i.test(u)).slice(0, 12),
+    faces: (Array.isArray(r.faces) ? r.faces : []).filter((f) => f && typeof f === "object").slice(0, 60).map((f) => ({ family: String(f.family || "").slice(0, 200), src: String(f.src || "").slice(0, 4000), weight: String(f.weight || "").slice(0, 20), style: String(f.style || "").slice(0, 20), base: String(f.base || "").slice(0, 500) }))
+  };
+}
+/* sessione della finestra nascosta: solo in memoria, creata una volta, svuotata dopo ogni lettura */
+let probeSes = null;
+function probeSession() {
+  if (probeSes) return probeSes;
+  probeSes = session.fromPartition("probe", { cache: false });
+  probeSes.setPermissionRequestHandler((_wc, _p, cb) => cb(false)); probeSes.setPermissionCheckHandler(() => false);
+  probeSes.on("will-download", (ev, item) => { try { item.cancel(); } catch {} ev.preventDefault(); });
+  return probeSes;
 }
 let probing = false;
 ipcMain.handle("css:probe", async (_e, raw) => {
@@ -413,19 +483,23 @@ ipcMain.handle("css:probe", async (_e, raw) => {
   if (!/^https?:$/.test(u.protocol)) return { err: "Indirizzo del sito non valido." };
   if (probing) return { err: "Sto già leggendo un sito: aspetta qualche secondo." };
   probing = true;
-  const part = "probe-" + Date.now(), ses = session.fromPartition(part, { cache: false });
-  ses.setPermissionRequestHandler((_wc, _p, cb) => cb(false)); ses.setPermissionCheckHandler(() => false);
-  ses.on("will-download", (ev, item) => { try { item.cancel(); } catch {} ev.preventDefault(); });
-  const w = new BrowserWindow({ show: false, width: 1366, height: 900, webPreferences: { partition: part, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, webgl: false, spellcheck: false } });
+  let w = null, ses = null;
   try {
+    ses = probeSession();
+    /* finestre di dialogo (alert, confirm) disattivate: una finestra nascosta non deve far comparire nulla */
+    w = new BrowserWindow({ show: false, width: 1366, height: 900, webPreferences: { session: ses, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false, webgl: false, spellcheck: false, disableDialogs: true, autoplayPolicy: "document-user-activation-required" } });
     w.webContents.setAudioMuted(true);
     w.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     w.webContents.on("will-navigate", (ev, nu) => { if (!/^https?:/i.test(nu)) ev.preventDefault(); });
+    w.webContents.on("will-redirect", (ev, nu) => { if (!/^https?:/i.test(nu)) ev.preventDefault(); });
     try { await withTimeout(w.loadURL(u.href), 20000, "Il sito non risponde (20 secondi)."); }
     catch (e) { if (!/ERR_ABORTED|-3\b/.test(String(e && e.message)) || !w.webContents.getURL()) throw e; }
     await wait(1500);
-    const r = await withTimeout(w.webContents.executeJavaScript(PROBE_JS, true), 8000, "Il sito non si lascia leggere.");
-    if (!r || typeof r !== "object") throw new Error("Il sito non si lascia leggere.");
+    const raw = await withTimeout(w.webContents.executeJavaScript(PROBE_JS, true), 8000, "Il sito non si lascia leggere.");
+    if (!raw || typeof raw !== "object") throw new Error("Il sito non si lascia leggere.");
+    /* la pagina del sito non serve più: si chiude subito, mentre si scaricano i caratteri */
+    try { w.destroy(); } catch {} w = null;
+    const r = cleanProbe(raw);
     r.fonts = await siteFonts(r, ses).catch(() => []);
     delete r.faces; delete r.sheets;
     return r;
@@ -434,8 +508,9 @@ ipcMain.handle("css:probe", async (_e, raw) => {
     logErr("stile da un sito", u.href + ": " + m);
     return { err: /ERR_NAME_NOT_RESOLVED|ERR_INTERNET|ERR_CONNECTION|ERR_ADDRESS/.test(m) ? "Non raggiungo " + u.hostname + ": controlla l'indirizzo e la connessione." : /ERR_CERT/.test(m) ? "Il certificato di " + u.hostname + " non è valido." : /secondi|leggere/.test(m) ? m : "Non riesco a leggere lo stile di " + u.hostname + "." };
   } finally {
-    try { w.destroy(); } catch {}
-    ses.clearStorageData().catch(() => {}); probing = false;
+    try { if (w) w.destroy(); } catch {}
+    if (ses) { ses.clearStorageData().catch(() => {}); ses.clearAuthCache().catch(() => {}); }
+    probing = false;
   }
 });
 /* Discord: un solo bot per tutta l'app (token in userData/discord.json); il torneo sceglie il server */
@@ -459,7 +534,8 @@ ipcMain.handle("bots:import", (_e, p) => {
     if (!e || !/^b[a-z0-9]{0,20}$/.test(String(e.id)) || !/^telegram(-[a-z0-9]+)?\.json$/.test(String(e.file))) { report.push({ label: name, status: "saltato", why: "voce non valida" }); return; }
     const txt = p.files && p.files[e.id]; if (typeof txt !== "string") { report.push({ label: name, status: "saltato", why: "configurazione mancante" }); return; }
     try { JSON.parse(txt); } catch { report.push({ label: name, status: "saltato", why: "configurazione illeggibile" }); return; }
-    if (bots[e.id]) { bots[e.id].stop(); delete bots[e.id]; }
+    /* l'istanza vecchia non deve più riscrivere il suo file sopra quello ripristinato */
+    if (bots[e.id]) { bots[e.id].dispose(); delete bots[e.id]; }
     const entry = { id: e.id, label: name, file: e.file, color: e.color || "", username: e.username || "" };
     let prev = null;
     if (fs.existsSync(botPath(entry))) {
@@ -480,12 +556,13 @@ ipcMain.handle("bots:import", (_e, p) => {
 ipcMain.handle("bots:remove", (_e, id) => {
   const L = botsLoad(); if (L.list.length < 2) return botsInfo();
   const e = L.list.find((x) => x.id === id); if (!e) return botsInfo();
-  if (bots[id]) { bots[id].stop(); delete bots[id]; }
+  if (bots[id]) { bots[id].dispose(); delete bots[id]; }
+  const index = L.list.indexOf(e), sel = selId === id;
   L.list = L.list.filter((x) => x !== e); botsSave(L);
   const dir = path.join(app.getPath("userData"), "bot-rimossi"); fs.mkdirSync(dir, { recursive: true });
   const moved = path.join(dir, stamp() + "_" + path.basename(e.file));
   try { fs.renameSync(botPath(e), moved); } catch {}
-  lastBotDel = { entry: e, moved };
+  lastBotDel = { entry: e, moved, index, sel };
   if (selId === id) selId = L.list[0].id;
   distribute(); return botsInfo();
 });
@@ -555,10 +632,11 @@ function start() {
   win.webContents.on("render-process-gone", (_e, d) => { logErr("pagina chiusa", d && d.reason); if (d && d.reason !== "clean-exit" && win && !win.isDestroyed()) setTimeout(() => { try { win.reload(); } catch {} }, 800); });
   win.on("unresponsive", () => logErr("pagina", "non risponde"));
   try { initUpdater(); } catch (e) { logErr("aggiornamenti", e); }
-  /* telecamere, microfono e cattura di finestre: solo per le pagine del programma */
+  /* telecamere, microfono, cattura di finestre, schermo intero (proiettore) e "Copia": solo per le pagine del programma */
   const own = (u) => String(u || "").startsWith("file://");
-  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(own(wc.getURL()) && (perm === "media" || perm === "display-capture")));
-  session.defaultSession.setPermissionCheckHandler((wc, perm, origin) => own(wc ? wc.getURL() : origin) && (perm === "media" || perm === "display-capture"));
+  const PERM_OK = new Set(["media", "display-capture", "fullscreen", "clipboard-sanitized-write"]);
+  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(own(wc.getURL()) && PERM_OK.has(perm)));
+  session.defaultSession.setPermissionCheckHandler((wc, perm, origin) => own(wc ? wc.getURL() : origin) && PERM_OK.has(perm));
   try {
   streamer = createStreamer({
     file: path.join(app.getPath("userData"), "stream.json"),

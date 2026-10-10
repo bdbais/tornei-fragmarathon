@@ -18,21 +18,30 @@ const SCENES = { finestra: "Solo la finestra", pip: "Finestra con telecamera nel
 
 function ffmpegPath() {
   let p = require("ffmpeg-static");
-  return p ? p.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep) : null;
+  if (!p) return null;
+  p = p.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep);
+  /* l'antivirus può averlo messo in quarantena: meglio «ffmpeg non trovato» subito che «Avvio…» per sempre */
+  return fs.existsSync(p) ? p : null;
 }
 
 module.exports = function createStreamer(opts) {
   const file = opts.file;
   let off = null, offLast = 0, offFrames = 0;
   let cfg = load(), win = null, ff = null, st = idle(), encoder = null, restarts = 0, stopping = false, startedAt = 0, gen = 0, early = [], liveSent = false, lastFrames = 0, previewData = null, saveFile = null;
+  /* session: cambia a ogni avvio e a ogni stop, così un avvio fermato a metà non va in onda;
+     restartT: riconnessione in attesa; slow/slowAt: riavvii perché ffmpeg non teneva il passo */
+  let session = 0, restartT = null, slow = 0, slowAt = 0;
 
   function idle() { return { live: false, starting: false, since: 0, scene: cfg ? cfg.scene : "pip", fps: 0, kbps: 0, frames: 0, err: "", encoder: "", outputs: [] }; }
   function defaults() {
     return { yt: { on: false, key: "", link: "" }, tw: { on: false, key: "", channel: "" }, rtmp: { on: false, url: "", key: "", link: "" },
       quality: "720p30", kbps: 0, source: "wall", cams: [], mic: "", pcAudio: false, overlay: true, save: false, scene: "pip", cam: 0 };
   }
-  function load() { try { const c = Object.assign(defaults(), JSON.parse(fs.readFileSync(file, "utf8"))); ["yt", "tw", "rtmp"].forEach((k) => (c[k] = Object.assign(defaults()[k], c[k]))); return c; } catch { return defaults(); } }
-  function persist() { try { fs.writeFileSync(file, JSON.stringify(cfg, null, 1)); } catch {} }
+  /* un file rovinato (JSON troncato) si mette da parte invece di sovrascriverlo: le chiavi si possono recuperare a mano */
+  function load() { try { const c = Object.assign(defaults(), JSON.parse(fs.readFileSync(file, "utf8"))); ["yt", "tw", "rtmp"].forEach((k) => (c[k] = Object.assign(defaults()[k], c[k]))); return c; } catch (e) { if (e instanceof SyntaxError) { try { fs.renameSync(file, file + ".rovinato-" + Date.now()); } catch {} } return defaults(); } }
+  /* scrittura atomica: un crash o un calo di corrente a metà non lascia un file vuoto */
+  /* se la sostituzione non riesce (file tenuto aperto dall'antivirus) si scrive direttamente: meglio che perdere la modifica */
+  function persist() { const t = file + ".tmp", data = JSON.stringify(cfg, null, 1); try { const fd = fs.openSync(t, "w"); try { fs.writeSync(fd, data); fs.fsyncSync(fd); } finally { fs.closeSync(fd); } } catch { return; } try { fs.renameSync(t, file); } catch { try { fs.writeFileSync(file, data); fs.unlinkSync(t); } catch {} } }
   function emit() { opts.onStatus && opts.onStatus(status()); }
 
   function links() {
@@ -83,13 +92,21 @@ module.exports = function createStreamer(opts) {
   }
 
   function spawnFfmpeg(hasAudio) {
+    const bin = ffmpegPath(); if (!bin) throw new Error("ffmpeg non trovato");
     const q = QUALITY[cfg.quality] || QUALITY["720p30"], kbps = cfg.kbps || q.kbps, outs = outputs(), e = pickEncoder();
-    const tee = outs.map((o) => "[f=flv:onfail=ignore]" + o.url.replace(/([|\[\]])/g, "\\$1"));
+    /* le chiavi di trasmissione non devono finire nel registro né negli errori (mostrati e mandati dal bot):
+       ffmpeg scrive l'indirizzo completo quando un'uscita non si apre */
+    const secrets = [cfg.yt.key, cfg.tw.key, cfg.rtmp.key].map((k) => String(k || "").trim()).filter((k) => k.length >= 4);
+    if (cfg.rtmp.on && cfg.rtmp.url && !cfg.rtmp.key) { const seg = cfg.rtmp.url.trim().replace(/\/+$/, "").split("/"); if (seg.length > 4 && seg[seg.length - 1].length >= 4) secrets.push(seg[seg.length - 1]); }
+    const scrub = (t) => secrets.reduce((a, k) => a.split(k).join("***"), String(t));
+    /* nel tee | separa le uscite; ' e \ sono virgolette ed escape (un apostrofo nei Documenti, come D'Amico, rompeva la registrazione) */
+    const tee = outs.map((o) => "[f=flv:onfail=ignore]" + o.url.replace(/([|\[\]'\\])/g, "\\$1"));
     if (cfg.save && opts.saveDir) {
       fs.mkdirSync(opts.saveDir, { recursive: true });
       const d = new Date(), p2 = (n) => String(n).padStart(2, "0");
       saveFile = path.join(opts.saveDir, `diretta_${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}_${p2(d.getHours())}-${p2(d.getMinutes())}-${p2(d.getSeconds())}.mkv`);
-      tee.push("[f=matroska]" + saveFile.replace(/\\/g, "/").replace(/([|\[\]:])/g, "\\$1"));
+      /* onfail=ignore: se la registrazione non riesce (disco pieno, cartella non scrivibile) la diretta continua */
+      tee.push("[f=matroska:onfail=ignore]" + saveFile.replace(/\\/g, "/").replace(/([|\[\]:'])/g, "\\$1"));
     }
     const args = ["-hide_banner", "-loglevel", "warning", "-stats", "-stats_period", "2",
       "-fflags", "+genpts", "-thread_queue_size", "1024", "-i", "pipe:0"];
@@ -99,39 +116,58 @@ module.exports = function createStreamer(opts) {
     args.push("-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-af", "aresample=async=1");
     if (!hasAudio) args.push("-shortest");
     args.push("-flags", "+global_header", "-f", "tee", tee.join("|"));
-    const p = spawn(ffmpegPath(), args, { windowsHide: true, stdio: ["pipe", "ignore", "pipe"] });
+    const logf = opts.logFile;
+    const p = spawn(bin, args, { windowsHide: true, stdio: ["pipe", "ignore", "pipe"] });
+    /* exe mancante o bloccato: arriva solo 'error' e mai 'exit'; senza questo ascolto resterebbe «Avvio…» per sempre */
+    p.on("error", (err) => { try { if (logf) fs.appendFileSync(logf, "ffmpeg: " + scrub(err.message) + "\n"); } catch {} if (ff !== p) return; ff = null; stop("ffmpeg non avviabile: " + (err.code || err.message)); });
     early.forEach((b) => p.stdin.write(b)); early = [];
     st.encoder = e; st.outputs = outs.map((o) => o.name);
-    let errBuf = "";
-    const logf = opts.logFile;
-    try { if (logf) fs.writeFileSync(logf, "[" + new Date().toISOString() + "] ffmpeg " + args.map((a) => (/rtmps?:\/\//.test(a) ? a.replace(/(live2\/|app\/|live\/)[^|\]]+/g, "$1***") : a)).join(" ") + "\n"); } catch {}
+    let errBuf = "", pend = "";
+    const lost = []; /* uscite cadute e non ricollegate da questo processo: restano visibili nell'errore */
+    try { if (logf) fs.writeFileSync(logf, "[" + new Date().toISOString() + "] ffmpeg " + args.map((a) => scrub(/rtmps?:\/\//.test(a) ? a.replace(/(live2\/|app\/|live\/)[^|\]]+/g, "$1***") : a)).join(" ") + "\n"); } catch {}
     p.stderr.on("data", (d) => {
       if (ff !== p || stopping) return; /* processo già sostituito o fermato: le ultime statistiche non contano */
-      const s = d.toString();
+      /* solo righe intere: una chiave spezzata fra due pezzi sfuggirebbe alla maschera */
+      const raw = pend + d.toString(), cut = Math.max(raw.lastIndexOf("\n"), raw.lastIndexOf("\r"));
+      if (cut < 0 && raw.length < 8192) { pend = raw; return; }
+      pend = cut < 0 ? "" : raw.slice(cut + 1);
+      const s = scrub(cut < 0 ? raw : raw.slice(0, cut + 1));
       try { if (logf) fs.appendFileSync(logf, s); } catch {}
       /* con il muxer tee ffmpeg scrive bitrate=N/A: si usa il bitrate impostato */
-      const m = /frame=\s*(\d+)\s+fps=\s*([\d.]+)/.exec(s), br = /bitrate=\s*([\d.]+)kbits/.exec(s);
+      const m = /frame=\s*(\d+)\s+fps=\s*([\d.]+)/.exec(s), br = /bitrate=\s*([\d.]+)kbits/.exec(s), sm = /Slave muxer #(\d+) failed/i.exec(s);
       if (m) {
         st.frames = +m[1]; st.fps = +m[2]; st.kbps = br ? Math.round(+br[1]) : kbps;
-        if (!st.live && st.frames > q.fps * 2) { st.live = true; st.starting = false; st.err = ""; st.since = st.since || Date.now(); restarts = 0; emit(); if (!liveSent) { liveSent = true; opts.onLive && opts.onLive(links()); } }
+        if (!st.live && st.frames > q.fps * 2) { st.live = true; st.starting = false; st.err = lost.join("; "); st.since = st.since || Date.now(); restarts = 0; p.__liveAt = p.__liveAt || Date.now(); emit(); if (!liveSent) { liveSent = true; opts.onLive && opts.onLive(links()); } }
         else emit();
-      } else if (/Slave muxer #\d+ failed/i.test(s) && outputs().length) {
-        /* una destinazione (YouTube, Twitch, RTMP) è caduta: si riparte da capo, così si riconnette */
-        st.err = "Connessione persa con " + outputs().map((o) => o.name).join(" / ") + ": mi riconnetto…"; emit();
-        try { p.kill("SIGKILL"); } catch {}
-      } else if (/error|failed|refused|denied|Invalid|unauthorized|403|404/i.test(s)) { errBuf = (errBuf + s).slice(-400); st.err = s.trim().split("\n").pop().slice(0, 200); emit(); }
+      }
+      if (sm) {
+        /* tee non riapre un'uscita caduta. Si riparte da capo (e si riconnette) solo se è caduta dopo almeno 30 s
+           in onda e non c'è una registrazione su disco da interrompere. Se non si apre all'avvio (chiave
+           sbagliata, rete assente) le altre uscite e la registrazione continuano; il tee dice quale (#N). */
+        const i = +sm[1], remote = i < outs.length;
+        if (remote && !cfg.save && p.__liveAt && Date.now() - p.__liveAt > 30000) { st.err = "Connessione persa con " + outs[i].name + ": mi riconnetto…"; emit(); try { p.kill("SIGKILL"); } catch {} }
+        else { lost.push(remote ? "Connessione persa con " + outs[i].name + ": per ricollegarla ferma e riavvia la diretta" : "Registrazione su disco non riuscita"); st.err = lost.join("; "); emit(); }
+      } else if (!m && /error|failed|refused|denied|Invalid|unauthorized|403|404/i.test(s)) { errBuf = (errBuf + s).slice(-400); st.err = s.trim().split("\n").pop().slice(0, 200); emit(); }
     });
     p.stdin.on("error", () => {});
     p.on("exit", (code) => {
       if (ff !== p) return;
       ff = null;
       if (stopping) return;
-      /* caduta: si riparte da capo (nuova intestazione WebM) fino a 10 volte */
+      /* caduta: si riparte da capo (nuova intestazione WebM) */
       st.live = false; st.starting = true; st.err = st.err || "trasmissione interrotta (codice " + code + ")";
       /* si riprova a lungo (alla LAN la connessione può cadere per minuti): fino a 60 tentativi, al massimo ogni 30 s */
       if (++restarts > 60) { stop("riconnessione non riuscita: " + st.err); return; }
       st.err = st.err.replace(/ \(tentativo \d+\)$/, "") + " (tentativo " + restarts + ")"; emit();
-      setTimeout(() => { if (!stopping && win) { gen++; early = []; ff = spawnFfmpeg(hasAudio); win.webContents.send("stream-cmd", { type: "restart", gen }); } }, Math.min(30000, 2000 * restarts));
+      /* il timer si tiene: stop() lo annulla, altrimenti dopo Ferma e Avvia partirebbe un secondo ffmpeg orfano */
+      clearTimeout(restartT);
+      restartT = setTimeout(() => {
+        restartT = null;
+        if (stopping || !win || ff) return;
+        gen++; early = [];
+        try { ff = spawnFfmpeg(hasAudio); } catch (x) { stop(String(x.message || x)); return; }
+        win.webContents.send("stream-cmd", { type: "restart", gen });
+      }, Math.min(30000, 2000 * restarts));
     });
     return p;
   }
@@ -172,34 +208,57 @@ module.exports = function createStreamer(opts) {
     if (ff || st.starting) return status();
     if (!ffmpegPath()) { st.err = "ffmpeg non trovato"; emit(); return status(); }
     if (!outputs().length && !cfg.save) { st.err = "Scegli almeno una destinazione (YouTube, Twitch o RTMP) e inserisci la chiave."; emit(); return status(); }
-    stopping = false; liveSent = false; restarts = 0;
+    stopping = false; liveSent = false; restarts = 0; clearTimeout(restartT); restartT = null;
+    const my = ++session; /* stop() lo cambia: dopo ogni attesa si controlla che l'avvio non sia stato fermato */
     st = idle(); st.starting = true; st.scene = cfg.scene; emit();
     try {
       const sid = await sourceId();
+      if (my !== session) return status();
       await ensureWin();
+      if (my !== session) return status();
       const q = QUALITY[cfg.quality] || QUALITY["720p30"];
       if (sid === "offscreen") startOffscreen(q);
       const ok = await new Promise((resolve) => {
-        const t = setTimeout(() => resolve({ ok: false, err: "la finestra della diretta non risponde" }), 20000);
-        opts.onReady = (r) => { clearTimeout(t); resolve(r); };
+        let t = null;
+        const done = (r) => { clearTimeout(t); if (opts.onReady === done) opts.onReady = null; resolve(r || {}); };
+        t = setTimeout(() => done({ ok: false, err: "la finestra della diretta non risponde" }), 20000);
+        opts.onReady = done;
         gen++; early = [];
         win.webContents.send("stream-cmd", { type: "start", gen, cfg: { w: q.w, h: q.h, fps: q.fps, sourceId: sid, cams: cfg.cams, mic: cfg.mic, pcAudio: cfg.pcAudio, overlay: cfg.overlay, scene: cfg.scene, cam: cfg.cam } });
       });
-      if (!ok.ok) { st.starting = false; st.err = ok.err || "avvio non riuscito"; stopOffscreen(); emit(); return status(); }
+      /* fermata durante l'attesa (Ferma subito dopo Avvia, /diretta ferma): niente ffmpeg; la finestra ha già avuto il suo «stop» */
+      if (my !== session) return status();
+      /* avvio non riuscito o scaduto: stop() chiude anche telecamere, microfono e registrazione rimasti aperti */
+      if (!ok.ok) return stop(ok.err || "avvio non riuscito");
       ff = spawnFfmpeg(!!ok.audio);
       startedAt = Date.now();
-    } catch (e) { st.starting = false; st.err = String(e.message || e); emit(); }
+    } catch (e) { if (my === session) stop(String(e.message || e)); }
     return status();
   }
   function stop(reason) {
-    stopping = true;
+    stopping = true; session++;
+    clearTimeout(restartT); restartT = null;
+    /* un avvio ancora in attesa della finestra si chiude subito, senza andare in onda */
+    if (opts.onReady) { const f = opts.onReady; opts.onReady = null; f({ ok: false, err: "fermata" }); }
     if (win && !win.isDestroyed()) win.webContents.send("stream-cmd", { type: "stop" });
     stopOffscreen();
     if (ff) { const p = ff; ff = null; try { p.stdin.end(); } catch {} setTimeout(() => { try { p.kill("SIGKILL"); } catch {} }, 4000); }
-    const was = st.live;
+    /* la fine si annuncia se l'inizio era stato annunciato, anche se in quel momento si stava riconnettendo */
+    const was = liveSent; liveSent = false;
     st = idle(); st.err = reason || ""; emit();
     if (was && opts.onEnd) opts.onEnd();
     return status();
+  }
+  /* ffmpeg non tiene il passo (rete lenta o PC lento): i pezzi si accumulerebbero in memoria senza limite.
+     Si riparte da capo (nuova intestazione WebM); dopo 3 volte in mezz'ora ci si ferma con un consiglio. */
+  function tooSlow(p) {
+    p.__slow = true;
+    const now = Date.now(), msg = "Connessione o PC troppo lenti per la qualità scelta";
+    if (now - slowAt > 30 * 60000) slow = 0;
+    slowAt = now;
+    if (++slow >= 3) { stop(msg + ": scegli una qualità più bassa"); return; }
+    st.err = msg + ": riavvio"; emit();
+    try { p.kill("SIGKILL"); } catch {}
   }
 
   return {
@@ -207,10 +266,19 @@ module.exports = function createStreamer(opts) {
     /* i primi pezzi (con l'intestazione WebM) possono arrivare prima che ffmpeg sia partito: si tengono da parte */
     chunk(g, buf) {
       if (g !== gen) return;
-      if (ff && ff.stdin.writable) ff.stdin.write(Buffer.from(buf));
-      else if (!stopping && early.length < 400) early.push(Buffer.from(buf));
+      if (ff && ff.stdin.writable) {
+        if (ff.__slow) return; /* già in chiusura: non si accoda altro */
+        /* in onda bastano 32 MB (circa 20 s di ritardo); prima, l'apertura delle connessioni può bloccare qualche secondo */
+        if (ff.stdin.writableLength > (ff.__liveAt ? 32 : 128) * 1048576) { tooSlow(ff); return; }
+        ff.stdin.write(Buffer.from(buf));
+      } else if (!stopping && early.length < 400) early.push(Buffer.from(buf));
     },
-    ready(r) { if (opts.onReady) { const f = opts.onReady; opts.onReady = null; f(r); } },
+    ready(r) {
+      r = r || {};
+      if (r.gen != null && r.gen !== gen) return; /* risposta di un avvio già annullato */
+      if (opts.onReady) { const f = opts.onReady; opts.onReady = null; f(r); }
+      else if (r.ok && win && !win.isDestroyed()) win.webContents.send("stream-cmd", { type: "stop" }); /* nessuno aspetta più: si spengono telecamere e microfono */
+    },
     preview(d) { previewData = d; },
     getPreview() { return previewData; },
     scene(name, cam) {

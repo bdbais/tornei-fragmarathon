@@ -25,9 +25,15 @@
   }
   function isEnc(text) { try { var j = typeof text === "string" ? JSON.parse(text) : text; return !!(j && j.kind === "backup-cifrato" && j.data); } catch (e) { return false; } }
   function decrypt(text, pw) {
-    var j = typeof text === "string" ? JSON.parse(text) : text;
     if (!pw) return Promise.reject(new Error("Scrivi la password del backup."));
-    return key(pw, unb64(j.salt), j.iter || ITER).then(function (k) {
+    var j;
+    /* tutto dentro la promessa: un file guasto (sale non valido, iterazioni fuori misura) dà un errore, non un'eccezione */
+    return Promise.resolve().then(function () {
+      j = typeof text === "string" ? JSON.parse(text) : text;
+      var it = +j.iter || ITER;
+      if (it < 1000 || it > 5e6 || it !== Math.floor(it)) throw new Error("iterazioni fuori misura");
+      return key(pw, unb64(j.salt), it);
+    }).then(function (k) {
       return crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(j.iv) }, k, unb64(j.data));
     }).then(function (pt) {
       var u = new Uint8Array(pt);

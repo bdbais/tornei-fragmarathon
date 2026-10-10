@@ -149,11 +149,12 @@
     rounds.forEach(function (rd) { rd.forEach(function (m) { if (m.b) { P[m.a + "\u0000" + m.b] = 1; P[m.b + "\u0000" + m.a] = 1; } }); });
     return P;
   }
-  /* Accoppiamento del turno successivo: punteggi simili, senza rivincite (se possibile). */
-  function swPair(players, rounds, shuffleFn) {
+  /* Accoppiamento del turno successivo: punteggi simili, senza rivincite (se possibile).
+     rank (facoltativo): la formula della classifica mostrata, così accoppiamenti e riposo seguono quella. */
+  function swPair(players, rounds, shuffleFn, rank) {
     var list, out = [];
     if (!rounds.length) list = shuffleFn ? shuffleFn(players.slice()) : players.slice();
-    else list = swStandings(players, rounds).map(function (t) { return t.n; });
+    else list = swStandings(players, rounds, rank).map(function (t) { return t.n; });
     var hadBye = {};
     rounds.forEach(function (rd) { rd.forEach(function (m) { if (m.b === null) hadBye[m.a] = 1; }); });
     if (list.length % 2) {
@@ -209,10 +210,10 @@
       if (rank) { A.pt += rank.run(fxMatchVars(m.sa, m.sb)); B.pt += rank.run(fxMatchVars(m.sb, m.sa)); }
       else if (m.sa > m.sb) A.pt += WIN; else if (m.sa < m.sb) B.pt += WIN; else { A.pt += DRAW; B.pt += DRAW; }
     });
-    return Object.keys(T).map(function (k) { return T[k]; }).sort(function (x, y) {
-      return y.pt - x.pt || (y.gf - y.gs) - (x.gf - x.gs) || y.gf - x.gf || x.n.localeCompare(y.n);
-    });
+    return Object.keys(T).map(function (k) { return T[k]; }).sort(rrCmp);
   }
+  /* ordine della classifica all'italiana: punti, differenza reti, reti fatte, nome (lo usa anche la classifica complessiva) */
+  function rrCmp(x, y) { return y.pt - x.pt || (y.gf - y.gs) - (x.gf - x.gs) || y.gf - x.gf || x.n.localeCompare(y.n); }
 
   /* ---------------- Formule dei punti ----------------
      Piccolo linguaggio per le formule dei punti, senza eval: numeri, variabili,
@@ -251,7 +252,8 @@
       if (t.t === "n") return function () { return t.v; };
       if (t.t === "id") {
         if (peek("(")) {
-          var f = FN[t.v]; if (!f) throw new Error("Funzione sconosciuta: " + t.v);
+          /* solo le funzioni dell'elenco: niente chiavi ereditate (__proto__, constructor) */
+          var f = Object.prototype.hasOwnProperty.call(FN, t.v) ? FN[t.v] : null; if (!f) throw new Error("Funzione sconosciuta: " + t.v);
           p++; var args = [];
           if (!peek(")")) { args.push(expr()); while (peek(",")) { p++; args.push(expr()); } }
           eat(")");
@@ -301,7 +303,7 @@
     seedOrder: seedOrder,
     deBuild: deBuild, deEval: deEval,
     swStandings: swStandings, swPair: swPair, swDone: swDone, swDefaultRounds: swDefaultRounds,
-    rrMatches: rrMatches, rrStandings: rrStandings,
+    rrMatches: rrMatches, rrStandings: rrStandings, rrCmp: rrCmp,
     fxCompile: fxCompile, fxMatchVars: fxMatchVars, FX_MATCH_VARS: FX_MATCH_VARS
   };
   if (typeof module !== "undefined" && module.exports) module.exports = TF;

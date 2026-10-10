@@ -108,6 +108,9 @@ test("formule: calcolo, funzioni ed errori", () => {
   assert.throws(() => TF.fxCompile("morti", ["kill"]), /Variabile sconosciuta/);
   assert.throws(() => TF.fxCompile("alert(1)"), /Funzione sconosciuta/);
   assert.throws(() => TF.fxCompile("constructor.constructor"), /Carattere non valido/);
+  assert.throws(() => TF.fxCompile("__proto__(1)"), /Funzione sconosciuta/);
+  assert.throws(() => TF.fxCompile("constructor(2)"), /Funzione sconosciuta/);
+  assert.throws(() => TF.fxCompile("tostring(2)"), /Funzione sconosciuta/);
 });
 
 test("formule: punti personalizzati in gironi e svizzero", () => {
@@ -117,4 +120,32 @@ test("formule: punti personalizzati in gironi e svizzero", () => {
   const rounds = [[{ a: "A", b: "B", sa: 5, sb: 1, w: "A" }, { a: "C", b: null }]];
   const st = TF.swStandings(["A", "B", "C"], rounds, rank);
   assert.deepStrictEqual(st.map((x) => x.n + ":" + x.pts), ["A:3", "C:2", "B:0"]);
+});
+
+test("girone all'italiana: a pari punti e differenza conta chi ha segnato di più", () => {
+  const g = { players: ["Alfa", "Beta", "Zeta"], matches: [{ a: "Zeta", b: "Beta", sa: 5, sb: 3 }, { a: "Alfa", b: "Beta", sa: 2, sb: 0 }, { a: "Alfa", b: "Zeta", sa: 1, sb: 1 }] };
+  const s = TF.rrStandings(g);
+  assert.deepStrictEqual(s.map((x) => x.n), ["Zeta", "Alfa", "Beta"]);
+  assert.deepStrictEqual(s.slice().reverse().sort(TF.rrCmp).map((x) => x.n), ["Zeta", "Alfa", "Beta"]);
+});
+
+test("svizzero: accoppiamenti e riposo seguono la formula della classifica", () => {
+  const punti = TF.fxCompile("punti", TF.FX_MATCH_VARS);
+  const P = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const r1 = [[{ a: "A", b: "B", sa: 20, sb: 19, w: "A" }, { a: "C", b: "D", sa: 1, sb: 0, w: "C" }, { a: "E", b: "F", sa: 1, sb: 0, w: "E" }, { a: "G", b: "H", sa: 1, sb: 0, w: "G" }]];
+  const order = TF.swStandings(P, r1, punti).map((x) => x.n);
+  assert.deepStrictEqual(order.slice(0, 2), ["A", "B"]);
+  const rd = TF.swPair(P, r1, null, punti);
+  const opp = (n) => { const m = rd.find((x) => x.a === n || x.b === n); return m.a === n ? m.b : m.a; };
+  assert.ok(["C", "E", "G"].indexOf(opp("B")) >= 0, "B (secondo) contro " + opp("B"));
+  /* senza formula resta il 3/1/0: B è tra gli sconfitti */
+  const rd0 = TF.swPair(P, r1);
+  const m0 = rd0.find((x) => x.a === "B" || x.b === "B");
+  assert.ok(["D", "F", "H"].indexOf(m0.a === "B" ? m0.b : m0.a) >= 0);
+  /* bye: con 5 giocatori va all'ultimo della classifica mostrata */
+  const r5 = [[{ a: "B", b: "A", sa: 9, sb: 2, w: "B" }, { a: "C", b: "D", sa: 1, sb: 0, w: "C" }, { a: "E", b: null }]];
+  const st5 = TF.swStandings(["A", "B", "C", "D", "E"], r5, punti).map((x) => x.n);
+  const bye = TF.swPair(["A", "B", "C", "D", "E"], r5, null, punti).find((m) => m.b === null).a;
+  assert.notStrictEqual(bye, "A");
+  assert.strictEqual(bye, st5.filter((n) => n !== "E").pop());
 });

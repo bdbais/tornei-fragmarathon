@@ -74,7 +74,12 @@
     var html = P.map(function (p) { return '<button type="button" data-sec="' + keyOf(p).replace(/"/g, "") + '"' + (keyOf(p) === act ? ' aria-current="page"' : "") + '>' + p.label.replace(/[&<>]/g, "") + '</button>'; }).join("");
     if (nav.getAttribute("data-sig") !== html) { nav.innerHTML = html; nav.setAttribute("data-sig", html); }
     P.forEach(function (p) { var on = keyOf(p) === act; if (p.el.classList.contains("sact") !== on) p.el.classList.toggle("sact", on); });
-    var cb = nav.querySelector("[aria-current]"); if (cb && nav.scrollWidth > nav.clientWidth + 2) nav.scrollLeft = Math.max(0, cb.offsetLeft - (nav.clientWidth - cb.offsetWidth) / 2);
+    /* menu orizzontale (schermi stretti): si ricentra solo se cambia la sezione o la larghezza, non a ogni ridisegno */
+    var cb = nav.querySelector("[aria-current]"), mark = act + "|" + nav.clientWidth;
+    if (cb && nav.getAttribute("data-act") !== mark) {
+      nav.setAttribute("data-act", mark);
+      if (nav.scrollWidth > nav.clientWidth + 2) nav.scrollLeft = Math.max(0, cb.offsetLeft - (nav.clientWidth - cb.offsetWidth) / 2);
+    }
   }
   function lsGetS(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
   document.addEventListener("click", function (e) {
@@ -84,9 +89,17 @@
     var f = document.getElementById("editbox"); if (f) f.scrollTop = 0;
   });
   /* aperte le impostazioni: schermata intera, Esc chiude */
-  var ebo = new MutationObserver(function () { var eb = document.getElementById("editbox"); document.documentElement.classList.toggle("set-on", !!eb && !eb.hidden); });
+  var ebo = new MutationObserver(function () {
+    var eb = document.getElementById("editbox"), on = !!eb && !eb.hidden, nv = document.getElementById("editnav");
+    document.documentElement.classList.toggle("set-on", on);
+    /* riaperte le impostazioni: il menu orizzontale torna a mostrare la sezione attiva al prossimo ridisegno */
+    if (on && nv) nv.removeAttribute("data-act");
+  });
   var ebx = document.getElementById("editbox"); if (ebx) ebo.observe(ebx, { attributes: true, attributeFilter: ["hidden"] });
+  /* tasto usato dall'IME (cinese, giapponese) per confermare o annullare una parola: non è un comando */
+  function imeKey(e) { return e.isComposing || e.keyCode === 229; }
   document.addEventListener("keydown", function (e) {
+    if (imeKey(e)) return;
     var eb = document.getElementById("editbox");
     if (e.key === "Escape" && eb && !eb.hidden && !document.querySelector("dialog[open]")) { var c = document.getElementById("ecancel"); if (c) { e.preventDefault(); c.click(); } }
   });
@@ -121,13 +134,14 @@
     el.scrollIntoView({ block: "start", behavior: "smooth" });
     el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1600);
   }
+  function T(s) { return window.I18N ? window.I18N.tr(s) : s; }
   var SETTINGS = ["Generale", "Nomi dei giochi", "Archivio tornei e backup", "Logo dell'evento", "Genera un logo con l'AI", "CSS personalizzato", "Bot Telegram", "Discord", "Diretta su YouTube e Twitch"];
   function collect() {
     var out = [], seen = {};
     function add(o) { var k = o.g + "|" + norm(o.t); if (seen[k]) return; seen[k] = 1; out.push(o); }
     document.querySelectorAll("#tabs0 .tab, #tabs .tab").forEach(function (b) {
       var t = (b.textContent || b.getAttribute("aria-label") || "").trim(); if (!t || b.id === "undodel") return;
-      if (b.id === "plus") t = "Aggiungi un gioco";
+      if (b.id === "plus") t = T("Aggiungi un gioco");
       add({ t: t, g: b.dataset.k && !/^(roster|squadre|results|hof|sala)$/.test(b.dataset.k) ? "Gioco" : "Scheda", run: function () { b.click(); } });
     });
     document.querySelectorAll("main .panel h2, #editform > .sect > h3").forEach(function (h) {
@@ -136,16 +150,18 @@
       if (!inSet && !visible(h)) return;
       add({ t: t, g: inSet ? "Impostazioni" : "Sezione", run: function () { if (inSet) openSettings(function () { reveal(findSet(t) || h); }); else reveal(h); } });
     });
+    /* i titoli nella pagina sono già tradotti: si confrontano con le etichette tradotte nella stessa lingua */
     SETTINGS.forEach(function (t) {
-      add({ t: t, g: "Impostazioni", run: function () { openSettings(function () {
-        var hs = Array.prototype.slice.call(document.querySelectorAll("#editform h3")), h = hs.filter(function (x) { return norm(headText(x)).indexOf(norm(t).slice(0, 8)) === 0; })[0];
+      var tt = T(t);
+      add({ t: tt, g: "Impostazioni", run: function () { openSettings(function () {
+        var h = findSet(tt);
         if (h) reveal(h); else { var f = document.getElementById("editform"); if (f) reveal(f); }
       }); } });
     });
-    if (window.HOME) add({ t: "Elenco dei tornei", g: "Comando", run: function () { window.HOME.open(); } }), add({ t: "Bot Telegram: elenco dei bot", g: "Comando", run: function () { window.HOME.open("bots"); } });
-    if (window.VERSION) add({ t: "Novità e versione " + window.VERSION.v, g: "Comando", run: window.VERSION.open });
-    add({ t: "Comprimi tutte le sezioni", g: "Comando", run: function () { document.querySelectorAll("[data-ckey]").forEach(function (b) { C[b.dataset.ckey] = 1; }); saveC(); process(); } });
-    add({ t: "Espandi tutte le sezioni", g: "Comando", run: function () { document.querySelectorAll("[data-ckey]").forEach(function (b) { delete C[b.dataset.ckey]; }); saveC(); process(); } });
+    if (window.HOME) add({ t: T("Elenco dei tornei"), g: "Comando", run: function () { window.HOME.open(); } }), add({ t: T("Bot Telegram: elenco dei bot"), g: "Comando", run: function () { window.HOME.open("bots"); } });
+    if (window.VERSION) add({ t: T("Novità e versione") + " " + window.VERSION.v, g: "Comando", run: window.VERSION.open });
+    add({ t: T("Comprimi tutte le sezioni"), g: "Comando", run: function () { document.querySelectorAll("[data-ckey]").forEach(function (b) { C[b.dataset.ckey] = 1; }); saveC(); process(); } });
+    add({ t: T("Espandi tutte le sezioni"), g: "Comando", run: function () { document.querySelectorAll("[data-ckey]").forEach(function (b) { delete C[b.dataset.ckey]; }); saveC(); process(); } });
     if (window.HELP) window.HELP.order.forEach(function (k) {
       var tp = window.HELP.topics[k]; if (tp) add({ t: tp.t, g: "Guida", run: function () { var hb = document.getElementById("helpbtn"); if (window.openHelp) window.openHelp(k); else if (hb) hb.click(); } });
     });
@@ -153,7 +169,7 @@
   }
   function score(it, q) {
     if (!q) return 1;
-    var t = norm(it.t + " " + it.g), ws = q.split(" "), s = 0;
+    var t = norm(it.t + " " + T(it.g)), ws = q.split(" "), s = 0;
     for (var i = 0; i < ws.length; i++) { var p = t.indexOf(ws[i]); if (p < 0) return 0; s += p === 0 ? 3 : (t.charAt(p - 1) === " " ? 2 : 1); }
     return s + (norm(it.t).indexOf(q) === 0 ? 5 : 0);
   }
@@ -176,6 +192,7 @@
       var inp = dlg.querySelector("input");
       inp.addEventListener("input", function () { sel = 0; paint(); });
       inp.addEventListener("keydown", function (e) {
+        if (imeKey(e)) return;
         if (e.key === "ArrowDown") { e.preventDefault(); sel = Math.min(items.length - 1, sel + 1); paint(); }
         else if (e.key === "ArrowUp") { e.preventDefault(); sel = Math.max(0, sel - 1); paint(); }
         else if (e.key === "Enter") { e.preventDefault(); run(sel); }
