@@ -171,3 +171,5 @@ body.wall.nocur{cursor:none}
 .aigrid figure{margin:0;display:flex;flex-direction:column;gap:6px}
 .aigrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:2px solid var(--line);background:#000}
 .aigrid button{width:100%}
+
+.impact{margin-top:14px;padding:12px 14px;border:2px solid #e5484d;border-left-width:6px;border-radius:8px;background:color-mix(in srgb,#e5484d 10%,transparent)}

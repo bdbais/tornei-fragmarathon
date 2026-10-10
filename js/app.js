@@ -930,6 +930,8 @@ $("setup").onclick=function(e){
     if(g.phase==="setup"||g.dirty){if(g.players.length>=2)startT(g)}
     else{g.running=true;save();render()}
   }
+  else if(b.id==="cfrecalc")calcRecalc(g);
+  else if(b.id==="cfregen"){if(!ARMS.regen){ARMS.regen=1;b.textContent="Conferma: rigenera";b.classList.add("p");setTimeout(function(){delete ARMS.regen;var x=$("cfregen");if(x)render()},4500);return}delete ARMS.regen;calcRegen(g)}
   else if(b.id==="cfadd"){
     var lab=($("cfnew").value||"").trim();if(!lab){$("cfnew").focus();return}
     var F0=ffaFields(g).slice(),k0=calcKey(lab),base=k0,ix=2;
@@ -988,7 +990,7 @@ $("setup").onchange=function(e){
   if(e.target.id==="fgs"){var v=parseInt(e.target.value,10);if(v>=2){g.ffaGs=Math.min(999,v);if(ffaAdvOf(g)>=g.ffaGs)g.ffaAdv=g.ffaGs-1;touch(g);save()}render()}
   if(e.target.classList.contains("cpre")&&e.target.value!==""){
     var pw=e.target.dataset.w,pr=CALC_PRE[pw][+e.target.value];g.calc=g.calc||{};
-    if(pw==="ffa"){if(g.running){toast("Metti il torneo in pausa per cambiare i campi.");render();return}g.calc.fields=pr[1].map(function(x){return{k:x[0],l:x[1]}});g.calc.ffa=pr[2];ffaRecalc(g);save();render();toast("Modello applicato: "+pr[0]+".")}
+    if(pw==="ffa"){if(g.running){toast("Metti il torneo in pausa per cambiare i campi.");render();return}g.calc.fields=pr[1].map(function(x){return{k:x[0],l:x[1]}});g.calc.ffa=pr[2];calcRecalc(g)}
     else{calcSet(g,pw,pr[1]);toast("Modello applicato: "+pr[0]+".")}
     return;
   }
@@ -1180,8 +1182,51 @@ function calcKey(l){
 }
 function calcVarsList(g){return g.mode==="ffa"?ffaFields(g).map(function(f){return f.k}):TF.FX_MATCH_VARS}
 function calcTest(src,al,sample){try{var fx=TF.fxCompile(src,al);return{ok:true,v:fx.run(sample)}}catch(e){return{ok:false,msg:e.message}}}
+/* Ricalcolo: le classifiche si rifanno da sole, ma le fasi già generate (turno successivo del
+   free for all, playoff) restano quelle decise con la formula vecchia. calcImpact() le confronta
+   con quello che darebbe la formula attuale. */
+function setDiff(a,b){return a.filter(function(x){return b.indexOf(x)<0})}
+function bracketNames(R){var o=[];(R&&R[0]||[]).forEach(function(m){if(m.a)o.push(m.a);if(m.b)o.push(m.b)});return o}
+function calcImpact(g){
+  var exp,act,where;
+  if(g.ffa){
+    var F=g.ffa;
+    for(var r=0;r<F.rounds.length-1;r++){
+      exp=[];F.rounds[r].groups.forEach(function(gr){var e=gEval(gr,false,F.adv);if(e.ok)e.adv.forEach(function(n){exp.push(n)})});
+      act=[];F.rounds[r+1].groups.forEach(function(gr){gr.p.forEach(function(n){act.push(n)})});
+      if(setDiff(exp,act).length||setDiff(act,exp).length)return{kind:"ffa",r:r,add:setDiff(exp,act),drop:setDiff(act,exp),where:"Turno "+(r+1)};
+    }
+    return null;
+  }
+  if(g.rounds&&(g.groups||g.sw)){
+    exp=g.groups?qualifiers(g):TF.swStandings(g.players,g.sw.rounds,rankFx(g)).slice(0,g.sw.top).map(function(x){return x.n});
+    act=bracketNames(g.rounds);where=g.groups?"gironi":"svizzero";
+    if(setDiff(exp,act).length||setDiff(act,exp).length)return{kind:g.groups?"rr":"sw",add:setDiff(exp,act),drop:setDiff(act,exp),where:where};
+  }
+  return null;
+}
+function calcRegen(g){
+  var im=calcImpact(g);if(!im)return;
+  autoBackup(DEF[S.cur].l+" - prima del ricalcolo");
+  if(im.kind==="ffa"){g.ffa.rounds=g.ffa.rounds.slice(0,im.r+1);shufArm=null;nextRound(g);toast("Turni rigenerati dal Turno "+(im.r+2)+" con la nuova formula.");return}
+  if(im.kind==="rr")finals(g);
+  else{g.rounds=bracket(TF.swStandings(g.players,g.sw.rounds,rankFx(g)).slice(0,g.sw.top).map(function(x){return x.n}));g.phase="final";syncThird(g)}
+  save();render();toast("Playoff rigenerati con la nuova formula.");
+}
+function calcRecalc(g){
+  ffaRecalc(g);save();render();
+  var im=calcImpact(g);
+  toast(im?"Punteggi ricalcolati. Attenzione: con la nuova formula cambiano i qualificati ("+im.where+"), vedi Calcolo dei punti.":"Punteggi e classifiche ricalcolati: i qualificati non cambiano.");
+}
+function renderImpact(g){
+  var im=calcImpact(g);if(!im)return"";
+  var list=function(a){return a.map(esc).join(", ")||"nessuno"};
+  return'<div class="impact" role="alert"><b>La formula è cambiata e i qualificati non tornano più.</b> '
+   +(im.kind==="ffa"?'Dal '+im.where+' con la formula attuale passerebbero anche: '+list(im.add)+'; non passerebbero: '+list(im.drop)+'.':'Con la formula attuale andrebbero ai playoff anche: '+list(im.add)+'; resterebbero fuori: '+list(im.drop)+'.')
+   +'<div class="row" style="margin-top:8px"><button class="p" id="cfregen">'+(ARMS.regen?"Conferma: rigenera":(im.kind==="ffa"?"Rigenera i turni dopo il "+im.where:"Rigenera i playoff"))+'</button><span class="hint" style="margin:0">'+(im.kind==="ffa"?"I turni successivi vengono rifatti e i loro punteggi azzerati.":"Il tabellone dei playoff viene rifatto e i suoi risultati azzerati.")+' Prima viene fatto un backup automatico.</span></div></div>';
+}
 function renderCalc(g,lock){
-  var c=calcOf(g),h='<details class="calc"'+(calcOpen?" open":"")+'><summary>Calcolo dei punti</summary>';
+  var c=calcOf(g),h=(g.phase!=="setup"?renderImpact(g):"")+'<details class="calc"'+(calcOpen?" open":"")+'><summary>Calcolo dei punti</summary>';
   if(g.mode==="ffa"){
     var F=ffaFields(g),src=c.ffa||CALC_DEF.ffa,sample={};F.forEach(function(f,i){sample[f.k]=i?3:2});
     var t=calcTest(src,F.map(function(f){return f.k}),sample);
@@ -1205,13 +1250,14 @@ function renderCalc(g,lock){
      +'<div class="row"><label class="row" style="gap:6px">Modello <select class="cpre" data-w="hof"><option value="">Scegli…</option>'+CALC_PRE.hof.map(function(p,i){return'<option value="'+i+'">'+p[0]+'</option>'}).join("")+'</select></label></div>'
      +'<p class="cres '+(t2.ok?'ok':'err')+'" id="cfhof-r">'+(t2.ok?'Esempio, vittoria 3 a 1: '+t2.v+' punti':esc(t2.msg))+'</p><p class="hint">'+mv+'</p>';
   }
+  if(g.phase!=="setup")h+='<div class="row" style="margin-top:10px"><button id="cfrecalc">Ricalcola punteggi e classifiche</button><span class="hint" style="margin:0">Applica le formule a tutti i risultati già inseriti.</span></div>';
   h+='<p class="hint">Operatori + − * / ^ e confronti (&gt;= ecc.), condizione ? a : b, funzioni min, max, abs, arrotonda, giu, su, se(c; a; b), tabella(n; v1; v2; …). Guida completa con F1.</p></details>';
   return h;
 }
 function calcSet(g,key,src){
   var al=key==="ffa"?ffaFields(g).map(function(f){return f.k}):TF.FX_MATCH_VARS;
   try{TF.fxCompile(src,al)}catch(e){toast("Formula non salvata: "+e.message);return false}
-  g.calc=g.calc||{};g.calc[key]=src.trim();if(key==="ffa")ffaRecalc(g);save();render();return true;
+  g.calc=g.calc||{};g.calc[key]=src.trim();calcRecalc(g);return true;
 }
 
 var SKINS=[["auto","Automatico: tema del gioco"],["frag","Fragmarathon"],["-","Ispirati alle piattaforme"],["chiaro","Bracket chiaro (stile Challonge)"],["notte","Arena notturna (stile start.gg)"],["lega","Lega pro (stile ESL)"],["wiki","Wiki (stile Liquipedia)"],["neon","Neon (stile Battlefy)"],["-","Temi dei giochi"],["quake","Quake: lava e metallo"],["tf2","Team Fortress 2: retrò"],["wreck","Wreckfest: cantiere"],["cs2","Counter-Strike 2: tattico"],["fifa","FIFA: campo da calcio"]];

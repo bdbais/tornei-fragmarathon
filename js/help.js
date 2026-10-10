@@ -85,6 +85,7 @@ window.HELP = {
       "<h4>Cosa si può scrivere</h4><ul><li>Operazioni: <code>+ - * / % ^</code> e parentesi; i decimali con il punto.</li>" +
       "<li>Confronti: <code>&gt; &lt; &gt;= &lt;= == !=</code>, e <code>&amp;&amp;</code> (e), <code>||</code> (o); <code>condizione ? a : b</code>.</li>" +
       "<li>Funzioni (argomenti separati da <code>;</code>): <code>min</code>, <code>max</code>, <code>abs</code>, <code>arrotonda</code>, <code>giu</code>, <code>su</code>, <code>se(condizione; a; b)</code>, <code>tabella(n; v1; v2; …)</code> che dà il valore n-esimo (utile per i punti per piazzamento).</li></ul>" +
+      "<h4>Ricalcolo</h4><p>Quando salvi una formula, o premi <b>Ricalcola punteggi e classifiche</b>, tutti i risultati già inseriti vengono ricalcolati. Se con la nuova formula cambierebbero i qualificati di una fase già partita (il turno successivo del free for all o i playoff), compare un avviso rosso con chi entrerebbe e chi uscirebbe e il pulsante <b>Rigenera</b>: rifà le fasi successive con la nuova formula, azzerandone i risultati, dopo un backup automatico. Se preferisci tenere le fasi già giocate, ignora l'avviso.</p>" +
       "<p>Esempi: <code>tabella(pos; 25; 18; 15; 12; 10; 8; 6; 4; 2; 1)</code>, <code>max(0; kill*2 - morti)</code>, <code>vinta*(diff &gt;= 3 ? 4 : 3) + pareggio</code>.</p>" },
 
     proiettore: { t: "Schermo proiettore", h:
