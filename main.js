@@ -1,6 +1,7 @@
 const { app, BrowserWindow, shell, ipcMain, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const AI = require("./js/ai.js");
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -150,6 +151,11 @@ ipcMain.handle("backup:list", () => { ensureDirs(); return listJson(DIRS.backup)
 ipcMain.handle("backup:read", (_e, file) => fs.readFileSync(safeFile(DIRS.backup, file), "utf8"));
 ipcMain.handle("folder:open", (_e, which) => { ensureDirs(); return shell.openPath(DIRS[which] || ROOT); });
 ipcMain.handle("wall:open", () => openWall());
+/* Generazione loghi: la richiesta parte da qui, senza i limiti CORS della pagina. */
+ipcMain.handle("ai:image", async (_e, cfg, prompt, seed, size) => {
+  try { return { data: await AI.generate(cfg || {}, prompt, seed, Math.min(1024, Math.max(256, size || 512))) }; }
+  catch (e) { return { error: String((e && e.name === "TimeoutError") ? "Il servizio non ha risposto in tempo" : (e && e.message) || e).slice(0, 300) }; }
+});
 ipcMain.handle("update:check", async () => {
   if (!updater) return { state: app.isPackaged ? "error" : "dev" };
   try { await updater.checkForUpdates(); return { state: "checking" }; } catch (e) { return { state: "error", message: String(e.message || e) }; }

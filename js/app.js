@@ -85,10 +85,10 @@ function roundName(r,t){var l=t-r;return l===1?"Finale":l===2?"Semifinali":l===3
 
 /* ---- gironi ---- */
 function makeGroups(g){return rrGroups(g)}
-function standings(gr){return TF.rrStandings(gr)}
+function standings(gr,g){return TF.rrStandings(gr,rankFx(g||G()))}
 function allDone(g){return g.groups.every(function(x){return x.matches.every(function(m){return m.sa!=null&&m.sb!=null})})}
 function overall(g){
-  var all=[];g.groups.forEach(function(x){standings(x).forEach(function(t){all.push(t)})});
+  var all=[];g.groups.forEach(function(x){standings(x,g).forEach(function(t){all.push(t)})});
   all.sort(function(a,b){return b.pt-a.pt||(b.gf-b.gs)-(a.gf-a.gs)||a.n.localeCompare(b.n)});
   return all.map(function(t){return t.n});
 }
@@ -99,7 +99,7 @@ function soloPodium(g){
 }
 function qualifiers(g){
   var all=[];
-  g.groups.forEach(function(x){standings(x).forEach(function(t,i){all.push({n:t.n,pos:i,pt:t.pt,d:t.gf-t.gs,gf:t.gf})})});
+  g.groups.forEach(function(x){standings(x,g).forEach(function(t,i){all.push({n:t.n,pos:i,pt:t.pt,d:t.gf-t.gs,gf:t.gf})})});
   all.sort(function(a,b){return a.pos-b.pos||b.pt-a.pt||b.d-a.d||b.gf-a.gf||a.n.localeCompare(b.n)});
   return all.slice(0,Math.min(g.nq||5,all.length)).map(function(x){return x.n});
 }
@@ -156,7 +156,7 @@ function renderSetup(){
   h+='</div>'+bulkRow(g,d,lock)+'<div class="row" style="margin-top:14px"><button class="p" id="start"'+(lock||g.players.length<2?" disabled":"")+'>START</button><button id="pause"'+(lock?"":" disabled")+'>PAUSA</button><button id="logo">'+(g.logo?'Cambia logo':'Carica logo')+'</button>'+(g.logo?'<button id="nologo">Rimuovi logo</button>':'')+'<button id="reset">Azzera '+esc(d.l)+'</button><input type="file" id="lf" accept="image/*" hidden></div>';
   h+=lock?'<p class="hint ok">Torneo in corso: giocatori e squadre sono bloccati. Premi PAUSA per modificarli.</p>':(g.phase!=="setup"?'<p class="hint">Torneo in pausa: puoi modificare giocatori e squadre.'+(g.dirty?" Dopo le modifiche, START rifà il sorteggio e i risultati attuali andranno persi.":" START riprende il torneo.")+'</p>':'');
   if(g.mode==="ffa"){var pl=ffaPlan(g.players.length,ffaGsOf(g),ffaAdvOf(g)),sz=ffaSizes(g.players.length,ffaGsOf(g));h+='<p class="hint">Free for all: in ogni girone i partecipanti giocano tutti insieme (non uno contro uno) e vince chi fa più punti. Passano i primi '+ffaAdvOf(g)+' di ogni girone e formano i gironi del turno dopo, fino a un solo girone finale: i primi 3 della finale sono i vincitori.'+(g.players.length>1?" Con "+g.players.length+" partecipanti: "+pl.map(function(k){return k===1?"finale":k+" gironi"}).join(" → ")+"."+(sz.length>1?" Primo turno: gironi da "+sz.join(", ")+".":""):"")+'</p>'}
-  h+=modeHint(g);
+  h+=modeHint(g)+renderCalc(g,lock);
   $("setup").innerHTML=h;
 }
 function modeHint(g){
@@ -179,7 +179,7 @@ function renderOut(){
     g.groups.forEach(function(x,gi){
       var free=g.phase==="groups"&&!x.matches.some(hasRes),dzg=free?' data-dz="r" data-g="'+gi+'"':'';
       h+='<div class="gbox"'+dzg+'><h3>'+(g.groups.length>1?"Girone "+letter(gi):"Girone unico")+'</h3><table><tr><th>'+(team0?"Squadra":"Giocatore")+'</th><th title="Partite giocate">G</th><th title="Vinte">V</th><th title="Pareggiate">N</th><th title="Perse">P</th><th title="Differenza punti">DR</th><th>Pt</th></tr>';
-      standings(x).forEach(function(s){h+='<tr'+(qs.indexOf(s.n)>-1?' class="q"':'')+(free?' data-dz="r" data-g="'+gi+'" data-p="'+esc(s.n)+'"':'')+'><td>'+(free?GRIP:'')+(team0?tico(s.n,16):'')+esc(s.n)+sub(s.n)+'</td><td>'+s.g+'</td><td>'+s.w+'</td><td>'+s.d+'</td><td>'+s.l+'</td><td>'+(s.gf-s.gs>0?"+":"")+(s.gf-s.gs)+'</td><td><b>'+s.pt+'</b></td></tr>'});
+      standings(x,g).forEach(function(s){h+='<tr'+(qs.indexOf(s.n)>-1?' class="q"':'')+(free?' data-dz="r" data-g="'+gi+'" data-p="'+esc(s.n)+'"':'')+'><td>'+(free?GRIP:'')+(team0?tico(s.n,16):'')+esc(s.n)+sub(s.n)+'</td><td>'+s.g+'</td><td>'+s.w+'</td><td>'+s.d+'</td><td>'+s.l+'</td><td>'+(s.gf-s.gs>0?"+":"")+(s.gf-s.gs)+'</td><td><b>'+s.pt+'</b></td></tr>'});
       h+='</table>';
       var day=0;
       x.matches.forEach(function(m,mi){
@@ -225,7 +225,7 @@ function result(g,k){
     return r;
   }
   if(g.de){var E=deState(g).ev;if(E.done){r.status="Concluso";r.top=E.top}else r.status="Torneo in corso";return r}
-  if(g.sw&&!g.rounds){var W=g.sw;if(swFinished(W)&&!(W.top>=2)){r.status="Concluso";r.top=TF.swStandings(g.players,W.rounds).slice(0,3).map(function(x){return x.n})}else r.status=swFinished(W)?"Svizzero concluso: avvia i playoff":"Turno "+W.rounds.length+" di "+W.nr;return r}
+  if(g.sw&&!g.rounds){var W=g.sw;if(swFinished(W)&&!(W.top>=2)){r.status="Concluso";r.top=TF.swStandings(g.players,W.rounds,rankFx(g)).slice(0,3).map(function(x){return x.n})}else r.status=swFinished(W)?"Svizzero concluso: avvia i playoff":"Turno "+W.rounds.length+" di "+W.nr;return r}
   if(g.rounds){
     var R=g.rounds,f=R[R.length-1][0];
     if(f.w){var t=g.third;r.status="Concluso";r.top=[f.w,f.a===f.w?f.b:f.a,t?(t.auto||t.w):null]}
@@ -262,7 +262,7 @@ function renderSquadre(){
 }
 function gamePts(g){
   var m={};function add(n,p){if(n)m[n]=(m[n]||0)+p}
-  function mt(t){if(t&&t.sa!=null&&t.sb!=null){add(t.a,t.sa);add(t.b,t.sb)}}
+  var hf=hofFx(g);function mt(t){if(t&&t.a&&t.b&&t.sa!=null&&t.sb!=null){add(t.a,hf?hf.run(TF.fxMatchVars(t.sa,t.sb)):t.sa);add(t.b,hf?hf.run(TF.fxMatchVars(t.sb,t.sa)):t.sb)}}
   if(g.ffa)g.ffa.rounds.forEach(function(rd){rd.groups.forEach(function(gr){gr.p.forEach(function(n){if(gr.s[n]!=null)add(n,gr.s[n])})})});
   if(g.groups)g.groups.forEach(function(x){x.matches.forEach(mt)});
   if(g.rounds)g.rounds.forEach(function(rd){rd.forEach(mt)});
@@ -445,6 +445,7 @@ function ffaPodium(g,top,tposArr){
   return h+'</div>';
 }
 function renderFfa(g){
+  var fxF=!!ffaFx(g),FF=ffaFields(g),frCols="grid-template-columns:28px minmax(0,1fr) repeat("+FF.length+",58px) 58px 34px";
   var F=g.ffa,h="",team=g.team!==undefined?g.team:!!DEF[S.cur].t,res=result(g,S.cur);
   if(res.status==="Concluso")h+=ffaPodium(g,res.top,res.tpos);
   F.rounds.forEach(function(rd,ri){
@@ -453,9 +454,10 @@ function renderFfa(g){
     rd.groups.forEach(function(gr,gi){
       var e=ev[gi],rk={};e.sorted.forEach(function(x,i){rk[x.n]=i+1});
       h+='<div class="gbox"'+(last?' data-dz="f" data-g="'+gi+'"':'')+'><h3>'+(fin?"Finale · primi 3 vincitori":"Girone "+String.fromCharCode(65+gi)+" · passano i primi "+e.na)+'</h3>';
+      if(fxF)h+='<div class="fr frh" style="'+frCols+'"><span></span><span></span>'+FF.map(function(f){return'<span>'+esc(f.l||f.k)+'</span>'}).join("")+'<span>Punti</span><span></span></div>';
       gr.p.forEach(function(n){
         var pos=e.full?e.rk[n]:null,ad=e.full&&e.adv.indexOf(n)>=0,tp=e.full&&e.sorted.some(function(x){return x.n!==n&&x.pos===pos});
-        h+='<div class="fr'+(ad?' adv':'')+'"'+(last?' data-dz="f" data-g="'+gi+'" data-p="'+esc(n)+'"':'')+'><span class="fp">'+(pos?(tp?"=":"")+pos:"–")+'</span><span class="fn">'+(last?GRIP:'')+(team?tico(n,18):"")+esc(n)+sub(n)+'</span><input type="number" min="0" class="fs" data-r="'+ri+'" data-g="'+gi+'" data-p="'+esc(n)+'" aria-label="Punteggio '+esc(n)+'" value="'+(gr.s[n]==null?"":gr.s[n])+'"'+(last?"":" disabled")+'><span class="fm">'+(ad?(fin?pos+"º":"✓"):"")+'</span></div>';
+        h+='<div class="fr'+(ad?' adv':'')+'"'+(fxF?' style="'+frCols+'"':'')+(last?' data-dz="f" data-g="'+gi+'" data-p="'+esc(n)+'"':'')+'><span class="fp">'+(pos?(tp?"=":"")+pos:"–")+'</span><span class="fn">'+(last?GRIP:'')+(team?tico(n,18):"")+esc(n)+sub(n)+'</span>'+(fxF?FF.map(function(f){var vv=((gr.v||{})[n]||{})[f.k];return'<input type="number" min="0" class="fsv" data-r="'+ri+'" data-g="'+gi+'" data-p="'+esc(n)+'" data-f="'+f.k+'" aria-label="'+esc(f.l||f.k)+' di '+esc(n)+'" value="'+(vv==null?"":vv)+'"'+(last?"":" disabled")+'>'}).join("")+'<span class="fsc">'+(gr.s[n]==null?"–":gr.s[n])+'</span>':'<input type="number" min="0" class="fs" data-r="'+ri+'" data-g="'+gi+'" data-p="'+esc(n)+'" aria-label="Punteggio '+esc(n)+'" value="'+(gr.s[n]==null?"":gr.s[n])+'"'+(last?"":" disabled")+'>')+'<span class="fm">'+(ad?(fin?pos+"º":"✓"):"")+'</span></div>';
       });
       if(e.full&&e.fb)h+='<p class="hint">Tutti a pari punti: passano i primi '+e.na+' in ordine di inserimento.</p>';
       else if(e.full&&!fin&&e.extra)h+='<p class="hint">Parità sul limite di qualificazione: passano a pari merito '+e.adv.length+' giocatori.</p>';
@@ -588,7 +590,7 @@ async function makePng(k){
     g.groups.forEach(function(x,gn){
       c.fillStyle="#111";c.font="22px "+FONT;c.textBaseline="alphabetic";
       c.fillText(g.groups.length>1?"Classifica girone "+String.fromCharCode(65+gn):"Classifica",M,sy+10);
-      var st=standings(x),ty=sy+30,tw2=W-2*M;
+      var st=standings(x,g),ty=sy+30,tw2=W-2*M;
       c.fillStyle="#111";c.fillRect(M,ty,tw2,34);c.fillStyle="#fff";c.font="bold 15px "+BODY;c.textBaseline="middle";
       c.fillText("Pos.",M+12,ty+17);c.fillText(team?"Squadra":"Giocatore",M+80,ty+17);
       c.textAlign="right";c.fillText("G",M+tw2-120,ty+17);c.fillText("Punti",M+tw2-14,ty+17);c.textAlign="left";
@@ -788,10 +790,10 @@ $("addgame").onclick=function(e){
 };
 $("addgame").onkeydown=function(e){if(e.key==="Enter"&&e.target.id==="agname")$("agadd").click()};
 var pend=null;
-function refocus(){if(pend!==null){var l=document.querySelectorAll("#out .sc:not(:disabled),#out .bs,#out .fs:not(:disabled),#out .ds,#out .ws"),x=l[pend];pend=null;if(x)x.focus()}}
+function refocus(){if(pend!==null){var l=document.querySelectorAll("#out .sc:not(:disabled),#out .bs,#out .fs:not(:disabled),#out .fsv:not(:disabled),#out .ds,#out .ws"),x=l[pend];pend=null;if(x)x.focus()}}
 $("out").onkeydown=function(e){
-  if(e.key!=="Enter"||!/\b(sc|bs|fs|ds|ws)\b/.test(e.target.className))return;
-  var l=[].slice.call(document.querySelectorAll("#out .sc:not(:disabled),#out .bs,#out .fs:not(:disabled),#out .ds,#out .ws"));pend=l.indexOf(e.target)+1;e.target.blur();setTimeout(refocus,0);
+  if(e.key!=="Enter"||!/\b(sc|bs|fs|fsv|ds|ws)\b/.test(e.target.className))return;
+  var l=[].slice.call(document.querySelectorAll("#out .sc:not(:disabled),#out .bs,#out .fs:not(:disabled),#out .fsv:not(:disabled),#out .ds,#out .ws"));pend=l.indexOf(e.target)+1;e.target.blur();setTimeout(refocus,0);
 };
 var armDel=null;
 function renderEdit(){
@@ -802,11 +804,62 @@ function renderEdit(){
   });
   h+='</div><h3 style="margin-top:20px">Logo dell&#39;evento</h3><div class="row"><img class="elogo" src="'+esc(S.ui.logo||applyUi.def.em)+'" alt="Logo attuale"><button id="elogo">Carica logo…</button>'+(S.ui.logo?'<button id="elogodef">Torna al logo Fragmarathon</button>':'')+'<input type="file" id="elf" accept="image/*" hidden></div>'
    +'<p class="hint">PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Viene ridotto a 512 pixel e salvato con i dati dell&#39;evento: compare nell&#39;intestazione, nelle immagini PNG e nei PDF.</p>'
+   +renderAi()
    +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row"><button id="ecssimp">Importa file .css…</button><button id="ecssexp">Scarica il modello</button>'+(S.ui.css?'<button id="ecssdel">Rimuovi il CSS</button>':'')+'<input type="file" id="ecf" accept=".css,text/css" hidden></div>'
    +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
    +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>';
   $("editform").innerHTML=h;
 }
+
+/* ---------- logo con l'AI (impostazioni per questo PC, fuori dai backup perché possono contenere una chiave) ---------- */
+var AIKEY=KEY+"-ai",aiRes=[],aiBusy=false,aiMsg="";
+var AISTYLE=[["emblem","Stemma esports","esports team emblem logo, shield badge, bold clean outlines"],["mascot","Mascotte","esports mascot logo, fierce mascot head, bold clean outlines"],["minimal","Minimal piatto","minimal flat vector logo, simple geometric shapes, two colors"],["retro","Retrò arcade","retro 80s arcade logo, neon glow, synthwave colors"],["metal","Metallo e fuoco","logo with chrome metal and flames, heavy metal style"]];
+function aiCfg(){var c={};try{c=JSON.parse(localStorage.getItem(AIKEY)||"{}")||{}}catch(e){}if(!AI.DEF[c.prov])c.prov="pollinations";if(!c.style)c.style="emblem";if(!c.target)c.target="event";return c}
+function aiSaveCfg(c){try{localStorage.setItem(AIKEY,JSON.stringify(c))}catch(e){}}
+function aiTargetName(t){return t==="event"?(S.ui.title||UI0.title):DEF[t]?DEF[t].l+(S.games[t]&&S.games[t].name?" "+S.games[t].name:""):""}
+function aiPrompt(c){var st=AISTYLE.filter(function(s){return s[0]===c.style})[0]||AISTYLE[0];return st[2]+", for a gaming tournament called \""+aiTargetName(c.target)+"\", centered icon, solid dark background, high contrast, no text"}
+function aiHost(c){try{return new URL(c.url||AI.DEF[c.prov].url).host}catch(e){return""}}
+function aiLocal(c){return/^(127\.0\.0\.1|localhost)(:|$)/.test(aiHost(c))}
+function renderAi(){
+  var c=aiCfg(),d=AI.DEF[c.prov],h='<h3 style="margin-top:20px">Genera un logo con l&#39;AI</h3>'
+   +'<div class="row"><label class="row" style="gap:6px">Logo per <select id="aitarget"><option value="event"'+(c.target==="event"?" selected":"")+'>L&#39;evento</option>'+Object.keys(DEF).map(function(k){return'<option value="'+k+'"'+(c.target===k?" selected":"")+'>Torneo di '+esc(DEF[k].l)+'</option>'}).join("")+'</select></label>'
+   +'<label class="row" style="gap:6px">Stile <select id="aistyle">'+AISTYLE.map(function(s){return'<option value="'+s[0]+'"'+(c.style===s[0]?" selected":"")+'>'+s[1]+'</option>'}).join("")+'</select></label></div>'
+   +'<div class="row" style="margin-top:8px"><label class="row" style="gap:6px">Servizio <select id="aiprov"><option value="pollinations"'+(c.prov==="pollinations"?" selected":"")+'>Pollinations: online, chiave gratuita</option><option value="hf"'+(c.prov==="hf"?" selected":"")+'>Hugging Face: online, token gratuito</option><option value="a1111"'+(c.prov==="a1111"?" selected":"")+'>Stable Diffusion sul tuo PC (AUTOMATIC1111, Forge)</option><option value="openai"'+(c.prov==="openai"?" selected":"")+'>Server compatibile OpenAI (LocalAI o remoto)</option></select></label></div>'
+   +'<div class="row" style="margin-top:8px"><input type="text" id="aiurl" placeholder="'+esc(d.url)+'" value="'+esc(c.url||"")+'" aria-label="Indirizzo del servizio"><input type="text" id="aimodel" placeholder="Modello: '+esc(d.model||"predefinito")+'" value="'+esc(c.model||"")+'" aria-label="Modello">'+(c.prov!=="a1111"?'<input type="password" id="aikey" placeholder="'+(d.key?"Chiave personale (obbligatoria)":"Chiave (facoltativa)")+'" value="'+esc(c.key||"")+'" aria-label="Chiave del servizio" autocomplete="off">':'')+'</div>'
+   +'<textarea id="aiprompt" class="aiprompt" spellcheck="false" aria-label="Descrizione del logo">'+esc(c.prompt||aiPrompt(c))+'</textarea>'
+   +'<div class="row"><button class="p" id="aigo"'+(aiBusy?" disabled":"")+'>'+(aiBusy?"Genero…":"Genera 4 proposte")+'</button><button id="aireset">Descrizione automatica</button><span class="hint" style="margin:0" id="aimsg" role="status">'+esc(aiMsg)+'</span></div>'
+   +'<p class="hint">'+(aiLocal(c)?'Il servizio gira su questo PC: nulla esce dalla rete locale.':'La descrizione viene inviata a <b>'+esc(aiHost(c))+'</b> per creare le immagini; non vengono inviati nomi di partecipanti né altri dati.')+(d.key?' Serve una chiave personale gratuita: <a href="'+d.keyUrl+'" target="_blank" rel="noopener">'+d.keyUrl.replace(/^https:\/\//,"")+'</a>. Resta salvata solo su questo PC, non nei backup.':'')+(c.prov==="a1111"?' Avvia Stable Diffusion con l&#39;opzione <code>--api</code>.':'')+(!DESK&&(c.prov==="a1111"||c.prov==="openai")?' Dalla versione web i servizi locali possono essere bloccati dal browser: usa l&#39;app installata.':'')+'</p>';
+  if(aiRes.length)h+='<div class="aigrid">'+aiRes.map(function(r,i){return'<figure><img src="'+r+'" alt="Proposta '+(i+1)+'"><figcaption><button data-aiuse="'+i+'">Usa questo</button></figcaption></figure>'}).join("")+'</div>';
+  return h;
+}
+function aiReadForm(){var c=aiCfg();["target","style","prov"].forEach(function(k){var el=$("ai"+k);if(el)c[k]=el.value});["url","model","key"].forEach(function(k){var el=$("ai"+k);if(el)c[k]=el.value.trim()});var p=$("aiprompt");if(p)c.prompt=p.value;return c}
+function aiOne(c,prompt,seed){
+  if(DESK&&DESK.aiImage)return DESK.aiImage({prov:c.prov,url:c.url,model:c.model,key:c.key},prompt,seed,512).then(function(r){if(r.error)throw new Error(r.error);return r.data});
+  return AI.generate(c,prompt,seed,512);
+}
+async function aiRun(){
+  var c=aiReadForm();aiSaveCfg(c);aiBusy=true;aiRes=[];aiMsg="Genero 1 di 4…";renderEdit();
+  var prompt=c.prompt||aiPrompt(c),base=Math.floor(Math.random()*1e8);
+  for(var i=0;i<4;i++){
+    try{aiRes.push(await aiOne(c,prompt,base+i));aiMsg=i<3?"Genero "+(i+2)+" di 4…":"Fatto: scegli la proposta che preferisci."}
+    catch(e){aiMsg="Non riuscito: "+(e&&e.message||e)+(/fetch|network|Failed/i.test(String(e&&e.message))?(AI.DEF[c.prov].key?" (controlla la connessione a internet)":" (il servizio è avviato all'indirizzo indicato?)"):"");break}
+    renderEdit();
+  }
+  aiBusy=false;renderEdit();
+}
+function aiUse(i){
+  var src=aiRes[i],c=aiCfg();if(!src)return;
+  var im=new Image();
+  im.onload=function(){
+    var ev=c.target==="event",z=ev?512:160,cv=document.createElement("canvas");cv.width=cv.height=z;
+    var sc=Math.min(z/im.width,z/im.height),w=im.width*sc,h=im.height*sc;cv.getContext("2d").drawImage(im,(z-w)/2,(z-h)/2,w,h);
+    var url=cv.toDataURL("image/png");
+    if(ev)S.ui.logo=url;else if(S.games[c.target])S.games[c.target].logo=url;
+    applyUi();save();render();renderEdit();toast(ev?"Nuovo logo dell'evento.":"Nuovo logo per "+DEF[c.target].l+".");
+  };
+  im.src=src;
+}
+
 var CSSTPL="/* Tornei Fragmarathon: CSS personalizzato.\n   Importalo da MODIFICA > CSS personalizzato. Vale sopra a qualsiasi tema.\n   :root:not(#x) serve a vincere su tema e chiaro/scuro di Windows. */\n\n:root:not(#x){\n  --bg:#101418;      /* sfondo della pagina */\n  --panel:#182028;   /* sfondo dei pannelli */\n  --ink:#F2F4F7;     /* testo */\n  --mut:#A9B4C2;     /* testo secondario */\n  --line:#2A3542;    /* righe sottili */\n  --edge:#3E4C5C;    /* bordi e intestazioni delle tabelle */\n  --acc:#FF5A1F;     /* colore principale: pulsanti, qualificati, vincitori */\n  --accink:#111111;  /* testo sopra al colore principale */\n  --win:var(--acc);\n  --gold:var(--acc);\n  --wacc:#FF5A1F;    /* colore principale sul proiettore (su fondo nero) */\n}\n\n/* Intestazione: righe e bagliore */\n.brand{}\n.brand h1{}\n.brand .tag{}\n\n/* Proiettore: il pannello mostrato */\n#wfit{}\n#wall .wh{}\n";
 function readLogo(file){
   var rd=new FileReader();
@@ -823,6 +876,13 @@ function readLogo(file){
   rd.readAsDataURL(file);
 }
 $("editbox").addEventListener("change",function(e){
+  if(/^ai(target|style|prov|url|model|key)$/.test(e.target.id)){
+    var c=aiReadForm(),autoP=!c.prompt||c.prompt===aiPrompt(aiCfg());
+    if(e.target.id==="aiprov"){c.url="";c.model=""}
+    if(autoP&&/^ai(target|style)$/.test(e.target.id))delete c.prompt;
+    aiSaveCfg(c);if(/^ai(target|style|prov)$/.test(e.target.id))renderEdit();return;
+  }
+  if(e.target.id==="aiprompt"){aiSaveCfg(aiReadForm());return}
   var f=e.target.files&&e.target.files[0];if(!f)return;
   if(e.target.id==="elf")readLogo(f);
   if(e.target.id==="ecf"){
@@ -836,6 +896,9 @@ $("editbox").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.id==="ecancel"){$("editbox").hidden=true;return}
   if(b.id==="elogo"){$("elf").click();return}
+  if(b.id==="aigo"){if(!aiBusy)aiRun();return}
+  if(b.id==="aireset"){var c0=aiReadForm();delete c0.prompt;aiSaveCfg(c0);renderEdit();return}
+  if(b.dataset.aiuse!==undefined){aiUse(+b.dataset.aiuse);return}
   if(b.id==="elogodef"){delete S.ui.logo;applyUi();save();renderEdit();toast("Ripristinato il logo Fragmarathon.");return}
   if(b.id==="ecssimp"){$("ecf").click();return}
   if(b.id==="ecssexp"){dlBlob(new Blob([CSSTPL],{type:"text/css"}),"tornei-fragmarathon-modello.css");toast("Modello CSS scaricato.");return}
@@ -867,6 +930,19 @@ $("setup").onclick=function(e){
     if(g.phase==="setup"||g.dirty){if(g.players.length>=2)startT(g)}
     else{g.running=true;save();render()}
   }
+  else if(b.id==="cfadd"){
+    var lab=($("cfnew").value||"").trim();if(!lab){$("cfnew").focus();return}
+    var F0=ffaFields(g).slice(),k0=calcKey(lab),base=k0,ix=2;
+    while(F0.some(function(f){return f.k===k0})||["min","max","abs","arrotonda","giu","su","se","tabella","round","floor","ceil","if","table"].indexOf(k0)>=0)k0=base+"_"+(ix++);
+    F0.push({k:k0,l:lab});g.calc=g.calc||{};g.calc.fields=F0;
+    if(!g.calc.ffa||g.calc.ffa===CALC_DEF.ffa)g.calc.ffa=F0.map(function(f){return f.k}).join(" + ");
+    ffaRecalc(g);save();render();toast("Campo aggiunto: nella formula usa «"+k0+"».");
+  }
+  else if(b.classList.contains("cfdel")){
+    var F1=ffaFields(g).slice();F1.splice(+b.dataset.i,1);g.calc=g.calc||{};g.calc.fields=F1;
+    if(!fxSafe(g.calc.ffa||"",F1.map(function(f){return f.k}))){g.calc.ffa=F1.map(function(f){return f.k}).join(" + ");toast("La formula usava il campo rimosso: ora somma i campi rimasti.")}
+    ffaRecalc(g);save();render();
+  }
   else if(b.id==="pause"){g.running=false;save();render()}
   else if(b.id==="logo")$("lf").click();
   else if(b.id==="nologo"){delete g.logo;save();render()}
@@ -891,8 +967,18 @@ $("setup").onkeydown=function(e){
   if(e.key!=="Enter")return;
   if(e.target.id==="pname")addPlayer();
   else if(e.target.classList.contains("mi"))addMember(+e.target.dataset.t);
+  else if(e.target.id==="cfnew"){e.preventDefault();$("cfadd").click()}
+  else if(/^cf(ffa|rank|hof)$/.test(e.target.id)){e.preventDefault();e.target.blur()}
 };
-$("setup").oninput=function(e){if(e.target.id==="tname"){G().name=e.target.value;save()}};
+$("setup").oninput=function(e){
+  if(e.target.id==="tname"){G().name=e.target.value;save();return}
+  var id=e.target.id;if(id!=="cfffa"&&id!=="cfrank"&&id!=="cfhof")return;
+  var g=G(),al=id==="cfffa"?ffaFields(g).map(function(f){return f.k}):TF.FX_MATCH_VARS,smp={};
+  if(id==="cfffa")ffaFields(g).forEach(function(f,i){smp[f.k]=i?3:2});else smp=TF.fxMatchVars(3,1);
+  var t=calcTest(e.target.value,al,smp),out=$(id+"-r");
+  if(out){out.className="cres "+(t.ok?"ok":"err");out.textContent=t.ok?(id==="cfffa"?"Esempio con "+al.map(function(k){return k+" = "+smp[k]}).join(", ")+": ":"Esempio, vittoria 3 a 1: ")+t.v+" punti (premi Invio o esci dal campo per salvare)":t.msg}
+};
+$("setup").addEventListener("toggle",function(e){if(e.target.classList&&e.target.classList.contains("calc"))calcOpen=e.target.open},true);
 $("setup").onchange=function(e){
   var g=G();if(["mode","ng","team","nq"].indexOf(e.target.id)>-1)touch(g);
   if(e.target.id==="mode"){g.mode=e.target.value;if(g.mode==="solo")g.ng=1;save();render()}
@@ -900,6 +986,15 @@ $("setup").onchange=function(e){
   if(e.target.id==="tsize"){g.tsize=+e.target.value;save()}
   if(e.target.id==="plat"){g.plat=e.target.value;save();render()}
   if(e.target.id==="fgs"){var v=parseInt(e.target.value,10);if(v>=2){g.ffaGs=Math.min(999,v);if(ffaAdvOf(g)>=g.ffaGs)g.ffaAdv=g.ffaGs-1;touch(g);save()}render()}
+  if(e.target.classList.contains("cpre")&&e.target.value!==""){
+    var pw=e.target.dataset.w,pr=CALC_PRE[pw][+e.target.value];g.calc=g.calc||{};
+    if(pw==="ffa"){if(g.running){toast("Metti il torneo in pausa per cambiare i campi.");render();return}g.calc.fields=pr[1].map(function(x){return{k:x[0],l:x[1]}});g.calc.ffa=pr[2];ffaRecalc(g);save();render();toast("Modello applicato: "+pr[0]+".")}
+    else{calcSet(g,pw,pr[1]);toast("Modello applicato: "+pr[0]+".")}
+    return;
+  }
+  if(e.target.id==="cfffa"){calcSet(g,"ffa",e.target.value);return}
+  if(e.target.id==="cfrank"){calcSet(g,"rank",e.target.value);return}
+  if(e.target.id==="cfhof"){calcSet(g,"hof",e.target.value);return}
   if(e.target.id==="dereset"){g.deReset=e.target.checked;touch(g);save();return}
   if(e.target.id==="swr"){var sr=parseInt(e.target.value,10);if(sr>=1){g.swR=Math.min(30,sr);touch(g);save()}render();return}
   if(e.target.id==="swtop"){g.swTop=+e.target.value;touch(g);save();render();return}
@@ -925,6 +1020,11 @@ $("setup").onchange=function(e){
 };
 $("out").onchange=function(e){
   var t=e.target;
+  if(t.classList.contains("fsv")){
+    var g5=G(),gr5=g5.ffa.rounds[+t.dataset.r].groups[+t.dataset.g],n5=t.dataset.p;gr5.v=gr5.v||{};gr5.v[n5]=gr5.v[n5]||{};
+    var v5=scoreVal(t.value);if(v5==null)delete gr5.v[n5][t.dataset.f];else gr5.v[n5][t.dataset.f]=v5;
+    gr5.s[n5]=ffaScore(g5,gr5,n5);save();renderOut();return;
+  }
   if(t.classList.contains("fs")){
     var gr0=G().ffa.rounds[+t.dataset.r].groups[+t.dataset.g],v0=t.value===""?null:Math.max(0,parseInt(t.value,10));
     gr0.s[t.dataset.p]=isNaN(v0)?null:v0;save();renderOut();return;
@@ -963,7 +1063,7 @@ $("out").onclick=function(e){
   if(b.dataset.de){var m3=deState(g).ev.M[b.dataset.de];if(m3&&m3.ready){g.de.res[m3.id]={a:m3.a,b:m3.b,sa:m3.sa,sb:m3.sb,w:b.dataset.n};save();renderOut()}return}
   if(b.dataset.sw!==undefined){var m4=g.sw.rounds[+b.dataset.sw][+b.dataset.i];if(m4){m4.w=b.dataset.n;save();renderOut()}return}
   if(b.id==="swnext"){g.sw.rounds.push(TF.swPair(g.players,g.sw.rounds,shuffle));save();render();return}
-  if(b.id==="swpo"){g.rounds=bracket(TF.swStandings(g.players,g.sw.rounds).slice(0,g.sw.top).map(function(x){return x.n}));g.phase="final";syncThird(g);save();render();return}
+  if(b.id==="swpo"){g.rounds=bracket(TF.swStandings(g.players,g.sw.rounds,rankFx(g)).slice(0,g.sw.top).map(function(x){return x.n}));g.phase="final";syncThird(g);save();render();return}
   if(b.id==="fin"){if(allDone(g)){finals(g);save();render()}return}
   if(b.dataset.r!==undefined){
     if(b.dataset.r==="t")g.third.w=b.dataset.n;
@@ -1040,6 +1140,80 @@ function fitProj(){
    Formati aggiuntivi: doppia eliminazione, svizzero, gironi all'italiana
    (la logica pura è in js/formats.js, qui solo stato e interfaccia)
    ====================================================================== */
+
+var calcOpen=false;
+/* ======================================================================
+   Calcolo dei punti: formule per torneo (motore in js/formats.js)
+   g.calc = {fields:[{k,l}], ffa:"...", rank:"...", hof:"..."}
+   ====================================================================== */
+var CALC_DEF={ffa:"punti",rank:"3*vinta + pareggio",hof:"punti"};
+var CALC_PRE={
+  ffa:[["Punti inseriti (semplice)",[["punti","Punti"]],"punti"],
+       ["Battle royale: piazzamento + uccisioni",[["pos","Posizione"],["kill","Uccisioni"]],"tabella(pos; 12; 9; 7; 5; 4; 3; 3; 2; 2; 2; 1; 1; 1; 1; 1) + kill"],
+       ["Corse: punti stile Formula 1",[["pos","Posizione"]],"tabella(pos; 25; 18; 15; 12; 10; 8; 6; 4; 2; 1)"],
+       ["Uccisioni e morti",[["kill","Uccisioni"],["morti","Morti"]],"max(0; kill*2 - morti)"],
+       ["Uccisioni, assist e morti",[["kill","Uccisioni"],["assist","Assist"],["morti","Morti"]],"max(0; kill*2 + assist - morti)"]],
+  rank:[["Vittoria 3, pareggio 1 (calcio)","3*vinta + pareggio"],["Vittoria 2, pareggio 1","2*vinta + pareggio"],["Contano solo le vittorie","vinta"],["Vittoria con 3+ di scarto vale 4","vinta*(diff >= 3 ? 4 : 3) + pareggio"],["Punti fatti in partita","punti"]],
+  hof:[["Punti fatti in partita","punti"],["Vittorie × 10 + punti fatti","vinta*10 + punti"],["Differenza punti (mai sotto zero)","max(0; diff)"]]
+};
+function calcOf(g){return g&&g.calc||{}}
+function ffaFields(g){var f=calcOf(g).fields;return f&&f.length?f:[{k:"punti",l:"Punti"}]}
+function fxSafe(src,al){try{return TF.fxCompile(src,al)}catch(e){return null}}
+function rankFx(g){var c=calcOf(g);return c.rank&&c.rank!==CALC_DEF.rank?fxSafe(c.rank,TF.FX_MATCH_VARS):null}
+function hofFx(g){var c=calcOf(g);return c.hof&&c.hof!==CALC_DEF.hof?fxSafe(c.hof,TF.FX_MATCH_VARS):null}
+function ffaFx(g){var c=calcOf(g),f=ffaFields(g);if(!c.ffa||(f.length===1&&f[0].k==="punti"&&c.ffa===CALC_DEF.ffa))return null;return fxSafe(c.ffa,f.map(function(x){return x.k}))}
+/* FFA con formula: i valori grezzi stanno in gr.v[nome][campo], il punteggio calcolato in gr.s[nome] */
+function ffaScore(g,gr,n){
+  var fx=ffaFx(g),v=(gr.v||{})[n];if(!fx||!v)return gr.s[n];
+  var full=ffaFields(g).every(function(f){return v[f.k]!=null});
+  return full?fx.run(v):null;
+}
+function ffaRecalc(g){
+  if(!g.ffa)return;var fx=ffaFx(g);
+  g.ffa.rounds.forEach(function(rd){rd.groups.forEach(function(gr){
+    if(!gr.v)return;
+    Object.keys(gr.v).forEach(function(n){if(fx)gr.s[n]=ffaScore(g,gr,n);else if(gr.v[n].punti!=null)gr.s[n]=gr.v[n].punti})})});
+}
+function calcKey(l){
+  var k=String(l||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9_]+/g,"_").replace(/^_+|_+$/g,"").replace(/^(\d)/,"c$1");
+  return k||"campo";
+}
+function calcVarsList(g){return g.mode==="ffa"?ffaFields(g).map(function(f){return f.k}):TF.FX_MATCH_VARS}
+function calcTest(src,al,sample){try{var fx=TF.fxCompile(src,al);return{ok:true,v:fx.run(sample)}}catch(e){return{ok:false,msg:e.message}}}
+function renderCalc(g,lock){
+  var c=calcOf(g),h='<details class="calc"'+(calcOpen?" open":"")+'><summary>Calcolo dei punti</summary>';
+  if(g.mode==="ffa"){
+    var F=ffaFields(g),src=c.ffa||CALC_DEF.ffa,sample={};F.forEach(function(f,i){sample[f.k]=i?3:2});
+    var t=calcTest(src,F.map(function(f){return f.k}),sample);
+    h+='<p class="hint">In ogni girone inserisci questi valori per ogni partecipante; la formula li trasforma nel punteggio che decide la classifica e la Hall of Fame.</p>'
+     +'<div class="row"><label class="row" style="gap:6px">Modello <select class="cpre" data-w="ffa"'+(lock?" disabled":"")+'><option value="">Scegli…</option>'+CALC_PRE.ffa.map(function(p,i){return'<option value="'+i+'">'+p[0]+'</option>'}).join("")+'</select></label></div>'
+     +'<div class="cfields">'+F.map(function(f,i){return'<span class="chip"><b>'+esc(f.k)+'</b>'+(f.l&&f.l!==f.k?' '+esc(f.l):'')+(F.length>1&&!lock?'<button class="cfdel" data-i="'+i+'" aria-label="Rimuovi il campo '+esc(f.l||f.k)+'">×</button>':'')+'</span>'}).join("")
+     +(F.length<5&&!lock?'<input type="text" id="cfnew" placeholder="Nuovo campo (es. Uccisioni)" aria-label="Nome del nuovo campo"><button id="cfadd">Aggiungi campo</button>':'')+'</div>'
+     +(lock?'<p class="hint">I campi si cambiano con il torneo in pausa; la formula si può cambiare sempre.</p>':'')
+     +'<label class="cfx">Formula del punteggio <input type="text" id="cfffa" spellcheck="false" value="'+esc(src)+'"></label>'
+     +'<p class="cres '+(t.ok?'ok':'err')+'" id="cfffa-r">'+(t.ok?'Esempio con '+F.map(function(f){return f.k+' = '+sample[f.k]}).join(", ")+': '+t.v+' punti':esc(t.msg))+'</p>';
+  }else{
+    var mv="Variabili: punti (fatti), avversario (subiti), diff, vinta, pareggio, persa (1 o 0)"+(g.mode==="swiss"?", bye (riposo)":"")+".";
+    if(g.mode==="rr"||g.mode==="swiss"){
+      var r1=c.rank||CALC_DEF.rank,t1=calcTest(r1,TF.FX_MATCH_VARS,TF.fxMatchVars(3,1));
+      h+='<label class="cfx">Punti in classifica per ogni partita <input type="text" id="cfrank" spellcheck="false" value="'+esc(r1)+'"></label>'
+       +'<div class="row"><label class="row" style="gap:6px">Modello <select class="cpre" data-w="rank"><option value="">Scegli…</option>'+CALC_PRE.rank.map(function(p,i){return'<option value="'+i+'">'+p[0]+'</option>'}).join("")+'</select></label></div>'
+       +'<p class="cres '+(t1.ok?'ok':'err')+'" id="cfrank-r">'+(t1.ok?'Esempio, vittoria 3 a 1: '+t1.v+' punti':esc(t1.msg))+'</p>';
+    }
+    var r2=c.hof||CALC_DEF.hof,t2=calcTest(r2,TF.FX_MATCH_VARS,TF.fxMatchVars(3,1));
+    h+='<label class="cfx">Punti per la Hall of Fame per ogni partita <input type="text" id="cfhof" spellcheck="false" value="'+esc(r2)+'"></label>'
+     +'<div class="row"><label class="row" style="gap:6px">Modello <select class="cpre" data-w="hof"><option value="">Scegli…</option>'+CALC_PRE.hof.map(function(p,i){return'<option value="'+i+'">'+p[0]+'</option>'}).join("")+'</select></label></div>'
+     +'<p class="cres '+(t2.ok?'ok':'err')+'" id="cfhof-r">'+(t2.ok?'Esempio, vittoria 3 a 1: '+t2.v+' punti':esc(t2.msg))+'</p><p class="hint">'+mv+'</p>';
+  }
+  h+='<p class="hint">Operatori + − * / ^ e confronti (&gt;= ecc.), condizione ? a : b, funzioni min, max, abs, arrotonda, giu, su, se(c; a; b), tabella(n; v1; v2; …). Guida completa con F1.</p></details>';
+  return h;
+}
+function calcSet(g,key,src){
+  var al=key==="ffa"?ffaFields(g).map(function(f){return f.k}):TF.FX_MATCH_VARS;
+  try{TF.fxCompile(src,al)}catch(e){toast("Formula non salvata: "+e.message);return false}
+  g.calc=g.calc||{};g.calc[key]=src.trim();if(key==="ffa")ffaRecalc(g);save();render();return true;
+}
+
 var SKINS=[["auto","Automatico: tema del gioco"],["frag","Fragmarathon"],["-","Ispirati alle piattaforme"],["chiaro","Bracket chiaro (stile Challonge)"],["notte","Arena notturna (stile start.gg)"],["lega","Lega pro (stile ESL)"],["wiki","Wiki (stile Liquipedia)"],["neon","Neon (stile Battlefy)"],["-","Temi dei giochi"],["quake","Quake: lava e metallo"],["tf2","Team Fortress 2: retrò"],["wreck","Wreckfest: cantiere"],["cs2","Counter-Strike 2: tattico"],["fifa","FIFA: campo da calcio"]];
 var GAMESKIN={quake:"quake",tf2:"tf2",wreck:"wreck",cs2:"cs2",fifa:"fifa"};
 function skinOpts(cur){var o="",grp=false;SKINS.forEach(function(s){if(s[0]==="-"){o+=(grp?"</optgroup>":"")+'<optgroup label="'+s[1]+'">';grp=true;return}o+='<option value="'+s[0]+'"'+(cur===s[0]?" selected":"")+'>'+s[1]+'</option>'});return o+(grp?"</optgroup>":"")}
@@ -1110,7 +1284,7 @@ function moveDE(g,src,dst){
 /* --- sistema svizzero --- */
 function swFinished(W){var cur=W.rounds[W.rounds.length-1];return W.rounds.length>=W.nr&&cur.every(TF.swDone)}
 function renderSW(g){
-  var W=g.sw,team=isTeam(g),st=TF.swStandings(g.players,W.rounds),h="",li=W.rounds.length-1,cur=W.rounds[li],done=cur.every(TF.swDone),fin=swFinished(W),po=W.top>=2;
+  var W=g.sw,team=isTeam(g),st=TF.swStandings(g.players,W.rounds,rankFx(g)),h="",li=W.rounds.length-1,cur=W.rounds[li],done=cur.every(TF.swDone),fin=swFinished(W),po=W.top>=2;
   if(fin&&!po)h+=ffaPodium(g,st.slice(0,3).map(function(x){return x.n}));
   h+='<section class="panel"><h2>Classifica svizzero'+helpBtn("swiss")+'</h2><table class="res sw"><tr><th>Pos.</th><th>'+(team?"Squadra":"Giocatore")+'</th><th title="Vinte">V</th><th title="Pareggiate">N</th><th title="Perse">P</th><th title="Buchholz: somma dei punti degli avversari affrontati">Buchholz</th><th title="Differenza punti">DR</th><th>Pt</th></tr>';
   st.forEach(function(t,i){h+='<tr'+(po&&i<W.top?' class="q"':'')+'><td>'+(i+1)+'º</td><td>'+(team?tico(t.n,18):"")+esc(t.n)+sub(t.n)+'</td><td>'+t.w+'</td><td>'+t.d+'</td><td>'+t.l+'</td><td>'+t.buch+'</td><td>'+(t.sf-t.ss>0?"+":"")+(t.sf-t.ss)+'</td><td><b>'+t.pts+'</b></td></tr>'});
@@ -1358,8 +1532,15 @@ function wClone(el){
 }
 function wFitBox(){
   var box=$("wbody"),c=$("wfit");if(!box||!c)return;
-  var W=box.clientWidth,H=box.clientHeight;
-  for(var k=4;k>=0.25;k-=0.05){c.style.width=(W/k)+"px";c.style.transform="scale("+k+")";if(c.scrollHeight*k<=H&&c.scrollWidth<=W/k+1)break}
+  var W=box.clientWidth,H=box.clientHeight,k,best=0.25;
+  c.style.left=c.style.top="0px";
+  /* il fattore più grande con cui il pannello (che si riadatta alla larghezza W/k) sta tutto nello spazio */
+  for(k=10;k>=0.25;k-=0.05){c.style.width=(W/k)+"px";if(c.scrollHeight*k<=H&&c.scrollWidth<=W/k+1){best=k;break}}
+  c.style.width=(W/best)+"px";c.style.transform="scale("+best+")";
+  /* centrato nello spazio libero */
+  var inner=c.firstElementChild,cw=inner?Math.min(W/best,inner.scrollWidth):W/best;
+  c.style.left=Math.max(0,(W-cw*best)/2)+"px";c.style.top=Math.max(0,(H-c.scrollHeight*best)/2)+"px";
+  if(inner)inner.style.width=cw<W/best-1?cw+"px":"";
 }
 function wDraw(fade){
   if(!wItems.length){$("wtitle").textContent=S.ui.title||UI0.title;$("wsub").textContent="Niente da mostrare";$("wbody").innerHTML='<p class="wempty">Clicca l\'icona del proiettore su un pannello della finestra principale.</p>';$("wpg").textContent="";return}
@@ -1373,6 +1554,8 @@ function wDraw(fade){
   if(el){var f=document.createElement("div");f.id="wfit";f.appendChild(wClone(el));body.appendChild(f);wFitBox()}
   if(fade&&body.animate&&!matchMedia("(prefers-reduced-motion: reduce)").matches)body.animate([{opacity:0},{opacity:1}],{duration:450,easing:"ease-out"});
   var p=$("wprog");p.style.animation="none";void p.offsetWidth;p.style.animation=wS.gal&&wItems.length>1?"wprog "+(wS.sec*1000)+"ms linear":"none";
+  if(window.wFitStage){wFitStage();wFitBox()}
+  $("wfull").textContent="Riempi lo schermo: "+(wS.full?"sì":"no");$("wfull").classList.toggle("on",!!wS.full);
   $("wgal").textContent=wS.gal?"Galleria: attiva":"Galleria: spenta";$("wgal").classList.toggle("on",!!wS.gal);
   if(document.activeElement!==$("wsec"))$("wsec").value=wS.sec;$("wscope").value=wS.scope;
 }
@@ -1398,12 +1581,12 @@ function wallInit(){
    +'<div class="wctl" id="wctl" role="toolbar" aria-label="Comandi del proiettore"><button data-w="prev" title="Pannello precedente (PgUp)" aria-label="Pannello precedente">◀</button><button data-w="next" title="Pannello successivo (PgDn)" aria-label="Pannello successivo">▶</button>'
    +'<button data-w="gal" id="wgal" title="Scorri i pannelli da solo (G)">Galleria: spenta</button><label>ogni <input type="number" id="wsec" min="3" max="600" step="1" inputmode="numeric"> secondi</label>'
    +'<select id="wscope" aria-label="Pannelli da mostrare"><option value="view">Pannelli di questa scheda</option><option value="all">Tutti i giochi e i risultati</option></select>'
-   +'<button data-w="fs">Schermo intero</button><button data-w="close">Chiudi</button>'
-   +'<span class="wkeys"><kbd>PgUp</kbd><kbd>PgDn</kbd> pannelli <kbd>G</kbd> galleria <kbd>F</kbd> schermo intero <kbd>Esc</kbd> chiudi</span></div>';
+   +'<button data-w="full" id="wfull" title="Usa tutta la superficie dello schermo (R)">Riempi lo schermo: no</button><button data-w="fs">Schermo intero</button><button data-w="close">Chiudi</button>'
+   +'<span class="wkeys"><kbd>PgUp</kbd><kbd>PgDn</kbd> pannelli <kbd>G</kbd> galleria <kbd>R</kbd> riempi <kbd>F</kbd> schermo intero <kbd>Esc</kbd> chiudi</span></div>';
   document.body.appendChild(w);
   function fs(){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(function(){})}
   w.addEventListener("click",function(e){var b=e.target.closest("[data-w]");if(!b)return;var a=b.dataset.w;
-    if(a==="prev")wGo(-1);else if(a==="next")wGo(1);else if(a==="gal")wSet({gal:!wS.gal});else if(a==="fs")fs();else if(a==="close")window.close()});
+    if(a==="prev")wGo(-1);else if(a==="next")wGo(1);else if(a==="gal")wSet({gal:!wS.gal});else if(a==="full")wSet({full:!wS.full});else if(a==="fs")fs();else if(a==="close")window.close()});
   $("wsec").addEventListener("change",function(){var v=parseInt(this.value,10);if(v>=3)wSet({sec:Math.min(600,v)});else this.value=wS.sec});
   $("wscope").addEventListener("change",function(){wSet({scope:this.value})});
   document.addEventListener("keydown",function(e){
@@ -1411,12 +1594,18 @@ function wallInit(){
     if(e.key==="PageDown"||e.key==="ArrowRight"||e.key==="ArrowDown"){e.preventDefault();wGo(1)}
     else if(e.key==="PageUp"||e.key==="ArrowLeft"||e.key==="ArrowUp"){e.preventDefault();wGo(-1)}
     else if(e.key==="g"||e.key==="G"||e.key===" "){e.preventDefault();wSet({gal:!wS.gal})}
+    else if(e.key==="r"||e.key==="R"){e.preventDefault();wSet({full:!wS.full})}
     else if(e.key==="f"||e.key==="F"||e.key==="F11"){e.preventDefault();fs()}
     else if(e.key==="Escape"){if(document.fullscreenElement)document.exitFullscreen();else window.close()}
   });
   function showCtl(){var c=$("wctl");c.classList.add("on");document.body.classList.remove("nocur");clearTimeout(wHide);wHide=setTimeout(function(){if(!c.contains(document.activeElement)||document.activeElement===document.body){c.classList.remove("on");document.body.classList.add("nocur")}},3000)}
   document.addEventListener("mousemove",showCtl);showCtl();
-  function fitStage(){var st=$("wstage");st.style.transform="translate(-50%,-50%) scale("+Math.min(innerWidth/1920,innerHeight/1080)+")"}
+  window.wFitStage=function(){
+    var st=$("wstage"),full=!!(wS&&wS.full);$("wall").classList.toggle("full",full);
+    if(full)st.style.cssText="left:0;top:0;width:"+innerWidth+"px;height:"+innerHeight+"px;transform:none";
+    else st.style.cssText="transform:translate(-50%,-50%) scale("+Math.min(innerWidth/1920,innerHeight/1080)+")";
+  };
+  function fitStage(){wFitStage();wFitBox()}
   window.addEventListener("resize",fitStage);fitStage();
   try{wSig=localStorage.getItem(KEY)||"";wWSig=localStorage.getItem(WKEY)||""}catch(e){}
   wS=wState();if(!wS.view)wS.view=S.cur;

@@ -138,3 +138,36 @@ body.wall.nocur{cursor:none}
 .elogo{height:64px;width:auto;max-width:200px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:8px;padding:4px}
 #ecss{width:100%;min-height:160px;margin-top:10px;padding:10px;border:2px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:13px/1.5 Consolas,"Cascadia Mono",monospace;resize:vertical}
 .brand img.emblem{max-width:min(340px,42vw);object-fit:contain}
+
+/* ---------- calcolo dei punti ---------- */
+.calc{margin-top:14px;padding:10px 14px;border:2px solid var(--line);border-radius:8px}
+.calc summary{font-size:1rem}
+.calc[open] summary{margin-bottom:8px}
+.cfields{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.cfields .chip b{font-family:Consolas,"Cascadia Mono",monospace;font-weight:600}
+.cfields input{flex:0 1 240px}
+.cfx{display:flex;flex-direction:column;gap:4px;margin-top:10px;color:var(--mut);font-size:.9rem}
+.cfx input{width:100%;font:14px/1.4 Consolas,"Cascadia Mono",monospace!important;color:var(--ink)}
+.cres{margin:6px 0 0;font-size:.88rem}
+.cres.ok{color:var(--mut)}
+.cres.err{color:#e5484d;font-weight:600}
+.fr.frh{font-size:.72rem;color:var(--mut);text-transform:none;padding-bottom:0}
+.fr.frh span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.fr input.fsv{width:100%;padding:6px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);text-align:center;font:inherit}
+.fsc{text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* ---------- proiettore: "Riempi lo schermo" ---------- */
+#wall.full #wstage{position:absolute;grid-template-rows:auto 1fr 6px}
+#wall.full .wh{padding:8px 18px 6px;gap:16px;border-bottom-width:5px}
+#wall.full .wh img.ico,#wall.full .wh .gchip{width:52px!important;height:52px!important}
+#wall.full .wht h1{font-size:30px}
+#wall.full .wht p{font-size:22px;margin-top:2px}
+#wall.full .wpg{font-size:22px}
+#wall.full #wbody{margin:8px 10px 6px}
+
+/* ---------- logo con l'AI ---------- */
+.aiprompt{width:100%;min-height:70px;margin:10px 0 8px;padding:10px;border:2px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+.aigrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
+.aigrid figure{margin:0;display:flex;flex-direction:column;gap:6px}
+.aigrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:2px solid var(--line);background:#000}
+.aigrid button{width:100%}

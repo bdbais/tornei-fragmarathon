@@ -27,6 +27,9 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 - **Guida contestuale**: pulsante `?` in ogni finestra, oppure `F1`.
 - **Hall of Fame** con i punti per ogni gioco, per giocatori e squadre.
 - **Temi**: automatico per gioco (Quake, Team Fortress 2, Wreckfest, Counter-Strike 2, FIFA), Fragmarathon, e temi ispirati alle piattaforme di tornei (stile Challonge, start.gg, ESL, Liquipedia, Battlefy). Il proiettore segue il tema.
+- **Calcolo dei punti con formule** per ogni torneo: campi a scelta nel free for all (es. posizione e uccisioni) con modelli pronti, punti in classifica e punti per la Hall of Fame nei formati a partite. Linguaggio di formule sicuro, senza `eval`, testato in `tests/`.
+- **Logo con l'AI** per l'evento o per ogni torneo: Stable Diffusion locale (AUTOMATIC1111/Forge), server compatibili OpenAI (LocalAI), Pollinations o Hugging Face con chiave gratuita.
+- **Proiettore "Riempi lo schermo"**: usa tutta la superficie anche su schermi non 16:9.
 - **Logo e CSS personalizzati**: da MODIFICA si carica il logo dell'evento e si importa un file `.css` (c'è un modello da scaricare). Una CSP impedisce al CSS di caricare risorse da internet.
 - **Aggiornamenti automatici** dalla release GitHub (versione installata).
 - Scorciatoie: `F1` guida, `Ctrl+S` salva torneo, `Ctrl+Z` annulla, `F5` proiettore (`PgUp`/`PgDn` pannelli, `G` galleria).

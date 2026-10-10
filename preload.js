@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("desk", {
   readBackup: (file) => ipcRenderer.invoke("backup:read", file),
   openFolder: (which) => ipcRenderer.invoke("folder:open", which),
   openWall: () => ipcRenderer.invoke("wall:open"),
+  aiImage: (cfg, prompt, seed, size) => ipcRenderer.invoke("ai:image", cfg, prompt, seed, size),
   checkUpdate: () => ipcRenderer.invoke("update:check"),
   installUpdate: () => ipcRenderer.invoke("update:install"),
   onUpdate: (cb) => ipcRenderer.on("update", (_e, s) => cb(s))

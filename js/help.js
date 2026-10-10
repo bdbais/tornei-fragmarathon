@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "proiettore", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     inizio: { t: "Come si inizia", h:
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +
@@ -77,22 +77,38 @@ window.HELP = {
       "<ul><li>Per ogni giocatore e squadra vedi le icone dei giochi a cui ha partecipato con i punti fatti in ognuno; il gioco migliore ha il bordo arancio.</li>" +
       "<li>Nei giochi a squadre i punti della squadra contano anche per ogni suo componente.</li></ul>" },
 
+    formule: { t: "Calcolo dei punti (formule)", h:
+      "<p>Ogni torneo ha il suo riquadro <b>Calcolo dei punti</b> nella scheda del gioco. Le formule si scrivono come in un foglio di calcolo e si vede subito il risultato su un esempio; se c'è un errore viene spiegato in rosso e la formula non viene salvata.</p>" +
+      "<h4>Free for all</h4><p>Scegli i <b>campi</b> da inserire per ogni partecipante (per esempio Posizione e Uccisioni) e la <b>formula</b> che li trasforma nel punteggio. Il punteggio decide la classifica del girone e conta per la Hall of Fame. Modelli pronti: piazzamento + uccisioni (battle royale), punti stile Formula 1, uccisioni e morti, KDA. I campi si cambiano con il torneo in pausa; la formula sempre, e i punteggi si ricalcolano.</p>" +
+      "<h4>Partite uno contro uno</h4><p><b>Punti in classifica</b> (gironi all'italiana e svizzero): quanti punti vale ogni partita, di base <code>3*vinta + pareggio</code>. <b>Punti per la Hall of Fame</b> (tutti i formati a partite): di base i punti fatti.</p>" +
+      "<p>Variabili delle partite: <code>punti</code> (fatti), <code>avversario</code> (subiti), <code>diff</code>, <code>vinta</code>, <code>pareggio</code>, <code>persa</code> (valgono 1 o 0), <code>bye</code> (riposo nello svizzero).</p>" +
+      "<h4>Cosa si può scrivere</h4><ul><li>Operazioni: <code>+ - * / % ^</code> e parentesi; i decimali con il punto.</li>" +
+      "<li>Confronti: <code>&gt; &lt; &gt;= &lt;= == !=</code>, e <code>&amp;&amp;</code> (e), <code>||</code> (o); <code>condizione ? a : b</code>.</li>" +
+      "<li>Funzioni (argomenti separati da <code>;</code>): <code>min</code>, <code>max</code>, <code>abs</code>, <code>arrotonda</code>, <code>giu</code>, <code>su</code>, <code>se(condizione; a; b)</code>, <code>tabella(n; v1; v2; …)</code> che dà il valore n-esimo (utile per i punti per piazzamento).</li></ul>" +
+      "<p>Esempi: <code>tabella(pos; 25; 18; 15; 12; 10; 8; 6; 4; 2; 1)</code>, <code>max(0; kill*2 - morti)</code>, <code>vinta*(diff &gt;= 3 ? 4 : 3) + pareggio</code>.</p>" },
+
     proiettore: { t: "Schermo proiettore", h:
       "<p>Ogni pannello (un girone, un tabellone, una classifica, il podio) ha in alto a destra l'icona del proiettore. Cliccala: si apre una finestra separata che mostra <b>solo quel pannello</b>, ingrandito al massimo che lo schermo consente. L'icona del pannello in onda diventa arancio.</p>" +
       "<ul><li>Con un secondo schermo collegato la finestra si apre lì, già a tutto schermo. Con uno schermo solo usa <kbd>F</kbd> per il tutto schermo.</li>" +
       "<li><kbd>PgDn</kbd> e <kbd>PgUp</kbd> (o le frecce) passano al pannello successivo o precedente della stessa scheda.</li>" +
       "<li><b>Galleria</b>: i pannelli scorrono da soli. Scegli ogni quanti secondi (da 3 in su) e se mostrare solo i pannelli della scheda o tutti i giochi, i risultati e la Hall of Fame. Si attiva e si ferma con <kbd>G</kbd>.</li>" +
+      "<li><b>Riempi lo schermo</b> (tasto <kbd>R</kbd>): usa tutta la superficie anche su schermi non 16:9 e riduce l'intestazione, così il pannello è il più grande possibile.</li>" +
       "<li>Il proiettore si aggiorna da solo appena inserisci un punteggio.</li>" +
       "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
       "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
 
-    temi: { t: "Temi, logo e CSS", h:
+    temi: { t: "Temi, logo, AI e CSS", h:
       "<p>Scegli il tema dal menu <b>Tema</b> in alto a destra. Vale per la finestra principale e per il proiettore e viene salvato con i dati dell'evento.</p>" +
       "<ul><li><b>Automatico</b>: ogni gioco ha i suoi colori (Quake lava e metallo, Team Fortress 2 retrò, Wreckfest cantiere, Counter-Strike 2 tattico, FIFA campo da calcio); le altre schede usano Fragmarathon. Sul proiettore, in galleria, il tema cambia con il gioco mostrato.</li>" +
       "<li><b>Fragmarathon</b>: il tema dell'evento; segue chiaro o scuro di Windows.</li>" +
       "<li><b>Ispirati alle piattaforme</b>: Bracket chiaro (stile Challonge), Arena notturna (stile start.gg), Lega pro (stile ESL), Wiki (stile Liquipedia), Neon (stile Battlefy). Riprendono solo i colori, non loghi o marchi.</li>" +
       "<li><b>Temi dei giochi</b>: puoi anche fissare il tema di un gioco per tutto il programma.</li></ul>" +
       "<h4>Logo dell'evento</h4><p>In fondo alla pagina premi <b>MODIFICA</b>, poi <b>Carica logo</b>: PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Compare nell'intestazione, nelle immagini PNG e nei PDF. <b>Torna al logo Fragmarathon</b> rimette quello di base.</p>" +
+      "<h4>Logo generato con l'AI</h4><p>In <b>MODIFICA</b>, sotto il logo: scegli se il logo è per l'evento o per un torneo, lo stile e il servizio, poi <b>Genera 4 proposte</b> e <b>Usa questo</b> su quella che preferisci. Servizi:</p><ul>" +
+      "<li><b>Stable Diffusion sul tuo PC</b> (AUTOMATIC1111, Forge o SD.Next avviati con <code>--api</code>, indirizzo di base <code>http://127.0.0.1:7860</code>): gratuito e tutto in locale.</li>" +
+      "<li><b>Server compatibile OpenAI</b>, per esempio LocalAI in locale (<code>http://127.0.0.1:8080/v1</code>) o un servizio remoto con la sua chiave.</li>" +
+      "<li><b>Pollinations</b> e <b>Hugging Face</b>: online, con una chiave personale gratuita (enter.pollinations.ai/keys oppure huggingface.co/settings/tokens).</li></ul>" +
+      "<p class='note'>Le impostazioni e le chiavi restano su questo PC e non finiscono nei backup. Ai servizi online viene inviata solo la descrizione del logo.</p>" +
       "<h4>CSS personalizzato</h4><p>Sempre in <b>MODIFICA</b>: <b>Importa file .css</b> carica un foglio di stile preparato fuori dal programma, oppure lo scrivi nella casella e premi <b>Salva</b>. <b>Scarica il modello</b> ti dà un file di partenza con tutte le variabili dei colori (--bg, --panel, --ink, --mut, --line, --edge, --acc, --accink, --wacc per il proiettore). Il CSS vale sopra al tema scelto, anche sul proiettore, e viaggia con i backup.</p>" +
       "<p class='note'>Per sicurezza il CSS non può caricare nulla da internet (url(https://…) e @import vengono bloccati). Le immagini vanno incorporate come url(data:…).</p>" },
 

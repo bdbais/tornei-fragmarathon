@@ -94,3 +94,27 @@ test("girone all'italiana: tutti contro tutti una volta, uno solo per giornata",
   const s = TF.rrStandings(g);
   assert.deepStrictEqual(s.map((x) => x.n + ":" + x.pt), ["A:4", "C:3", "B:1"]);
 });
+
+test("formule: calcolo, funzioni ed errori", () => {
+  const r = (f, v, al) => TF.fxCompile(f, al).run(v);
+  assert.strictEqual(r("3*vinta + pareggio", { vinta: 1 }), 3);
+  assert.strictEqual(r("tabella(pos; 12; 9; 7) + kill", { pos: 2, kill: 4 }), 13);
+  assert.strictEqual(r("tabella(pos; 12; 9; 7)", { pos: 9 }), 0);
+  assert.strictEqual(r("diff >= 2 ? 4 : 3*vinta", { diff: 1, vinta: 1 }), 3);
+  assert.strictEqual(r("max(0, kill*2 - morti)", { kill: 1, morti: 5 }), 0);
+  assert.strictEqual(r("punti / 0", { punti: 5 }), 0);
+  assert.strictEqual(r("-(2+3)*2", {}), -10);
+  assert.throws(() => TF.fxCompile("kill +", ["kill"]), /troppo presto/);
+  assert.throws(() => TF.fxCompile("morti", ["kill"]), /Variabile sconosciuta/);
+  assert.throws(() => TF.fxCompile("alert(1)"), /Funzione sconosciuta/);
+  assert.throws(() => TF.fxCompile("constructor.constructor"), /Carattere non valido/);
+});
+
+test("formule: punti personalizzati in gironi e svizzero", () => {
+  const rank = TF.fxCompile("2*vinta + pareggio + se(diff >= 3; 1; 0)", TF.FX_MATCH_VARS);
+  const g = { players: ["A", "B", "C"], matches: [{ a: "A", b: "B", sa: 3, sb: 0 }, { a: "A", b: "C", sa: 1, sb: 1 }, { a: "B", b: "C", sa: 0, sb: 1 }] };
+  assert.deepStrictEqual(TF.rrStandings(g, rank).map((x) => x.n + ":" + x.pt), ["A:4", "C:3", "B:0"]);
+  const rounds = [[{ a: "A", b: "B", sa: 5, sb: 1, w: "A" }, { a: "C", b: null }]];
+  const st = TF.swStandings(["A", "B", "C"], rounds, rank);
+  assert.deepStrictEqual(st.map((x) => x.n + ":" + x.pts), ["A:3", "C:2", "B:0"]);
+});

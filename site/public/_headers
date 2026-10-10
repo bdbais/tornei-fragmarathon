@@ -10,9 +10,10 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=(), interest-cohort=()
 
 # PWA: stili inline nelle tabelle, immagini e font incorporati (data:),
-# file scaricati come blob:. Nessun accesso a server esterni.
+# file scaricati come blob:. Uniche connessioni esterne: il generatore di loghi
+# (Pollinations, Hugging Face o un servizio sul PC locale).
 /app/*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://gen.pollinations.ai https://router.huggingface.co http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
 /app/sw.js
   Cache-Control: no-cache

@@ -117,20 +117,26 @@
      rounds: [[{a,b,sa,sb,w}]]  w = nome del vincitore, "=" per il pareggio. b = null è il bye. */
   var WIN = 3, DRAW = 1;
   function swDone(m) { return m.b === null || m.w != null; }
-  function swStandings(players, rounds) {
+  /* rank (facoltativo) = formula compilata con fxCompile sulle variabili FX_MATCH_VARS. */
+  function swStandings(players, rounds, rank) {
     var T = {};
     players.forEach(function (p) { T[p] = { n: p, pts: 0, w: 0, d: 0, l: 0, sf: 0, ss: 0, opp: [], bye: false, buch: 0 }; });
     rounds.forEach(function (rd) {
       rd.forEach(function (m) {
         var A = T[m.a], B = m.b ? T[m.b] : null;
         if (!A) return;
-        if (m.b === null) { A.pts += WIN; A.w++; A.bye = true; return; }
+        if (m.b === null) { A.pts += rank ? rank.run({ vinta: 1, bye: 1 }) : WIN; A.w++; A.bye = true; return; }
         if (!B || m.w == null) return;
         A.opp.push(m.b); B.opp.push(m.a);
         if (m.sa != null && m.sb != null) { A.sf += m.sa; A.ss += m.sb; B.sf += m.sb; B.ss += m.sa; }
-        if (m.w === "=") { A.pts += DRAW; B.pts += DRAW; A.d++; B.d++; }
-        else if (m.w === m.a) { A.pts += WIN; A.w++; B.l++; }
-        else { B.pts += WIN; B.w++; A.l++; }
+        var dr = m.w === "=", aw = m.w === m.a;
+        if (dr) { A.d++; B.d++; } else if (aw) { A.w++; B.l++; } else { B.w++; A.l++; }
+        if (rank) {
+          var va = { punti: m.sa || 0, avversario: m.sb || 0, diff: (m.sa || 0) - (m.sb || 0), vinta: aw && !dr ? 1 : 0, pareggio: dr ? 1 : 0, persa: !aw && !dr ? 1 : 0, bye: 0 };
+          var vb = { punti: m.sb || 0, avversario: m.sa || 0, diff: -va.diff, vinta: va.persa, pareggio: va.pareggio, persa: va.vinta, bye: 0 };
+          A.pts += rank.run(va); B.pts += rank.run(vb);
+        } else if (dr) { A.pts += DRAW; B.pts += DRAW; }
+        else if (aw) A.pts += WIN; else B.pts += WIN;
       });
     });
     var L = Object.keys(T).map(function (k) { return T[k]; });
@@ -192,27 +198,111 @@
     }
     return out;
   }
-  function rrStandings(gr) {
+  function rrStandings(gr, rank) {
     var T = {};
     gr.players.forEach(function (p) { T[p] = { n: p, g: 0, w: 0, d: 0, l: 0, gf: 0, gs: 0, pt: 0 }; });
     gr.matches.forEach(function (m) {
       if (m.sa == null || m.sb == null || !T[m.a] || !T[m.b]) return;
       var A = T[m.a], B = T[m.b];
       A.g++; B.g++; A.gf += m.sa; A.gs += m.sb; B.gf += m.sb; B.gs += m.sa;
-      if (m.sa > m.sb) { A.w++; B.l++; A.pt += WIN; }
-      else if (m.sa < m.sb) { B.w++; A.l++; B.pt += WIN; }
-      else { A.d++; B.d++; A.pt += DRAW; B.pt += DRAW; }
+      if (m.sa > m.sb) { A.w++; B.l++; } else if (m.sa < m.sb) { B.w++; A.l++; } else { A.d++; B.d++; }
+      if (rank) { A.pt += rank.run(fxMatchVars(m.sa, m.sb)); B.pt += rank.run(fxMatchVars(m.sb, m.sa)); }
+      else if (m.sa > m.sb) A.pt += WIN; else if (m.sa < m.sb) B.pt += WIN; else { A.pt += DRAW; B.pt += DRAW; }
     });
     return Object.keys(T).map(function (k) { return T[k]; }).sort(function (x, y) {
       return y.pt - x.pt || (y.gf - y.gs) - (x.gf - x.gs) || y.gf - x.gf || x.n.localeCompare(y.n);
     });
   }
 
+  /* ---------------- Formule dei punti ----------------
+     Piccolo linguaggio per le formule dei punti, senza eval: numeri, variabili,
+     + - * / % ^, confronti, && || !, condizione ? a : b e le funzioni
+     min, max, abs, arrotonda (round), giu (floor), su (ceil), se(c; a; b),
+     tabella(i; v1; v2; ...) che restituisce il valore i-esimo (1 = primo).
+     Gli argomenti si separano con ; oppure ,  -  i decimali usano il punto. */
+  var FN = {
+    min: function (a) { return a.length ? Math.min.apply(null, a) : 0; },
+    max: function (a) { return a.length ? Math.max.apply(null, a) : 0; },
+    abs: function (a) { return Math.abs(a[0] || 0); },
+    arrotonda: function (a) { return Math.round(a[0] || 0); },
+    giu: function (a) { return Math.floor(a[0] || 0); },
+    su: function (a) { return Math.ceil(a[0] || 0); },
+    se: function (a) { return a[0] ? (a[1] || 0) : (a[2] || 0); },
+    tabella: function (a) { var i = Math.round(a[0]); return i >= 1 && i < a.length ? a[i] : 0; }
+  };
+  FN.round = FN.arrotonda; FN.floor = FN.giu; FN.ceil = FN.su; FN.if = FN.se; FN.table = FN.tabella;
+  function fxCompile(src, allowed) {
+    src = String(src == null ? "" : src);
+    var toks = [], i = 0, m, re = /\s*(?:(\d+(?:\.\d+)?)|([A-Za-z_\u00C0-\u017F][\w\u00C0-\u017F]*)|(<=|>=|==|!=|&&|\|\||[-+*\/%^()<>!?:;,]))/y;
+    while (i < src.length) {
+      re.lastIndex = i;
+      if (/^\s*$/.test(src.slice(i))) break;
+      m = re.exec(src);
+      if (!m) throw new Error("Carattere non valido alla posizione " + (i + 1) + ": «" + src.slice(i).trim().charAt(0) + "»");
+      toks.push(m[1] ? { t: "n", v: +m[1] } : m[2] ? { t: "id", v: m[2].toLowerCase() } : { t: "op", v: m[3] === ";" ? "," : m[3] });
+      i = re.lastIndex;
+    }
+    var p = 0, used = {};
+    function peek(v) { return toks[p] && toks[p].t === "op" && toks[p].v === v; }
+    function eat(v) { if (!peek(v)) throw new Error("Manca «" + v + "»"); p++; }
+    function primary() {
+      var t = toks[p++];
+      if (!t) throw new Error("La formula finisce troppo presto");
+      if (t.t === "n") return function () { return t.v; };
+      if (t.t === "id") {
+        if (peek("(")) {
+          var f = FN[t.v]; if (!f) throw new Error("Funzione sconosciuta: " + t.v);
+          p++; var args = [];
+          if (!peek(")")) { args.push(expr()); while (peek(",")) { p++; args.push(expr()); } }
+          eat(")");
+          return function (V) { return f(args.map(function (a) { return a(V); })); };
+        }
+        if (allowed && allowed.indexOf(t.v) < 0) throw new Error("Variabile sconosciuta: " + t.v + " (disponibili: " + allowed.join(", ") + ")");
+        used[t.v] = 1;
+        return function (V) { var x = V[t.v]; return typeof x === "number" && isFinite(x) ? x : 0; };
+      }
+      if (t.v === "(") { var e = expr(); eat(")"); return e; }
+      if (t.v === "-") { var u = primary(); return function (V) { return -u(V); }; }
+      if (t.v === "+") return primary();
+      if (t.v === "!") { var n = primary(); return function (V) { return n(V) ? 0 : 1; }; }
+      throw new Error("Simbolo inatteso: «" + t.v + "»");
+    }
+    function pow() { var b = primary(); if (peek("^")) { p++; var e = pow(); return function (V) { return Math.pow(b(V), e(V)); }; } return b; }
+    function bin(next, ops, f) {
+      return function () {
+        var l = next();
+        while (toks[p] && toks[p].t === "op" && ops.indexOf(toks[p].v) >= 0) {
+          var o = toks[p++].v, r = next(), L = l;
+          l = (function (L, r, o) { return function (V) { return f(o, L(V), r(V)); }; })(L, r, o);
+        }
+        return l;
+      };
+    }
+    var mul = bin(pow, ["*", "/", "%"], function (o, a, b) { return o === "*" ? a * b : b === 0 ? 0 : o === "/" ? a / b : a % b; });
+    var add = bin(mul, ["+", "-"], function (o, a, b) { return o === "+" ? a + b : a - b; });
+    var cmp = bin(add, ["<", ">", "<=", ">=", "==", "!="], function (o, a, b) {
+      return (o === "<" ? a < b : o === ">" ? a > b : o === "<=" ? a <= b : o === ">=" ? a >= b : o === "==" ? a === b : a !== b) ? 1 : 0; });
+    var and = bin(cmp, ["&&"], function (o, a, b) { return a && b ? 1 : 0; });
+    var or = bin(and, ["||"], function (o, a, b) { return a || b ? 1 : 0; });
+    function expr() { var c = or(); if (peek("?")) { p++; var a = expr(); eat(":"); var b = expr(); return function (V) { return c(V) ? a(V) : b(V); }; } return c; }
+    if (!toks.length) throw new Error("La formula è vuota");
+    var root = expr();
+    if (p < toks.length) throw new Error("Simbolo inatteso: «" + toks[p].v + "»");
+    return { run: function (V) { var r = root(V || {}); return typeof r === "number" && isFinite(r) ? Math.round(r * 1000) / 1000 : 0; }, used: Object.keys(used) };
+  }
+  /* Punti di una partita uno contro uno, dal punto di vista di un lato. */
+  function fxMatchVars(own, opp, bye) {
+    var done = own != null && opp != null;
+    return { punti: own || 0, avversario: opp || 0, diff: (own || 0) - (opp || 0), vinta: bye || (done && own > opp) ? 1 : 0, pareggio: done && own === opp && !bye ? 1 : 0, persa: done && own < opp ? 1 : 0, bye: bye ? 1 : 0 };
+  }
+  var FX_MATCH_VARS = ["punti", "avversario", "diff", "vinta", "pareggio", "persa", "bye"];
+
   var TF = {
     seedOrder: seedOrder,
     deBuild: deBuild, deEval: deEval,
     swStandings: swStandings, swPair: swPair, swDone: swDone, swDefaultRounds: swDefaultRounds,
-    rrMatches: rrMatches, rrStandings: rrStandings
+    rrMatches: rrMatches, rrStandings: rrStandings,
+    fxCompile: fxCompile, fxMatchVars: fxMatchVars, FX_MATCH_VARS: FX_MATCH_VARS
   };
   if (typeof module !== "undefined" && module.exports) module.exports = TF;
   else root.TF = TF;

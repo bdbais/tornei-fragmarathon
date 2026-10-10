@@ -6,7 +6,7 @@
 <title>Tornei Fragmarathon</title>
 <meta name="description" content="Gestore di tornei per LAN party: free for all, eliminazione diretta e doppia, svizzero, gironi all'italiana. Funziona offline.">
 <meta name="theme-color" content="#111111">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://gen.pollinations.ai https://router.huggingface.co http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -208,6 +208,7 @@ body.proj::before{display:none}
 </main>
 <script src="js/formats.js"></script>
 <script src="js/help.js"></script>
+<script src="js/ai.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pwa.js"></script>
 </body>

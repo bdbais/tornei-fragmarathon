@@ -1,10 +1,10 @@
 /* Service worker della PWA: tutto in cache per funzionare offline alla LAN party.
    Strategia: rete prima (così gli aggiornamenti arrivano subito), cache se offline.
    Cambia VERSION a ogni rilascio: la cache vecchia viene eliminata. */
-const VERSION = "tornei-3.1.3";
+const VERSION = "tornei-3.2.0";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest",
-  "./js/formats.js", "./js/help.js", "./js/app.js", "./js/pwa.js", "./css/ui.css", "./css/themes.css",
+  "./js/formats.js", "./js/help.js", "./js/ai.js", "./js/app.js", "./js/pwa.js", "./css/ui.css", "./css/themes.css",
   "./icon.png", "./icon-192.png", "./icon-512.png", "./icon-maskable.png"
 ];
 
