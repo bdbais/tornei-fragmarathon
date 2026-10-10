@@ -54,7 +54,7 @@ function undoDel(){
   save();renderRoster();render();undoBtn();toast("Rimesso: "+l+".");
 }
 /* Rinominare un giocatore o una squadra: cambia il nome ovunque (elenco, squadre, tutti i giochi, risultati). */
-var RN_SKIP={name:1,mode:1,phase:1,plat:1,logo:1,calc:1,file:1,draft:1,l:1};
+var RN_SKIP={name:1,mode:1,phase:1,plat:1,logo:1,calc:1,file:1,draft:1,l:1,cfg:1};
 function renameDeep(o,a,b){
   if(Array.isArray(o)){for(var i=0;i<o.length;i++){if(o[i]===a)o[i]=b;else if(o[i]&&typeof o[i]==="object")renameDeep(o[i],a,b)}return}
   if(!o||typeof o!=="object")return;
@@ -212,7 +212,7 @@ function renderSetup(){
   h+='</div>'+bulkRow(g,d,lock)+'<div class="row" style="margin-top:14px"><button class="p" id="start"'+(lock||g.players.length<2?" disabled":"")+'>START</button><button id="pause"'+(lock?"":" disabled")+'>PAUSA</button><button id="logo">'+(g.logo?'Cambia logo':'Carica logo')+'</button>'+(g.logo?'<button id="nologo">Rimuovi logo</button>':'')+'<button id="reset">Azzera '+esc(d.l)+'</button><button id="gdraft" aria-pressed="'+(g.draft?"true":"false")+'" title="Nascosto ai partecipanti nel bot e sul proiettore: lo vedono solo amministratori e organizzatori">'+(g.draft?"In lavorazione: rendi visibile":"Segna in lavorazione")+'</button><span class="gdup"><button id="gdup">Duplica '+esc(d.l)+'</button></span><button id="gdel">Elimina '+esc(d.l)+'</button><input type="file" id="lf" accept="image/*" hidden></div>'+(g.draft?'<p class="hint draftnote">In lavorazione: i partecipanti non lo vedono nel bot né sul proiettore.</p>':'');
   h+=lock?'<p class="hint ok">Torneo in corso: giocatori e squadre sono bloccati. Premi PAUSA per modificarli.</p>':(g.phase!=="setup"?'<p class="hint">Torneo in pausa: puoi modificare giocatori e squadre.'+(g.dirty?" Dopo le modifiche, START rifà il sorteggio e i risultati attuali andranno persi.":" START riprende il torneo.")+'</p>':'');
   if(g.mode==="ffa"){var pl=ffaPlan(g.players.length,ffaGsOf(g),ffaAdvOf(g)),sz=ffaSizes(g.players.length,ffaGsOf(g));h+='<p class="hint">Free for all: in ogni girone i partecipanti giocano tutti insieme (non uno contro uno) e vince chi fa più punti. Passano i primi '+ffaAdvOf(g)+' di ogni girone e formano i gironi del turno dopo, fino a un solo girone finale: i primi 3 della finale sono i vincitori.'+(g.players.length>1?" Con "+g.players.length+" partecipanti: "+pl.map(function(k){return k===1?"finale":k+" gironi"}).join(" → ")+"."+(sz.length>1?" Primo turno: gironi da "+sz.join(", ")+".":""):"")+'</p>'}
-  h+=modeHint(g)+renderCalc(g,lock);
+  h+=modeHint(g)+renderCalc(g,lock)+renderCfg(g);
   $("setup").innerHTML=h;
 }
 function modeHint(g){
@@ -1377,7 +1377,7 @@ $("setup").onclick=function(e){
     if(!armed){
       armed=true;b.textContent="Conferma: azzera "+DEF[S.cur].l;b.classList.add("p");
       setTimeout(function(){armed=false;var el=$("reset");if(el){el.textContent="Azzera "+(DEF[S.cur]||{}).l;el.classList.remove("p")}},4000);
-    }else{armed=false;delSnap("risultati di "+DEF[S.cur].l);var lg=g.logo;S.games[S.cur]=fresh(S.cur);if(lg)S.games[S.cur].logo=lg;save();render()}
+    }else{armed=false;delSnap("risultati di "+DEF[S.cur].l);var lg=g.logo,gcf=g.cfg;S.games[S.cur]=fresh(S.cur);if(lg)S.games[S.cur].logo=lg;if(gcf)S.games[S.cur].cfg=gcf;save();render()}
   }
   else if(b.classList.contains("ma"))addMember(+b.dataset.t);
   else if(b.classList.contains("mr")){if(g.running)return;delSnap(g.members[g.players[+b.dataset.t]][+b.dataset.m]+" dalla squadra");touch(g);var t=g.players[+b.dataset.t];g.members[t].splice(+b.dataset.m,1);save();render()}
@@ -1582,6 +1582,7 @@ function migrateState(st){
   if(!st.ui.title)d("Titolo",UI0.title,1);
   if(!st.ev||typeof st.ev!=="object")st.ev={};
   if(!st.disc||typeof st.disc!=="object"){st.disc={};d("Account Discord dei giocatori","nessuno")}
+  if(!Object.keys(st.games||{}).some(function(k){return st.games[k]&&st.games[k].cfg}))d("Archivio configurazioni dei server","vuoto");
   if(!langName(st.ev.lang)){d("Lingua del torneo",langName("it")||"Italiano",1);st.ev.lang="it"}
   if(!st.ev.mode){d("Tipo di evento","LAN party");st.ev.mode="lan"}
   if(!st.games||typeof st.games!=="object")st.games={};
@@ -1625,7 +1626,9 @@ function diffState(a,b){
   bg.forEach(function(k){var ga=(a.games||{})[k],gb=(b.games||{})[k];if(ag.indexOf(k)<0||!ga||!gb)return;var L=gameLabel(b,k);
     q([L,"Formato"],ML[ga.mode]||ga.mode,ML[gb.mode]||gb.mode);q([L,"Stato"],ga.phase==="setup"?"in preparazione":"avviato",gb.phase==="setup"?"in preparazione":"avviato");
     q([L,"Partecipanti"],(ga.players||[]).length,(gb.players||[]).length);q([L,"A squadre"],yn(ga.team),yn(gb.team));
-    q([L,"Server assegnati agli incontri"],Object.keys(ga.srv||{}).length,Object.keys(gb.srv||{}).length)});
+    q([L,"Server assegnati agli incontri"],Object.keys(ga.srv||{}).length,Object.keys(gb.srv||{}).length);
+    q([L,"File di configurazione"],((ga.cfg||{}).files||[]).map(function(f){return f.n}).join(", "),((gb.cfg||{}).files||[]).map(function(f){return f.n}).join(", "),1);
+    q([L,"Impostazioni del server"],((ga.cfg||{}).set||[]).length,((gb.cfg||{}).set||[]).length)});
   var sa=a.sala||{},sb=b.sala||{},seats=function(x){return Object.keys(x.st||{}).filter(function(k){return x.st[k]&&x.st[k].player}).length};
   if(a.sala||b.sala){q("Oggetti nella mappa della sala",(sa.items||[]).length,(sb.items||[]).length);q("Postazioni assegnate",seats(sa),seats(sb));
     q("Server di gioco",(sa.servers||[]).map(function(s){return s.name}).join(", "),(sb.servers||[]).map(function(s){return s.name}).join(", "),1);q("Wi-Fi della sala",(sa.wifi||{}).ssid,(sb.wifi||{}).ssid,1)}
@@ -1974,7 +1977,7 @@ function dupGame(k,withRes){
   while(Object.keys(DEF).some(function(x){return DEF[x].l===base+" ("+n+")"}))n++;
   S.custom.push({k:nk,l:base+" ("+n+")",m:g.mode,t:isTeam(g,k)?1:0});
   var c=JSON.parse(JSON.stringify(g));delete c.file;
-  if(!withRes){var t={name:c.name||"",mode:c.mode,ng:c.ng||2,players:c.players.slice(),members:c.members||{},phase:"setup",groups:null,rounds:null};["team","plat","logo","calc","nq","tsize","ffaGs","ffaAdv","swR","swTop","hidden","cam","draft"].forEach(function(x){if(c[x]!==undefined)t[x]=c[x]});c=t}
+  if(!withRes){var t={name:c.name||"",mode:c.mode,ng:c.ng||2,players:c.players.slice(),members:c.members||{},phase:"setup",groups:null,rounds:null};["team","plat","logo","calc","nq","tsize","ffaGs","ffaAdv","swR","swTop","hidden","cam","draft","cfg"].forEach(function(x){if(c[x]!==undefined)t[x]=c[x]});c=t}
   S.games[nk]=c;registerCustom();normGames();S.cur=nk;save();render();toast("Creato "+DEF[nk].l+(withRes?" con i risultati.":", pronto da avviare."));
 }
 function restoreGame(k){S.off=(S.off||[]).filter(function(x){return x!==k});registerCustom();normGames();S.cur=k;$("addgame").hidden=true;save();render();toast(DEF[k].l+" è di nuovo nel torneo.")}
@@ -2502,6 +2505,98 @@ function botDiscord(m){
   if(window.HOME&&window.HOME.editOther)evs.filter(function(id){return!(S.ev&&S.ev.id===id)}).forEach(function(id){window.HOME.editOther(id,function(st){if((st.roster||[]).indexOf(nm)<0)return false;st.disc=st.disc||{};st.disc[nm]=acc;return true})});
   toast("Account Discord di "+nm+" dal bot Telegram: "+acc+".");
 }
+
+
+/* ======================================================================
+   Archivio delle configurazioni dei server, per gioco: file di testo (server.cfg, .ini…) e un elenco
+   di impostazioni nome = valore. Si salva con il torneo e nei backup; nulla va ai giocatori.
+   ====================================================================== */
+var GC_MAX=256*1024,GC_TOT=1536*1024,gcOpen=false,gcEdit=null;
+var GC_TPL={quake:["g_gametype","fraglimit","timelimit","capturelimit","sv_maxclients","sv_hostname","g_password","zmq_rcon_password"],
+  tf2:["mp_tournament","mp_timelimit","mp_winlimit","mp_maxrounds","tv_enable","sv_password","rcon_password"],
+  cs2:["game_type","game_mode","mp_maxrounds","mp_overtime_enable","mp_roundtime","mp_freezetime","tv_enable","sv_password","rcon_password"],
+  wreck:["server_name","password","max_players","track","laps","bots","admin_steamids"]};
+function gcOf(g){if(!g.cfg||typeof g.cfg!=="object")g.cfg={files:[],set:[]};if(!Array.isArray(g.cfg.files))g.cfg.files=[];if(!Array.isArray(g.cfg.set))g.cfg.set=[];return g.cfg}
+function gcSize(){var n=0;Object.keys(S.games).forEach(function(k){var c=S.games[k]&&S.games[k].cfg;if(c&&c.files)c.files.forEach(function(f){n+=String(f.t||"").length})});return n}
+function gcSecret(k){return/pass|rcon|token|secret|steamid|pwd/i.test(String(k||""))}
+function gcName(n){n=String(n||"").replace(/[\\/:*?"<>|\u0000-\u001f]+/g,"_").trim().slice(0,80);return n||"config.cfg"}
+function gcKB(n){return n<1024?n+" B":(n/1024).toFixed(n<10240?1:0)+" KB"}
+function gcWhen(t){if(!t)return"";var d=new Date(t),p=function(x){return String(x).padStart(2,"0")};return p(d.getDate())+"/"+p(d.getMonth()+1)+" "+p(d.getHours())+":"+p(d.getMinutes())}
+function renderCfg(g){
+  var c=g.cfg||{files:[],set:[]},F=c.files||[],T=c.set||[],k=S.cur,h;
+  if(gcEdit!=null&&!F[gcEdit])gcEdit=null;
+  h='<details class="gcbox" id="gcbox"'+(gcOpen?' open':'')+'><summary><span>Configurazioni dei server</span>'+(F.length||T.length?' <span class="gcn">'+F.length+' <span>file</span>, '+T.length+' <span>impostazioni</span></span>':'')+'</summary>'
+   +'<p class="hint">File di configurazione e impostazioni dei server di questo gioco: restano nel torneo e nei backup, non vanno ai giocatori.</p>'
+   +'<h4>File</h4>';
+  h+=F.length?'<ul class="gcfiles">'+F.map(function(f,i){return'<li><button class="gcfn" data-gc="open" data-gf="'+i+'" title="Apri e modifica"><span data-noi18n>'+esc(f.n)+'</span></button><span class="hint">'+gcKB(String(f.t||"").length)+(f.at?' · '+gcWhen(f.at):'')+'</span><button data-gc="dl" data-gf="'+i+'">Scarica</button><button data-gc="del" data-gf="'+i+'">Elimina</button></li>'}).join("")+'</ul>'
+     :'<p class="empty">Nessun file: carica il server.cfg o gli altri file di configurazione.</p>';
+  h+='<div class="row"><button data-gc="up">Carica file…</button><button data-gc="new">Nuovo file</button>'+(F.length?'<button data-gc="zip">Scarica tutti (.zip)</button>':'')+'<input type="file" id="gcfile" multiple hidden></div>';
+  if(gcEdit!=null){var f=F[gcEdit];
+    h+='<div class="gced"><div class="row"><input type="text" id="gcfname" value="'+esc(f.n)+'" aria-label="Nome del file" spellcheck="false"><button class="p" data-gc="save">Salva il file</button><button data-gc="parse" title="Legge le righe del file e le aggiunge all&#39;elenco delle impostazioni">Ricava le impostazioni</button><button data-gc="close">Chiudi</button></div>'
+     +'<textarea id="gcta" spellcheck="false" aria-label="Contenuto del file">'+esc(f.t||"")+'</textarea></div>'}
+  h+='<h4>Impostazioni</h4>';
+  h+=T.length?'<table class="gctab"><thead><tr><th>Nome</th><th>Valore</th><th></th></tr></thead><tbody>'+T.map(function(s,i){var sec=gcSecret(s.k);
+    return'<tr><td><input type="text" data-gs="'+i+'" data-gk="k" value="'+esc(s.k||"")+'" aria-label="Nome dell&#39;impostazione" spellcheck="false"></td><td><input type="'+(sec?"password":"text")+'" data-gs="'+i+'" data-gk="v" value="'+esc(s.v||"")+'" aria-label="Valore di '+esc(s.k||"")+'" spellcheck="false" autocomplete="off"></td><td><button data-gc="sdel" data-gs="'+i+'" aria-label="Elimina '+esc(s.k||"")+'">×</button></td></tr>'}).join("")+'</tbody></table>'
+     :'<p class="empty">Nessuna impostazione in elenco.</p>';
+  h+='<div class="row"><button data-gc="sadd">Aggiungi impostazione</button>'+(GC_TPL[k]?'<button data-gc="tpl">Impostazioni tipiche di '+esc(ORIGL[k]||DEF[k].l)+'</button>':'')+(T.length?'<button data-gc="copy">Copia come testo</button><button data-gc="sdl">Scarica come .cfg</button>':'')+'</div>';
+  return h+'</details>';
+}
+function gcText(T){return T.filter(function(s){return s.k}).map(function(s){return s.k+' "'+String(s.v||"").replace(/"/g,"'")+'"'}).join("\n")+"\n"}
+/* righe di un file di configurazione → impostazioni: set k "v", seta k v, k "v", k = v (ini); commenti e sezioni saltati */
+function gcParse(txt){
+  var out=[];String(txt||"").split(/\r?\n/).forEach(function(l){
+    l=l.replace(/^\s+|\s+$/g,"");if(!l||/^(\/\/|#|;|\[)/.test(l))return;
+    var m=l.match(/^(?:set[asu]?\s+)?([A-Za-z_][\w.\-]*)\s*(?:=\s*|\s+)("([^"]*)"|(.*?))\s*(?:\/\/.*)?$/);
+    if(!m||/^(exec|bind|alias|echo|say|map|changelevel|writeid|writeip|unbind|plugin_load)$/i.test(m[1]))return;
+    out.push({k:m[1],v:m[3]!==undefined?m[3]:String(m[4]||"").replace(/^"|"$/g,"")});
+  });
+  return out;
+}
+function gcRead(files){
+  var g=G(),c=gcOf(g),n=0,skip=[];
+  return Promise.all([].slice.call(files).map(function(fl){
+    if(fl.size>GC_MAX){skip.push(fl.name+" (oltre 256 KB)");return null}
+    return fl.arrayBuffer().then(function(buf){
+      var u=new Uint8Array(buf),t;if(u.indexOf(0)>=0){skip.push(fl.name+" (non è un file di testo)");return}
+      try{t=new TextDecoder("utf-8",{fatal:true}).decode(u)}catch(e){t=new TextDecoder("windows-1252").decode(u)}
+      t=t.replace(/^﻿/,"");
+      if(gcSize()+t.length>GC_TOT){skip.push(fl.name+" (archivio pieno)");return}
+      var nm=gcName(fl.name),ex=c.files.filter(function(f){return f.n===nm})[0];
+      if(ex){ex.t=t;ex.at=Date.now()}else c.files.push({n:nm,t:t,at:Date.now()});n++;
+    });
+  })).then(function(){save();render();toast((n?"File caricati: "+n+".":"Nessun file caricato.")+(skip.length?" Saltati: "+skip.join(", ")+".":""))});
+}
+$("setup").addEventListener("toggle",function(e){if(e.target.id==="gcbox")gcOpen=e.target.open},true);
+$("setup").addEventListener("click",function(e){
+  var b=e.target.closest("[data-gc]");if(!b)return;var a=b.getAttribute("data-gc"),g=G(),c=gcOf(g),i=+b.getAttribute("data-gf"),f=c.files[i],k=S.cur;
+  if(a==="up"){$("gcfile").click();return}
+  if(a==="new"){var n=1,nm="server.cfg";while(c.files.some(function(x){return x.n===nm}))nm="config"+(++n)+".cfg";c.files.push({n:nm,t:"",at:Date.now()});gcEdit=c.files.length-1;save();render();setTimeout(function(){var x=$("gcfname");if(x){x.focus();x.select()}},50);return}
+  if(a==="open"){gcEdit=i;render();setTimeout(function(){var t=$("gcta");if(t){t.focus();t.scrollIntoView({block:"center"})}},50);return}
+  if(a==="close"){gcEdit=null;render();return}
+  if(a==="save"&&c.files[gcEdit]){var ed=c.files[gcEdit],txt=$("gcta").value;
+    if(txt.length>GC_MAX){toast("Il file supera 256 KB: accorcialo.");return}
+    if(gcSize()-String(ed.t||"").length+txt.length>GC_TOT){toast("Archivio delle configurazioni pieno (1,5 MB per torneo).");return}
+    ed.n=gcName($("gcfname").value);ed.t=txt;ed.at=Date.now();save();render();toast("File salvato: "+ed.n+".");return}
+  if(a==="parse"&&c.files[gcEdit]){var P=gcParse($("gcta").value),add=0,upd=0;
+    P.forEach(function(p){var ex=c.set.filter(function(s){return s.k===p.k})[0];if(ex){if(ex.v!==p.v){ex.v=p.v;upd++}}else{c.set.push(p);add++}});
+    save();render();toast("Impostazioni ricavate: "+add+" nuove, "+upd+" aggiornate.");return}
+  if(a==="dl"&&f){dlBlob(new Blob([f.t||""],{type:"text/plain;charset=utf-8"}),f.n);return}
+  if(a==="zip"&&c.files.length&&window.SHEETS&&SHEETS.zip){var z=SHEETS.zip(c.files.map(function(x){return{name:x.n,data:x.t||""}}));
+    dlBlob(new Blob([z],{type:"application/zip"}),"configurazioni-"+String(DEF[k].l).replace(/[^\w-]+/g,"-").replace(/^-|-$/g,"").toLowerCase()+".zip");return}
+  if(a==="del"&&f){delSnap("file "+f.n+" di "+DEF[k].l);c.files.splice(i,1);if(gcEdit===i)gcEdit=null;else if(gcEdit>i)gcEdit--;save();render();toast("File eliminato: "+f.n+".");return}
+  if(a==="sadd"){c.set.push({k:"",v:""});save();render();setTimeout(function(){var x=document.querySelectorAll('#setup [data-gk="k"]');if(x.length)x[x.length-1].focus()},50);return}
+  if(a==="sdel"){var si=+b.getAttribute("data-gs"),s=c.set[si];if(!s)return;delSnap("impostazione "+(s.k||"")+" di "+DEF[k].l);c.set.splice(si,1);save();render();return}
+  if(a==="tpl"){var n2=0;(GC_TPL[k]||[]).forEach(function(x){if(!c.set.some(function(s){return s.k===x})){c.set.push({k:x,v:""});n2++}});save();render();toast(n2?"Aggiunte "+n2+" impostazioni da compilare.":"Le impostazioni tipiche ci sono già.");return}
+  if(a==="copy"){var txt2=gcText(c.set);if(navigator.clipboard)navigator.clipboard.writeText(txt2).then(function(){toast("Impostazioni copiate: incollale nella console o nel file del server.")},function(){toast("Non riesco a copiare: usa Scarica come .cfg.")});return}
+  if(a==="sdl"){dlBlob(new Blob([gcText(c.set)],{type:"text/plain;charset=utf-8"}),"impostazioni-"+String(DEF[k].l).replace(/[^\w-]+/g,"-").replace(/^-|-$/g,"").toLowerCase()+".cfg");return}
+});
+$("setup").addEventListener("change",function(e){
+  var t=e.target;
+  if(t.id==="gcfile"){if(t.files&&t.files.length)gcRead(t.files);t.value="";return}
+  var si=t.getAttribute&&t.getAttribute("data-gs"),gk=t.getAttribute&&t.getAttribute("data-gk");if(si===null||!gk)return;
+  var c=gcOf(G()),s=c.set[+si];if(!s)return;s[gk]=String(t.value||"").slice(0,gk==="k"?80:2000);save();
+  if(gk==="k"){var v=t.closest("tr")&&t.closest("tr").querySelector('[data-gk="v"]');if(v)v.type=gcSecret(s.k)?"password":"text"}
+});
 
 window.__app={
   S:function(){return S},

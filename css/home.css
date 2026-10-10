@@ -370,3 +370,20 @@ html.set-on body{overflow:hidden}
 .dcs.no{color:#e5484d;font-weight:600}
 .dcok{color:#5865F2;font-weight:600}
 .dcguide ol{margin:6px 0;padding-left:20px}
+
+/* archivio delle configurazioni dei server */
+#setup .gcbox{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+#setup .gcbox>summary{cursor:pointer;font-weight:700;color:var(--ink)}
+#setup .gcn{font-weight:400;color:var(--mut);font-size:13px;margin-left:6px}
+#setup .gcbox h4{margin:12px 0 6px;font-size:13px;color:var(--mut);font-weight:600}
+#setup .gcfiles{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+#setup .gcfiles li{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#setup .gcfiles .gcfn{font-family:ui-monospace,Consolas,monospace;font-weight:600}
+#setup .gcfiles .hint{margin:0}
+#setup .gced{margin-top:8px}
+#setup .gced textarea{display:block;width:100%;min-height:220px;margin-top:6px;padding:8px;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:13px/1.45 ui-monospace,Consolas,monospace;tab-size:4;box-sizing:border-box}
+#setup .gctab{width:100%;border-collapse:collapse;font-size:14px}
+#setup .gctab th{text-align:left;font-weight:600;color:var(--mut);font-size:12px;padding:4px 6px;border-bottom:1px solid var(--line)}
+#setup .gctab td{padding:3px 6px;border-bottom:1px solid var(--line)}
+#setup .gctab td:last-child{width:1%}
+#setup .gctab input{width:100%;box-sizing:border-box;font-family:ui-monospace,Consolas,monospace}

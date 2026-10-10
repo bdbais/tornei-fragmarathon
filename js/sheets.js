@@ -125,5 +125,5 @@
     var g = /[#&?]gid=(\d+)/.exec(link);
     return "https://docs.google.com/spreadsheets/d/" + m[1] + "/export?format=csv" + (g ? "&gid=" + g[1] : "");
   }
-  window.SHEETS = { parseCsv: parseCsv, toCsv: toCsv, toXlsx: toXlsx, readXlsx: readXlsx, readFile: readFile, gsheetCsvUrl: gsheetCsvUrl };
+  window.SHEETS = { zip: zipStore, parseCsv: parseCsv, toCsv: toCsv, toXlsx: toXlsx, readXlsx: readXlsx, readFile: readFile, gsheetCsvUrl: gsheetCsvUrl };
 })();

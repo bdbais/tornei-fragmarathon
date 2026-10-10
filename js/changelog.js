@@ -4,6 +4,11 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.9.0", d: "2026-10-10", t: "Archivio delle configurazioni dei server e cartellini nuovi", items: [
+      "Per ogni gioco un archivio delle configurazioni dei server: carichi i file (server.cfg, .ini…), li modifichi, li scarichi uno per uno o tutti in un .zip, e tieni un elenco di impostazioni nome e valore, con quelle tipiche già pronte per Quake Live, Team Fortress 2, Counter-Strike 2 e Wreckfest.",
+      "Le impostazioni si possono ricavare direttamente da un file di configurazione; le password restano nascoste e nulla va ai giocatori. Azzera e Duplica conservano l'archivio.",
+      "Cartellini delle postazioni rifatti: titolo e logo del torneo, data, numero della postazione grande, giocatore, IP e QR del Wi-Fi, con i colori e il carattere del tema scelto. Anche le altre pagine del kit hanno il logo."
+    ] },
     { v: "3.8.0", d: "2026-10-10", t: "Discord: invito, account dei giocatori e un canale per ogni partita", items: [
       "Nelle informazioni del torneo c'è il link di invito al server Discord: compare sulle schede e nel bot Telegram, e l'app lo può creare da sola.",
       "Con un bot Discord l'app crea un canale per ogni partita pronta, visibile solo ai suoi giocatori, con il server su cui giocare; a partita finita diventa di sola lettura con il risultato. Si attiva in Impostazioni, Discord.",

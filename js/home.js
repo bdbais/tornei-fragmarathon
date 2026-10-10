@@ -133,7 +133,7 @@
   /* ---------- azioni ---------- */
   function template(g, keep) {
     var t = { name: g.name || "", mode: g.mode, ng: g.ng || 2, players: keep ? (g.players || []).slice() : [], members: keep ? (g.members || {}) : {}, phase: "setup", groups: null, rounds: null };
-    ["team", "plat", "logo", "calc", "nq", "tsize", "ffaGs", "ffaAdv", "swR", "swTop", "hidden", "cam"].forEach(function (k) { if (g[k] !== undefined) t[k] = g[k]; });
+    ["team", "plat", "logo", "calc", "nq", "tsize", "ffaGs", "ffaAdv", "swR", "swTop", "hidden", "cam", "cfg"].forEach(function (k) { if (g[k] !== undefined) t[k] = g[k]; });
     return t;
   }
   function readState(id) {

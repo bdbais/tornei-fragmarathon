@@ -349,10 +349,68 @@
     for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect(x + (c + 2) * cell, y + (r + 2) * cell, Math.ceil(cell), Math.ceil(cell));
   }
   function page() { var c = document.createElement("canvas"); c.width = 1240; c.height = 1754; var x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); return c; }
+  /* tema attivo: colori, carattere del titolo e logo come nella testata dell'app */
+  function themeOf() {
+    var cs = getComputedStyle(document.documentElement), v = function (n, d) { return (cs.getPropertyValue(n) || "").trim() || d; };
+    var h1 = document.querySelector(".brand h1"), em = document.querySelector(".brand img.emblem");
+    var panel = v("--panel", "#1b1b1b");
+    return { acc: v("--acc", "#ea580c"), b1: v("--b1", panel), b2: v("--b2", v("--bg", "#111")),
+      font: h1 ? getComputedStyle(h1).fontFamily : "Inter,'Segoe UI',Arial,sans-serif", logo: em && em.complete && em.naturalWidth ? em : null };
+  }
+  /* chiaro o scuro: per scegliere il colore del testo sopra un colore del tema */
+  function isDark(col) {
+    var c = document.createElement("canvas").getContext("2d"); c.fillStyle = "#808080"; c.fillStyle = col; var f = c.fillStyle, r, g, b, m;
+    if ((m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(f))) { r = parseInt(m[1], 16); g = parseInt(m[2], 16); b = parseInt(m[3], 16); }
+    else if ((m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(f))) { r = +m[1]; g = +m[2]; b = +m[3]; } else return true;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b < 140;
+  }
+  function logoAt(ctx, img, x, y, size) {
+    var k = Math.min(size / img.naturalWidth, size / img.naturalHeight), w = img.naturalWidth * k, h = img.naturalHeight * k;
+    ctx.drawImage(img, x + (size - w) / 2, y + (size - h) / 2, w, h);
+  }
   function head(ctx, title, sub) {
-    ctx.fillStyle = "#0f172a"; ctx.font = "800 54px Inter,'Segoe UI',Arial,sans-serif"; ctx.textBaseline = "top"; ctx.textAlign = "left"; ctx.fillText(title, 80, 70, 1080);
-    if (sub) { ctx.fillStyle = "#475569"; ctx.font = "500 28px Inter,'Segoe UI',Arial,sans-serif"; ctx.fillText(sub, 80, 140, 1080); }
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim() || "#ea580c"; ctx.fillRect(80, 185, 1080, 6);
+    var TH = themeOf(), lw = TH.logo ? 120 : 0;
+    ctx.fillStyle = "#0f172a"; ctx.font = "800 54px Inter,'Segoe UI',Arial,sans-serif"; ctx.textBaseline = "top"; ctx.textAlign = "left"; ctx.fillText(title, 80, 70, 1080 - lw);
+    if (sub) { ctx.fillStyle = "#475569"; ctx.font = "500 28px Inter,'Segoe UI',Arial,sans-serif"; ctx.fillText(sub, 80, 140, 1080 - lw); }
+    if (TH.logo) logoAt(ctx, TH.logo, 1160 - 104, 64, 104);
+    ctx.fillStyle = TH.acc; ctx.fillRect(80, 185, 1080, 6);
+  }
+  function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+  /* cartellino da tavolo di una postazione: testata nei colori del tema (righe diagonali e barre come il banner),
+     logo e titolo del torneo, numero della postazione, giocatore, IP e QR del Wi-Fi */
+  function seatCard(ctx, x, y, w, h, id, st, TH, title, when, wifi) {
+    var bh = 100, dark = isDark(TH.b1), ink = "#0f172a", mut = "#64748b";
+    ctx.save();
+    ctx.strokeStyle = "#cbd5e1"; ctx.setLineDash([8, 8]); ctx.lineWidth = 1.5; ctx.strokeRect(x - 8, y - 8, w + 16, h + 16); ctx.setLineDash([]);
+    ctx.save(); rrect(ctx, x, y, w, h, 18); ctx.clip();
+    ctx.fillStyle = "#fff"; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = TH.b1; ctx.fillRect(x, y, w, bh);
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, bh); ctx.clip(); ctx.strokeStyle = TH.b2; ctx.lineWidth = 9; ctx.globalAlpha = 0.9;
+    for (var d = -bh; d < w + bh; d += 26) { ctx.beginPath(); ctx.moveTo(x + d, y + bh); ctx.lineTo(x + d + bh, y); ctx.stroke(); }
+    ctx.globalAlpha = 1; ctx.fillStyle = TH.acc; ctx.beginPath(); ctx.moveTo(x + w - 86, y + bh); ctx.lineTo(x + w - 50, y); ctx.lineTo(x + w - 32, y); ctx.lineTo(x + w - 68, y + bh); ctx.fill();
+    ctx.fillStyle = dark ? "rgba(255,255,255,.55)" : "rgba(15,23,42,.35)"; ctx.beginPath(); ctx.moveTo(x + w - 50, y + bh); ctx.lineTo(x + w - 14, y); ctx.lineTo(x + w - 4, y); ctx.lineTo(x + w - 40, y + bh); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = TH.acc; ctx.fillRect(x, y + bh, w, 7);
+    var lx = x + 18;
+    if (TH.logo) { logoAt(ctx, TH.logo, lx, y + 12, bh - 24); lx += bh - 24 + 14; }
+    var tw = x + w - 100 - lx, fs = 36;
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    do { ctx.font = "800 " + fs + "px " + TH.font; fs -= 2; } while (ctx.measureText(title).width > tw && fs > 20);
+    ctx.fillStyle = dark ? "#fff" : ink; ctx.fillText(title, lx, y + bh / 2 - (when ? 12 : 0), tw);
+    if (when) { ctx.font = "600 19px Inter,'Segoe UI',Arial,sans-serif"; ctx.fillStyle = dark ? "rgba(255,255,255,.8)" : mut; ctx.fillText(when, lx, y + bh / 2 + 22, tw); }
+    ctx.textBaseline = "top";
+    var qr = wifi && wifi.ssid ? 132 : 0, by = y + bh + 7;
+    ctx.fillStyle = mut; ctx.font = "600 20px Inter,'Segoe UI',Arial,sans-serif"; ctx.fillText(T("Postazione"), x + 26, by + 14, w - 60);
+    ctx.fillStyle = TH.acc; ctx.font = "900 128px " + TH.font; ctx.fillText(id, x + 22, by + 36, w - 52 - qr);
+    ctx.fillStyle = ink; ctx.font = "800 42px Inter,'Segoe UI',Arial,sans-serif"; ctx.fillText(st.player || "", x + 26, by + 174, w - 52 - (qr ? qr + 10 : 0));
+    if (st.ip) { ctx.fillStyle = "#475569"; ctx.font = "500 24px ui-monospace,Consolas,monospace"; ctx.fillText("IP " + st.ip, x + 26, y + h - 42, w - 60 - qr); }
+    if (qr) {
+      drawQR(ctx, wifiString(wifi), x + w - qr - 14, y + h - qr - 14, qr);
+      ctx.fillStyle = mut; ctx.font = "600 17px Inter,'Segoe UI',Arial,sans-serif"; ctx.textAlign = "center"; ctx.fillText("Wi-Fi " + wifi.ssid, x + w - qr / 2 - 14, y + h - qr - 38, qr + 20); ctx.textAlign = "left";
+    }
+    ctx.restore();
+    rrect(ctx, x, y, w, h, 18); ctx.strokeStyle = TH.acc; ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
   }
   function wrapText(ctx, text, x, y, maxW, lh) {
     String(text || "").split(/\n/).forEach(function (par) {
@@ -410,16 +468,11 @@
       pages.push(p3);
     }
     if (parts.cards && L.length) {
+      var TH = themeOf();
       for (var i1 = 0; i1 < L.length; i1 += 8) {
         var p4 = page(), c4 = p4.getContext("2d");
         L.slice(i1, i1 + 8).forEach(function (s, j) {
-          var st = X.st[s.id] || {}, cx = 60 + (j % 2) * 570, cy = 60 + Math.floor(j / 2) * 410, w = 550, h = 390;
-          c4.strokeStyle = "#94a3b8"; c4.setLineDash([10, 8]); c4.lineWidth = 2; c4.strokeRect(cx, cy, w, h); c4.setLineDash([]);
-          c4.fillStyle = "#0f172a"; c4.textAlign = "left"; c4.font = "900 120px Inter,'Segoe UI',Arial,sans-serif"; c4.fillText(s.id, cx + 30, cy + 30, w - 60);
-          c4.font = "700 40px Inter,'Segoe UI',Arial,sans-serif"; c4.fillText(st.player || "", cx + 30, cy + 175, w - 60);
-          c4.fillStyle = "#475569"; c4.font = "500 28px ui-monospace,Consolas,monospace"; if (st.ip) c4.fillText("IP " + st.ip, cx + 30, cy + 235, w - 220);
-          c4.font = "500 24px Inter,'Segoe UI',Arial,sans-serif"; c4.fillText(title, cx + 30, cy + h - 50, w - 220);
-          if (X.wifi.ssid) { drawQR(c4, wifiString(X.wifi), cx + w - 180, cy + h - 180, 160); }
+          seatCard(c4, 70 + (j % 2) * 560, 62 + Math.floor(j / 2) * 410, 540, 380, s.id, X.st[s.id] || {}, TH, title, when, X.wifi);
         });
         pages.push(p4);
       }
