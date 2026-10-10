@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "bot", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     inizio: { t: "Come si inizia", h:
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +
@@ -101,6 +101,24 @@ window.HELP = {
       "<li>Il proiettore si aggiorna da solo appena inserisci un punteggio.</li>" +
       "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
       "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
+
+    diretta: { t: "Diretta su YouTube e Twitch", h:
+      "<p>Il programma può trasmettere in diretta lo schermo del proiettore insieme a una o più telecamere, su YouTube, Twitch o un altro server RTMP, anche su più destinazioni insieme. Non serve installare altro (né OBS né altri programmi). Funziona nell'app installata per Windows.</p>" +
+      "<h4>1. Prendi le chiavi di trasmissione</h4><ul>" +
+      "<li><b>YouTube</b>: YouTube Studio, <i>Crea</i>, <i>Trasmetti dal vivo</i>, scheda <i>Streaming</i>: copia la <b>chiave dello stream</b>. Come link per gli spettatori va bene quello del canale con /live in fondo, per esempio <code>https://youtube.com/@canale/live</code>.</li>" +
+      "<li><b>Twitch</b>: <i>Dashboard del creatore</i>, <i>Impostazioni</i>, <i>Stream</i>: copia la <b>chiave di trasmissione principale</b> e scrivi il nome del canale (il link lo crea il programma).</li>" +
+      "<li><b>Altro server RTMP</b> (per esempio Facebook o un server tuo): indirizzo <code>rtmp://</code> o <code>rtmps://</code>, chiave e link per gli spettatori.</li></ul>" +
+      "<p class='note'>Le chiavi sono come password: chi le ha può trasmettere sul tuo canale. Restano solo su questo PC, non finiscono nei backup, e nelle impostazioni ne vedi solo le ultime 4 cifre.</p>" +
+      "<h4>2. Impostazioni</h4><p>In <b>IMPOSTAZIONI</b>, sezione <b>Diretta su YouTube e Twitch</b>:</p><ul>" +
+      "<li><b>Finestra da trasmettere</b>: lo <b>schermo proiettore</b> (consigliato) viene disegnato apposta per la diretta alla sua risoluzione, quindi non serve tenerlo aperto né visibile. In alternativa la finestra principale, uno schermo intero o un altro programma.</li>" +
+      "<li><b>Telecamere</b>: fino a 4. <b>Microfono</b> per il commento e <b>audio del PC</b> per i suoni del gioco.</li>" +
+      "<li><b>Qualità</b>: 720p a 30 fps chiede circa 5 Mbit/s in upload, 1080p a 60 fps circa 10 Mbit/s. Il programma usa la scheda video (NVIDIA, Intel o AMD) se c'è, altrimenti il processore.</li>" +
+      "<li><b>Titolo e logo in sovrimpressione</b> e <b>copia su disco</b> in Documenti\\Tornei Fragmarathon\\dirette.</li></ul>" +
+      "<h4>3. In onda</h4><p>Il pulsante <b>Diretta</b> in alto apre i comandi con l'anteprima: <b>Avvia la diretta</b>, <b>Ferma la diretta</b> e le scene:</p><ul>" +
+      "<li><b>Solo la finestra</b>, <b>Finestra con telecamera nell'angolo</b>, <b>Finestra e telecamere affiancate</b>, <b>Solo la telecamera</b>, <b>Tutte le telecamere</b>. Con più telecamere scegli quale è la principale.</li>" +
+      "<li>Il pallino del pulsante è rosso quando sei in onda, giallo mentre si avvia o si riconnette.</li>" +
+      "<li>Appena la diretta parte, il <b>bot Telegram avvisa tutte le chat</b> con i link per guardarla. Chiunque può chiedere al bot <code>/diretta</code>; gli organizzatori possono usare <code>/diretta avvia</code>, <code>/diretta ferma</code> e <code>/diretta scena</code>.</li>" +
+      "<li>Se la connessione cade, il programma si riconnette da solo (fino a 60 tentativi). Il dettaglio tecnico è in Documenti\\Tornei Fragmarathon\\diretta-ffmpeg.log.</li></ul>" },
 
     bot: { t: "Bot Telegram", h:
       "<p>Con un bot Telegram i partecipanti possono vedere tornei, classifiche, partite e Hall of Fame dal telefono, seguire un torneo per ricevere gli avvisi e iscriversi. Il bot è tuo: lo crei una volta sola, gratis, in due minuti.</p>" +

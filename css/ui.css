@@ -176,3 +176,27 @@ body.wall.nocur{cursor:none}
 
 .gpos{font-size:.75rem;font-weight:700;color:var(--acc)}
 .hofcalc{margin:0}
+
+/* ---------- diretta ---------- */
+#livebtn .ldot{display:inline-block;width:10px;height:10px;margin-right:8px;border-radius:50%;background:var(--mut);vertical-align:middle}
+#livebtn.on .ldot{background:#E5202A;box-shadow:0 0 0 3px color-mix(in srgb,#E5202A 35%,transparent)}
+#livebtn.wait .ldot{background:#F2B705}
+@media (prefers-reduced-motion:no-preference){#livebtn.on .ldot{animation:ldot 1.6s ease-in-out infinite}@keyframes ldot{50%{opacity:.35}}}
+.livegrid{display:grid;grid-template-columns:minmax(0,384px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:760px){.livegrid{grid-template-columns:1fr}}
+.liveprev{width:100%;aspect-ratio:16/9;object-fit:contain;background:#000;border-radius:8px;border:2px solid var(--edge)}
+.liveoff{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;background:var(--bg);border:2px dashed var(--line);border-radius:8px;color:var(--mut);font-size:.9rem}
+.livepill{display:inline-block;padding:2px 10px;border-radius:999px;background:#E5202A;color:#fff;font-weight:800;font-size:.85rem}
+.livepill.wait{background:#F2B705;color:#111}
+.livescenes button{font-size:.85rem}
+.strform fieldset{margin:10px 0 0;padding:8px 12px 12px;border:2px solid var(--line);border-radius:8px}
+.strform legend{padding:0 6px;font-weight:700}
+.strform input[type=text],.strform input[type=password]{flex:1 1 240px;min-width:0}
+
+/* proiettore disegnato per la diretta: niente comandi */
+body.streamwall .wctl{display:none!important}
+
+/* campi chiave e numero come gli altri campi di testo */
+input[type=password],#editbox input[type=number],#livebox input[type=number]{min-width:0;padding:10px 12px;border:2px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input[type=password]{flex:1 1 200px}
+#livebox a,#editbox a{color:var(--acc);text-underline-offset:2px}

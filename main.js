@@ -1,16 +1,17 @@
-const { app, BrowserWindow, shell, ipcMain, screen } = require("electron");
+const { app, BrowserWindow, shell, ipcMain, screen, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const AI = require("./js/ai.js");
 const createBot = require("./bot.js");
+const createStreamer = require("./streamer.js");
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
 /* Cartelle dei dati: create al primo avvio, senza configurazione. */
 const ROOT = path.join(app.getPath("documents"), "Tornei Fragmarathon");
-const DIRS = { tornei: path.join(ROOT, "tornei"), backup: path.join(ROOT, "backup") };
+const DIRS = { tornei: path.join(ROOT, "tornei"), backup: path.join(ROOT, "backup"), dirette: path.join(ROOT, "dirette") };
 const MAX_BACKUPS = 200;
-function ensureDirs() { Object.values(DIRS).forEach((d) => fs.mkdirSync(d, { recursive: true })); }
+function ensureDirs() { [DIRS.tornei, DIRS.backup].forEach((d) => fs.mkdirSync(d, { recursive: true })); }
 
 /* Accetta solo nomi di file .json dentro la cartella indicata: niente percorsi. */
 function safeFile(dir, name) {
@@ -79,13 +80,13 @@ function createWindow() {
   win.on("close", () => {
     try { fs.writeFileSync(STATE_FILE, JSON.stringify({ ...win.getNormalBounds(), max: win.isMaximized() })); } catch {}
   });
-  win.on("closed", () => { win = null; if (wall) wall.close(); });
+  win.on("closed", () => { win = null; if (wall) wall.close(); if (streamer) streamer.dispose(); });
   win.loadFile(path.join(__dirname, "index.html"));
 }
 
 /* ---- schermo proiettore: secondo monitor se c'è, a tutto schermo ---- */
 function openWall() {
-  if (wall) { wall.show(); wall.focus(); return; }
+  if (wall) { wall.show(); wall.focus(); return wall; }
   const prim = screen.getPrimaryDisplay();
   const ext = screen.getAllDisplays().find((d) => d.id !== prim.id);
   const area = (ext || prim).bounds;
@@ -98,6 +99,7 @@ function openWall() {
   hardenNav(wall);
   wall.on("closed", () => { wall = null; });
   wall.loadFile(path.join(__dirname, "index.html"), { query: { wall: "1" } });
+  return wall;
 }
 
 /* ---- aggiornamenti automatici (GitHub Releases del repository pubblico) ---- */
@@ -165,6 +167,18 @@ ipcMain.handle("bot:status", () => (bot ? bot.status() : null));
 ipcMain.handle("bot:config", (_e, c) => (bot ? bot.configure(c) : null));
 ipcMain.handle("bot:decide", (_e, id, ok) => (bot ? bot.decide(id, ok) : false));
 ipcMain.handle("bot:png", (_e, id, data) => { if (bot) bot.pngReply(id, data); });
+/* Diretta: la finestra nascosta compone, ffmpeg trasmette (streamer.js) */
+let streamer = null;
+ipcMain.handle("stream:status", () => (streamer ? streamer.status() : null));
+ipcMain.handle("stream:config", (_e, c) => (streamer ? streamer.configure(c) : null));
+ipcMain.handle("stream:start", () => (streamer ? streamer.start() : null));
+ipcMain.handle("stream:stop", () => (streamer ? streamer.stop() : null));
+ipcMain.handle("stream:scene", (_e, s, cam) => (streamer ? streamer.scene(s, cam) : null));
+ipcMain.handle("stream:sources", () => (streamer ? streamer.sources() : null));
+ipcMain.handle("stream:getPreview", () => (streamer ? streamer.getPreview() : null));
+ipcMain.on("stream:ready", (_e, r) => { if (streamer) streamer.ready(r); });
+ipcMain.on("stream:chunk", (_e, gen, buf) => { if (streamer) streamer.chunk(gen, buf); });
+ipcMain.on("stream:preview", (_e, d) => { if (streamer) streamer.preview(d); });
 ipcMain.handle("update:check", async () => {
   if (!updater) return { state: app.isPackaged ? "error" : "dev" };
   try { await updater.checkForUpdates(); return { state: "checking" }; } catch (e) { return { state: "error", message: String(e.message || e) }; }
@@ -185,6 +199,22 @@ app.whenReady().then(() => {
     onChange: () => toPage({ type: "status" })
   });
   bot.start().catch(() => {});
+  /* telecamere, microfono e cattura di finestre: solo per le pagine del programma */
+  const own = (u) => String(u || "").startsWith("file://");
+  session.defaultSession.setPermissionRequestHandler((wc, perm, cb) => cb(own(wc.getURL()) && (perm === "media" || perm === "display-capture")));
+  session.defaultSession.setPermissionCheckHandler((wc, perm, origin) => own(wc ? wc.getURL() : origin) && (perm === "media" || perm === "display-capture"));
+  streamer = createStreamer({
+    file: path.join(app.getPath("userData"), "stream.json"),
+    logFile: path.join(ROOT, "diretta-ffmpeg.log"),
+    saveDir: DIRS.dirette,
+    webPreferences,
+    getMain: () => win,
+    getWall: () => new Promise((res) => { const had = !!wall; const w = openWall(); if (had) return res(w); w.webContents.once("did-finish-load", () => setTimeout(() => res(w), 1200)); }),
+    onStatus: (s) => { if (win) win.webContents.send("stream", s); },
+    onLive: (links) => { if (bot) bot.liveStarted(links); },
+    onEnd: () => { if (bot) bot.liveEnded(); }
+  });
+  bot.setStreamer(streamer);
 });
-app.on("before-quit", () => { if (bot) bot.stop(); });
+app.on("before-quit", () => { if (bot) bot.stop(); if (streamer) streamer.dispose(); });
 app.on("window-all-closed", () => app.quit());

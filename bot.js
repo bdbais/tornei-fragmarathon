@@ -23,6 +23,7 @@ const HELP = [
   "/seguiti – i tornei che segui",
   "/iscrivimi <i>torneo</i> – iscriviti a un torneo aperto",
   "/immagine <i>nome</i> – immagine del torneo",
+  "/diretta – dove guardare la diretta",
   "/stop – non ricevere più nulla"
 ].join("\n");
 const COMMANDS = [
@@ -30,7 +31,7 @@ const COMMANDS = [
   ["partite", "Partite da giocare adesso"], ["risultati", "Podi dei tornei conclusi"], ["hof", "Hall of Fame"],
   ["giocatore", "Cerca un giocatore"], ["io", "Collega il tuo nome"], ["miepartite", "Le tue prossime partite"],
   ["segui", "Ricevi gli avvisi di un torneo"], ["nonseguire", "Smetti di seguire"], ["seguiti", "Tornei che segui"],
-  ["iscrivimi", "Iscriviti a un torneo"], ["immagine", "Immagine del torneo"], ["aiuto", "Elenco dei comandi"], ["stop", "Non ricevere più nulla"]
+  ["iscrivimi", "Iscriviti a un torneo"], ["immagine", "Immagine del torneo"], ["diretta", "Dove guardare la diretta"], ["aiuto", "Elenco dei comandi"], ["stop", "Non ricevere più nulla"]
 ];
 
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]); }
@@ -50,6 +51,7 @@ function chunks(text, max) {
 
 module.exports = function createBot(opts) {
   const file = opts.file;
+  let streamer = null, liveLinks = null;
   let cfg = load(), vm = null, prev = null, running = false, ctrl = null, me = null, lastErr = "", lastOk = 0;
   const waits = {}, pngWait = {};
   let queue = Promise.resolve();
@@ -115,6 +117,37 @@ module.exports = function createBot(opts) {
     if (t.open && cfg.join !== "off") rows.push([{ text: "Iscriviti", callback_data: "I:" + t.k }]);
     rows.push([{ text: "‹ Tutti i tornei", callback_data: "L" }]);
     return rows;
+  }
+  function linksText(L) {
+    const ok = (L || []).filter((l) => l.url);
+    return ok.length ? ok.map((l) => "▶️ " + esc(l.name) + ": " + esc(l.url)).join("\n") : "(il link non è stato impostato: chiedi all'organizzatore)";
+  }
+  function liveKb() {
+    if (!streamer) return null;
+    const S = streamer.SCENES;
+    return Object.keys(S).map((k) => [{ text: S[k], callback_data: "V:" + k }]).concat([[{ text: "⏹ Ferma la diretta", callback_data: "V:stop" }]]);
+  }
+  async function liveCmd(chatId, arg, isAdmin) {
+    const a = norm(arg).split(" ")[0];
+    if (!a || !isAdmin) {
+      if (liveLinks) return send(chatId, "🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks));
+      if (!isAdmin) return send(chatId, "Nessuna diretta in corso, per ora. Ti avviso io quando parte.");
+    }
+    if (!streamer) return send(chatId, "La diretta non è disponibile su questo programma.");
+    if (a === "avvia" || a === "start") {
+      send(chatId, "Avvio la diretta…");
+      const st = await streamer.start();
+      return st.err && !st.starting && !st.live ? send(chatId, "❌ Non partita: " + esc(st.err)) : null;
+    }
+    if (a === "ferma" || a === "stop") { streamer.stop(); return send(chatId, "⏹ Diretta fermata."); }
+    if (a === "scena") {
+      const sc = norm(arg).split(" ")[1];
+      if (sc && streamer.SCENES[sc]) { streamer.scene(sc); return send(chatId, "Scena: " + esc(streamer.SCENES[sc])); }
+      return send(chatId, "Quale scena?", liveKb());
+    }
+    const st = streamer.status();
+    return send(chatId, (st.live ? "🔴 In diretta da " + Math.round((Date.now() - st.since) / 60000) + " minuti, " + st.kbps + " kbit/s, scena: " + esc(streamer.SCENES[st.scene] || st.scene) : st.starting ? "Diretta in avvio…" : "Diretta spenta." + (st.err ? "\nUltimo errore: " + esc(st.err) : "")) +
+      "\n\n/diretta avvia – /diretta ferma – /diretta scena", st.live ? liveKb() : [[{ text: "▶️ Avvia la diretta", callback_data: "V:avvia" }]]);
   }
   function listMsg() {
     const L = T();
@@ -253,6 +286,7 @@ module.exports = function createBot(opts) {
       if (a === "G" && t) return photo(chatId, t);
       if (a === "I" && t) return joinStart(chatId, from, t, null);
       if ((a === "A" || a === "X") && isAdmin) return decide(k, a === "A", chatId);
+      if (a === "V" && isAdmin && streamer) { if (k === "stop") return liveCmd(chatId, "ferma", true); if (k === "avvia") return liveCmd(chatId, "avvia", true); return liveCmd(chatId, "scena " + k, true); }
       return;
     }
     if (waits[chatId] && !text.startsWith("/")) { const w = waits[chatId]; delete waits[chatId]; if (w.type === "join") return joinStart(chatId, from, find(w.k), text); }
@@ -265,7 +299,7 @@ module.exports = function createBot(opts) {
     switch (cmd) {
       case "start": case "aiuto": case "help": {
         const m = listMsg();
-        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>.\n\n" + HELP + (isAdmin ? "\n\n<b>Organizzatori</b>\n/richieste – iscrizioni da confermare\n/annuncio <i>testo</i> – messaggio a tutti" : ""), m.kb);
+        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isAdmin ? "\n\n<b>Organizzatori</b>\n/richieste – iscrizioni da confermare\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), m.kb);
       }
       case "tornei": { const m = listMsg(); return send(chatId, m.text, m.kb); }
       case "torneo": { const t = find(arg); if (!t) { const m = listMsg(); return send(chatId, (arg ? "Non trovo «" + esc(arg) + "».\n\n" : "") + m.text, m.kb); } const d = detailMsg(t, chatId); return send(chatId, d.text, d.kb); }
@@ -285,6 +319,7 @@ module.exports = function createBot(opts) {
       case "seguiti": { const f = c.follow || {}; if (f.all) return send(chatId, "Segui tutti i tornei."); const L = (f.games || []).map((k) => find(k)).filter(Boolean); return send(chatId, L.length ? "Segui:\n" + L.map(tTitle).join("\n") : "Non segui nessun torneo. Usa /segui <i>nome</i> o /segui tutti."); }
       case "iscrivimi": { const parts = arg.split("|"); return joinStart(chatId, from, find(parts[0]), parts[1] ? parts[1].trim() : null); }
       case "immagine": return photo(chatId, find(arg));
+      case "diretta": case "live": return liveCmd(chatId, arg, isAdmin);
       case "stop": delete cfg.chats[chatId]; cfg.admins = cfg.admins.filter((a) => a !== chatId); persist(); return send(chatId, "Fatto: non riceverai più messaggi. Per ricominciare scrivi /start.");
       case "admin":
         if (arg && arg === cfg.code) { if (!cfg.admins.includes(chatId)) cfg.admins.push(chatId); cfg.code = newCode(); persist(); opts.onChange && opts.onChange(); return send(chatId, "🔑 Ora sei un organizzatore: riceverai le richieste di iscrizione da confermare.\n/richieste per vederle."); }
@@ -362,6 +397,15 @@ module.exports = function createBot(opts) {
       return status();
     },
     decide(id, ok) { return decide(id, ok, null); },
+    setStreamer(s) { streamer = s; },
+    /* la diretta è partita: avviso a tutte le chat del bot, con dove guardarla */
+    liveStarted(L) {
+      liveLinks = L || [];
+      if (!running) return;
+      const t = vm ? vm.title : "Tornei";
+      Object.keys(cfg.chats).forEach((id) => send(id, "🔴 <b>" + esc(t) + " è in diretta!</b>\n\n" + linksText(liveLinks)));
+    },
+    liveEnded() { liveLinks = null; },
     pngReply(id, data) { if (pngWait[id]) { const f = pngWait[id]; delete pngWait[id]; f(data); } }
   };
 };

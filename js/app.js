@@ -133,7 +133,7 @@ function renderTabs(){
   var HELPI=svg+'<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.3"/></svg>';
   var TROPHY=svg+'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/></svg>';
   function t(k,ic,l){return'<button class="tab" role="tab" data-k="'+k+'" aria-selected="'+(k===S.cur)+'">'+ic+l+'</button>'}
-  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><label class="skinsel">Tema <select id="skin" aria-label="Tema dei colori">'+skinOpts((S.ui&&S.ui.skin)||"auto")+'</select></label><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
+  $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+(window.desk&&window.desk.streamStatus?'<button class="tab" id="livebtn" title="Diretta su YouTube e Twitch"><span class="ldot" aria-hidden="true"></span>Diretta</button>':'')+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><label class="skinsel">Tema <select id="skin" aria-label="Tema dei colori">'+skinOpts((S.ui&&S.ui.skin)||"auto")+'</select></label><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
   $("tabs").innerHTML=Object.keys(DEF).map(function(k){return t(k,ico(k),esc(DEF[k].l)+platBadge(k))}).join("")+'<button class="tab" id="plus" aria-label="Aggiungi un gioco" title="Aggiungi un gioco">+</button>';
 }
 function renderSetup(){
@@ -300,7 +300,7 @@ function render(){
   var v=S.cur,isG=!!DEF[v];
   $("rosterBox").hidden=v!=="roster";$("resbox").hidden=v!=="results";$("sqbox").hidden=v!=="squadre";$("hofbox").hidden=v!=="hof";$("setup").hidden=!isG;$("out").hidden=!isG;
   if(v==="hof")renderHof();else if(v==="results")renderResults();else if(v==="squadre")renderSquadre();else if(isG){renderSetup();renderOut()}
-  renderArch();document.title=(S.ui.title||UI0.title)+(isG?" — "+DEF[v].l:"");
+  strDot();renderArch();document.title=(S.ui.title||UI0.title)+(isG?" — "+DEF[v].l:"");
 }
 
 var TEAMS=["ALPHA","DELTA","BRAVO","FOX","OMEGA","WOLF","ACE","SKYNET","VIPER","GHOST","TITAN","RAVEN","COBRA","REAPER","HAWK","STORM","PHANTOM","BLADE"];
@@ -759,6 +759,7 @@ function addPlayer(){
 $("tabs0").onclick=$("tabs").onclick=function(e){var b=e.target.closest("button");if(!b)return;
   if(b.id==="undo"){undo();return}
   if(b.id==="helpbtn"){openHelp(helpCtx());return}
+  if(b.id==="livebtn"){var lb=$("livebox");lb.hidden=!lb.hidden;if(!lb.hidden){renderLive();strRefresh();lb.scrollIntoView({block:"nearest"})}return}
   if(b.id==="plus"){var ag=$("addgame");ag.hidden=!ag.hidden;if(!ag.hidden)$("agname").focus();return}
   S.cur=b.dataset.k;armed=false;save();render()};
 $("tabs0").addEventListener("change",function(e){if(e.target.id==="skin"){S.ui.skin=e.target.value;save();render()}});
@@ -791,8 +792,8 @@ function renderEdit(){
    +renderAi()
    +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row"><button id="ecssimp">Importa file .css…</button><button id="ecssexp">Scarica il modello</button>'+(S.ui.css?'<button id="ecssdel">Rimuovi il CSS</button>':'')+'<input type="file" id="ecf" accept=".css,text/css" hidden></div>'
    +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
-   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings();
-  $("editform").innerHTML=h;botRefresh();
+   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings()+renderStreamSettings();
+  $("editform").innerHTML=h;botRefresh();strFill();
 }
 
 /* ---------- logo con l'AI (impostazioni per questo PC, fuori dai backup perché possono contenere una chiave) ---------- */
@@ -923,6 +924,89 @@ function renderBotSettings(){
 }
 function botCfg(c){if(!DESK||!DESK.botConfig)return;DESK.botConfig(c).then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st);if(st&&st.running)botPush()}).catch(function(){})}
 
+
+/* ======================================================================
+   Diretta su YouTube / Twitch (solo app installata: vedi streamer.js e js/stream.js)
+   ====================================================================== */
+var STR=window.desk&&window.desk.streamStatus?window.desk:null,strSt=null,strPrevT=null,strSrc=null;
+function strFmtTime(ms){var s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+":":"")+(h&&m<10?"0":"")+m+":"+(x<10?"0":"")+x}
+function strDot(){var b=$("livebtn");if(!b||!strSt)return;b.classList.toggle("on",!!strSt.live);b.classList.toggle("wait",!!strSt.starting&&!strSt.live)}
+function renderLive(){
+  var el=$("livebox");if(!el||el.hidden)return;var s=strSt;
+  if(!s){el.innerHTML='<h2 id="liveh">Diretta</h2><p class="hint">Caricamento…</p>';return}
+  var c=s.config,dest=[c.yt.on&&c.yt.hasKey?"YouTube":"",c.tw.on&&c.tw.hasKey?"Twitch":"",c.rtmp.on&&c.rtmp.url?"RTMP":""].filter(Boolean),state;
+  if(s.live)state='<span class="livepill">● IN DIRETTA</span> da '+strFmtTime(Date.now()-s.since)+' · '+s.kbps+' kbit/s · '+Math.round(s.fps)+' fps · '+esc(s.encoder.replace("h264_","").replace("libx264","processore"));
+  else if(s.starting)state='<span class="livepill wait">Avvio…</span>';
+  else state='Spenta';
+  var h='<h2 id="liveh">Diretta'+helpBtn("diretta")+'</h2><div class="livegrid"><div><img id="liveprev" class="liveprev" alt="Anteprima della diretta"'+(s.live||s.starting?'':' hidden')+'><div class="liveoff"'+(s.live||s.starting?' hidden':'')+'>L&#39;anteprima compare quando la diretta è avviata.</div></div><div>'
+   +'<p style="margin:0 0 8px" id="livestate">'+state+'</p>'
+   +'<p class="cres err" id="liveerr"'+(s.err?'':' hidden')+'>'+esc(s.err||"")+'</p>'
+   +'<p class="hint" style="margin:0 0 10px">Verso: '+(dest.length?dest.join(", "):'<b>nessuna destinazione</b>: impostala in IMPOSTAZIONI, sezione Diretta')+(c.save?' + copia su disco':'')+'</p>'
+   +'<div class="row">'+(s.live||s.starting?'<button id="livestop">Ferma la diretta</button>':'<button class="p" id="livego"'+(dest.length||c.save?'':' disabled')+'>Avvia la diretta</button>')+'<button id="liveset">Impostazioni</button></div>'
+   +'<h3 style="margin:14px 0 6px">Scena</h3><div class="row livescenes">'+Object.keys(s.scenes).map(function(k){return'<button data-scene="'+k+'"'+(s.scene===k?' class="p" aria-pressed="true"':' aria-pressed="false"')+'>'+esc(s.scenes[k])+'</button>'}).join("")+'</div>'
+   +(c.cams.length>1?'<div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Telecamera principale:</span>'+c.cams.map(function(x,i){return'<button data-livecam="'+i+'"'+(c.cam===i?' class="p"':'')+'>'+(i+1)+'</button>'}).join("")+'</div>':'')
+   +(s.links.some(function(l){return l.url})?'<p class="hint">Si guarda su: '+s.links.filter(function(l){return l.url}).map(function(l){return esc(l.name)+' <a href="'+esc(l.url)+'" target="_blank" rel="noopener">'+esc(l.url)+'</a>'}).join(" · ")+'</p>':'')
+   +'<p class="hint">Quando la diretta parte, il bot Telegram avvisa tutte le chat con questi link.</p></div></div>';
+  el.innerHTML=h;strPrev();
+}
+function strPrev(){
+  clearTimeout(strPrevT);if(!STR||!strSt||!(strSt.live||strSt.starting)||$("livebox").hidden)return;
+  STR.streamGetPreview().then(function(d){var i=$("liveprev");if(i&&d)i.src=d}).catch(function(){});
+  strPrevT=setTimeout(strPrev,1000);
+}
+function strRefresh(){if(!STR)return;STR.streamStatus().then(function(s){strSt=s;strDot();renderLive()}).catch(function(){})}
+if(STR){
+  STR.onStream(function(s){
+    var old=strSt,same=old&&old.live===s.live&&old.starting===s.starting&&old.scene===s.scene&&old.config.cam===s.config.cam;strSt=s;strDot();
+    if(!$("livebox").hidden){
+      if(same&&$("livestate")){$("livestate").innerHTML=s.live?'<span class="livepill">● IN DIRETTA</span> da '+strFmtTime(Date.now()-s.since)+' · '+s.kbps+' kbit/s · '+Math.round(s.fps)+' fps · '+esc(s.encoder.replace("h264_","").replace("libx264","processore")):s.starting?'<span class="livepill wait">Avvio…</span>':'Spenta';var e=$("liveerr");if(e){e.hidden=!s.err;e.textContent=s.err||""}}
+      else renderLive();
+    }
+    if(s.live&&!(old&&old.live))toast("Sei in diretta. Il bot Telegram ha avvisato tutti.");
+  });
+  strRefresh();
+}
+$("livebox").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||!STR)return;
+  if(b.id==="livego"){b.disabled=true;b.textContent="Avvio…";STR.streamStart().then(function(s){strSt=s;renderLive()});return}
+  if(b.id==="livestop"){STR.streamStop().then(function(s){strSt=s;renderLive()});return}
+  if(b.id==="liveset"){var eb=$("editbox");eb.hidden=false;renderEdit();var t=$("strbox");if(t)t.scrollIntoView({block:"start"});return}
+  if(b.dataset.scene){STR.streamScene(b.dataset.scene).then(function(s){strSt=s;renderLive()});return}
+  if(b.dataset.livecam!==undefined){STR.streamScene(strSt.scene,+b.dataset.livecam).then(function(s){strSt=s;renderLive()})}
+});
+function strHtml(s,src){
+  var c=s.config,o=function(v,cur,l){return'<option value="'+esc(v)+'"'+(v===cur?" selected":"")+'>'+esc(l)+'</option>'};
+  var h='<div class="strform">'
+   +'<fieldset><legend><label class="chk"><input type="checkbox" id="s_yt_on"'+(c.yt.on?" checked":"")+'>YouTube</label></legend><div class="row"><input type="password" id="s_yt_key" autocomplete="off" placeholder="'+(c.yt.hasKey?"Chiave salvata "+esc(c.yt.keyHint)+": lascia vuoto per non cambiarla":"Chiave di trasmissione (YouTube Studio, Trasmetti dal vivo)")+'"><input type="text" id="s_yt_link" placeholder="Link per gli spettatori, es. https://youtube.com/@canale/live" value="'+esc(c.yt.link)+'"></div></fieldset>'
+   +'<fieldset><legend><label class="chk"><input type="checkbox" id="s_tw_on"'+(c.tw.on?" checked":"")+'>Twitch</label></legend><div class="row"><input type="password" id="s_tw_key" autocomplete="off" placeholder="'+(c.tw.hasKey?"Chiave salvata "+esc(c.tw.keyHint)+": lascia vuoto per non cambiarla":"Chiave di trasmissione (Twitch, Dashboard creatore, Trasmissione)")+'"><input type="text" id="s_tw_ch" placeholder="Nome del canale, es. fragmarathon" value="'+esc(c.tw.channel)+'"></div></fieldset>'
+   +'<fieldset><legend><label class="chk"><input type="checkbox" id="s_rt_on"'+(c.rtmp.on?" checked":"")+'>Altro server RTMP</label></legend><div class="row"><input type="text" id="s_rt_url" placeholder="rtmp://… oppure rtmps://…" value="'+esc(c.rtmp.url)+'"><input type="password" id="s_rt_key" autocomplete="off" placeholder="'+(c.rtmp.hasKey?"Chiave salvata":"Chiave (facoltativa)")+'"><input type="text" id="s_rt_link" placeholder="Link per gli spettatori" value="'+esc(c.rtmp.link)+'"></div></fieldset>'
+   +'<div class="row" style="margin-top:10px"><label class="row" style="gap:6px">Qualità <select id="s_q">'+s.qualities.map(function(q){return o(q,c.quality,q.replace("p"," p ").replace(/ p (\d+)/," p, $1 fps"))}).join("")+'</select></label>'
+   +'<label class="row" style="gap:6px">Bitrate <input type="number" id="s_kbps" min="0" max="20000" step="500" value="'+(c.kbps||0)+'" style="width:100px"> kbit/s <span class="hint" style="margin:0">(0 = automatico)</span></label></div>'
+   +'<div class="row" style="margin-top:10px"><label class="row" style="gap:6px;flex:1 1 100%">Finestra da trasmettere <select id="s_src">'+o("wall",c.source,"Schermo proiettore (consigliato)")+o("main",c.source,"Finestra principale del programma")
+   +(src?src.screens.map(function(x,i){return o(x.id,c.source,"Schermo intero "+(i+1))}).join("")+src.windows.filter(function(x){return!/Tornei Fragmarathon/.test(x.name)}).map(function(x){return o(x.id,c.source,"Finestra: "+x.name.slice(0,60))}).join(""):"")+'</select></label></div>'
+   +'<div style="margin-top:10px"><span class="hint" style="margin:0">Telecamere (fino a 4):</span><div class="row">'+(src&&src.cams.length?src.cams.map(function(x){return'<label class="row chk"><input type="checkbox" class="s_cam" value="'+esc(x.id)+'"'+(c.cams.indexOf(x.id)>=0?" checked":"")+'>'+esc(x.name)+'</label>'}).join(""):'<span class="hint" style="margin:0">'+(src?"Nessuna telecamera collegata.":"Cerco le telecamere…")+'</span>')+'</div></div>'
+   +'<div class="row" style="margin-top:10px"><label class="row" style="gap:6px">Microfono <select id="s_mic">'+o("",c.mic,"Nessuno")+(src?src.mics.map(function(x){return o(x.id,c.mic,x.name)}).join(""):"")+'</select></label><label class="row chk"><input type="checkbox" id="s_pca"'+(c.pcAudio?" checked":"")+'>Audio del PC (quello che si sente dalle casse)</label></div>'
+   +'<div class="row" style="margin-top:10px"><label class="row chk"><input type="checkbox" id="s_ov"'+(c.overlay?" checked":"")+'>Titolo dell&#39;evento e logo in sovrimpressione</label><label class="row chk"><input type="checkbox" id="s_save"'+(c.save?" checked":"")+'>Salva anche una copia in Documenti\\Tornei Fragmarathon\\dirette</label></div>'
+   +'<div class="row" style="margin-top:12px"><button class="p" id="s_ok">Salva impostazioni della diretta</button><button id="s_open">Apri i comandi della diretta</button><span class="hint" style="margin:0" id="s_msg"></span></div></div>';
+  return h;
+}
+function renderStreamSettings(){return'<h3 style="margin-top:20px">Diretta su YouTube e Twitch</h3><p class="hint">Trasmette lo schermo del proiettore (o un&#39;altra finestra) con una o più telecamere, anche su YouTube e Twitch insieme. Le chiavi restano solo su questo PC. Guida: F1, «Diretta».</p>'+(STR?'<div id="strbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">Disponibile solo nell&#39;app installata per Windows.</p>')}
+function strFill(){
+  var b=$("strbox");if(!b||!STR)return;
+  STR.streamStatus().then(function(s){strSt=s;var x=$("strbox");if(x)x.innerHTML=strHtml(s,strSrc)});
+  STR.streamSources().then(function(src){strSrc=src;var x=$("strbox");if(x&&strSt&&!x.contains(document.activeElement))x.innerHTML=strHtml(strSt,src)}).catch(function(){});
+}
+function strSave(){
+  var v=function(id){var e=$(id);return e?e.value:""},ck=function(id){var e=$(id);return!!(e&&e.checked)};
+  var c={yt:{on:ck("s_yt_on"),link:v("s_yt_link")},tw:{on:ck("s_tw_on"),channel:v("s_tw_ch")},rtmp:{on:ck("s_rt_on"),url:v("s_rt_url"),link:v("s_rt_link")},
+    quality:v("s_q"),kbps:parseInt(v("s_kbps"),10)||0,source:v("s_src"),mic:v("s_mic"),pcAudio:ck("s_pca"),overlay:ck("s_ov"),save:ck("s_save"),
+    cams:[].slice.call(document.querySelectorAll(".s_cam:checked")).map(function(x){return x.value})};
+  if(v("s_yt_key").trim())c.yt.key=v("s_yt_key");if(v("s_tw_key").trim())c.tw.key=v("s_tw_key");if(v("s_rt_key").trim())c.rtmp.key=v("s_rt_key");
+  if(c.cams.length>4){toast("Al massimo 4 telecamere.");return}
+  if(c.yt.on&&c.yt.link&&!/^https?:\/\//i.test(c.yt.link)){toast("Il link di YouTube deve iniziare con https://");return}
+  STR.streamConfig(c).then(function(s){strSt=s;var x=$("strbox");if(x)x.innerHTML=strHtml(s,strSrc);var m=$("s_msg");if(m)m.textContent="Salvato.";renderLive()});
+}
+
 var CSSTPL="/* Tornei Fragmarathon: CSS personalizzato.\n   Importalo da IMPOSTAZIONI > CSS personalizzato. Vale sopra a qualsiasi tema.\n   :root:not(#x) serve a vincere su tema e chiaro/scuro di Windows. */\n\n:root:not(#x){\n  --bg:#101418;      /* sfondo della pagina */\n  --panel:#182028;   /* sfondo dei pannelli */\n  --ink:#F2F4F7;     /* testo */\n  --mut:#A9B4C2;     /* testo secondario */\n  --line:#2A3542;    /* righe sottili */\n  --edge:#3E4C5C;    /* bordi e intestazioni delle tabelle */\n  --acc:#FF5A1F;     /* colore principale: pulsanti, qualificati, vincitori */\n  --accink:#111111;  /* testo sopra al colore principale */\n  --win:var(--acc);\n  --gold:var(--acc);\n  --wacc:#FF5A1F;    /* colore principale sul proiettore (su fondo nero) */\n}\n\n/* Intestazione: righe e bagliore */\n.brand{}\n.brand h1{}\n.brand .tag{}\n\n/* Proiettore: il pannello mostrato */\n#wfit{}\n#wall .wh{}\n";
 function readLogo(file){
   var rd=new FileReader();
@@ -963,6 +1047,8 @@ $("editbox").onclick=function(e){
   if(b.id==="ecancel"){$("editbox").hidden=true;return}
   if(b.id==="elogo"){$("elf").click();return}
   if(b.id==="aigo"){if(!aiBusy)aiRun();return}
+  if(b.id==="s_ok"){strSave();return}
+  if(b.id==="s_open"){var lb=$("livebox");lb.hidden=false;renderLive();lb.scrollIntoView({block:"start"});return}
   if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
   if(b.id==="botdel"){botCfg({removeToken:true});return}
   if(b.id==="botcode"){botCfg({newCode:true});return}
@@ -1693,7 +1779,7 @@ function wPoll(){
   if(wS.gal&&wItems.length>1&&Date.now()-wT>=wS.sec*1000)wGo(1);
 }
 function wallInit(){
-  applyUi();document.body.classList.add("wall");document.title=(S.ui.title||UI0.title)+" — Proiettore";
+  applyUi();document.body.classList.add("wall");if(/[?&]stream=1/.test(location.search))document.body.classList.add("streamwall","nocur");document.title=(S.ui.title||UI0.title)+" — Proiettore";
   var w=document.createElement("div");w.id="wall";
   w.innerHTML='<div id="wstage"><header class="wh"><span id="wico"></span><div class="wht"><h1 id="wtitle"></h1><p id="wsub"></p></div><div class="wpg" id="wpg"></div></header><div id="wbody"></div><div class="wbar"><i id="wprog"></i></div></div>'
    +'<div class="wctl" id="wctl" role="toolbar" aria-label="Comandi del proiettore"><button data-w="prev" title="Pannello precedente (PgUp)" aria-label="Pannello precedente">◀</button><button data-w="next" title="Pannello successivo (PgDn)" aria-label="Pannello successivo">▶</button>'
