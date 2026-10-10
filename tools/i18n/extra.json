@@ -1,0 +1,15 @@
+{
+  "_nota": "Frasi composte nel codice a pezzi: qui intere, così il traduttore le trova esatte. tools/i18n-extract.mjs le aggiunge a ui.",
+  "ui": ["Aggiungi giocatore", "Aggiungi squadra", "Nome giocatore", "Nome squadra"],
+  "tr": {
+    "en": ["Add player", "Add team", "Player name", "Team name"],
+    "es": ["Añadir jugador", "Añadir equipo", "Nombre del jugador", "Nombre del equipo"],
+    "fr": ["Ajouter un joueur", "Ajouter une équipe", "Nom du joueur", "Nom de l'équipe"],
+    "de": ["Spieler hinzufügen", "Team hinzufügen", "Spielername", "Teamname"],
+    "ro": ["Adaugă jucător", "Adaugă echipă", "Numele jucătorului", "Numele echipei"],
+    "ru": ["Добавить игрока", "Добавить команду", "Имя игрока", "Название команды"],
+    "zh": ["添加选手", "添加队伍", "选手名称", "队伍名称"],
+    "ja": ["プレイヤーを追加", "チームを追加", "プレイヤー名", "チーム名"],
+    "vec": ["Zonta zogador", "Zonta squadra", "Nome del zogador", "Nome de la squadra"]
+  }
+}

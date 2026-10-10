@@ -23,6 +23,8 @@ function applyUi(){
   /* CSS personalizzato: in fondo al <head>, sopra a tema e stili di base */
   var cs=document.getElementById("customcss");if(!cs){cs=document.createElement("style");cs.id="customcss";document.head.appendChild(cs)}
   if(cs.textContent!==(S.ui.css||""))cs.textContent=S.ui.css||"";
+  /* lingua del torneo: proiettore, immagini, PDF e bot */
+  if(window.I18N)I18N.setEv((S.ev&&S.ev.lang)||"it");
 }
 initS();registerCustom();normGames();
 if(!DEF[S.cur])S.cur="quake";
@@ -938,7 +940,7 @@ function botResults(g,k){
 function botVM(){
   var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
   function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
-  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",when:evWhen(),place:(S.ev&&S.ev.place)||"",mode:(S.ev&&S.ev.mode)||"lan",addr:(S.ev&&S.ev.addr)||"",maps:(S.ev&&(S.ev.maps||(S.ev.addr&&S.ev.mode!=="online"?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(S.ev.addr):"")))||""},roster:S.roster.slice(),
+  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,lang:(S.ev&&S.ev.lang)||"it",draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",when:evWhen(),place:(S.ev&&S.ev.place)||"",mode:(S.ev&&S.ev.mode)||"lan",addr:(S.ev&&S.ev.addr)||"",maps:(S.ev&&(S.ev.maps||(S.ev.addr&&S.ev.mode!=="online"?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(S.ev.addr):"")))||""},roster:S.roster.slice(),
     tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,draft:!!g.draft,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
     hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
 }

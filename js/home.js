@@ -8,6 +8,7 @@
   "use strict";
   var A = window.__app;
   if (!A || A.WALL) return;
+  var LANGS = (window.I18NCORE && window.I18NCORE.LANGS) || [["it", "Italiano"]];
   var D = A.DESK, esc = A.esc, IDXK = "tornei-evidx", EVK = "tornei-ev:", PREFK = "tornei-home";
   var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null, vmCache = {}, curVM = null, othT = null;
 
@@ -73,7 +74,7 @@
     return thumb(S.ui && S.ui.logo).then(function (lg) {
       var acc = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim(), ev = S.ev || {};
       return {
-        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", place: ev.place || "",
+        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", lang: ev.lang || "it", place: ev.place || "",
         color: ev.color || "", accent: acc, logo: lg, games: A.games(JSON.parse(JSON.stringify(S))),
         players: (S.roster || []).length, bot: ev.bot || "", pinned: !!ev.pinned, draft: !!ev.draft, created: ev.created || Date.now(), updated: Date.now()
       };
@@ -152,7 +153,7 @@
         if (!keep) { st.roster = []; st.teams = []; }
       } else st = { cur: "quake", roster: [], games: {}, ui: {} };
       st.ui = st.ui || {}; st.ui.title = f.title; st.ui.sub = f.sub;
-      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
+      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), lang: f.lang || (window.I18N ? I18N.ui() : "it"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
       A.load(st); useBot(st); creating = false; laterOthers();
       return flush().then(function () { close(); A.toast("Torneo creato: " + f.title + ". Aggiungi giochi e giocatori."); });
     }).catch(function (e) { A.toast("Non riesco a creare il torneo: " + ((e && e.message) || e)); });
@@ -160,7 +161,7 @@
   function editEv(id, f) {
     function apply(st) {
       st.ui = st.ui || {}; st.ev = st.ev || {};
-      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); }
+      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); st.ev.lang = f.lang || "it"; }
       if (f.bot !== undefined) st.ev.bot = f.bot;
       if (f.pinned !== undefined) st.ev.pinned = f.pinned;
     }
@@ -171,7 +172,7 @@
     return store.read(id).then(function (t) {
       var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
       apply(st);
-      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.place = st.ev.place || ""; m.color = st.ev.color || "";
+      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
       m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
       return store.write(id, wrap(st, m));
     }).then(render).catch(function (e) { A.toast("Modifica non salvata: " + ((e && e.message) || e)); });
@@ -302,6 +303,7 @@
       '<label>Ora<input type="time" name="time" value="' + esc(m.time || "") + '"></label>' +
       '<label>Luogo<input name="place" maxlength="80" value="' + esc(m.place || "") + '" placeholder="Città o sala"></label>' +
       '<label class="col">Colore<input type="color" name="color" value="' + esc(evColor(m)) + '"></label>' + bo +
+      '<label>Lingua del torneo<select name="lang" data-noi18n>' + LANGS.map(function (l) { return '<option value="' + l[0] + '"' + ((m.lang || "it") === l[0] ? " selected" : "") + '>' + esc(l[1]) + '</option>'; }).join("") + '</select><small>Per proiettore, diretta, immagini, PDF e bot.</small></label>' +
       '<label>Si gioca<select name="mode"><option value="lan"' + (m.mode !== "online" && m.mode !== "ibrido" ? " selected" : "") + '>In presenza (LAN party)</option><option value="online"' + (m.mode === "online" ? " selected" : "") + '>Online</option><option value="ibrido"' + (m.mode === "ibrido" ? " selected" : "") + '>In presenza e online</option></select></label>' +
       '<label class="wide">Indirizzo della location<input name="addr" maxlength="160" value="' + esc(m.addr || "") + '" placeholder="Via, numero, città (per l\'online: piattaforma o server, es. Discord)"></label>' +
       '<label class="wide">Link Google Maps<input type="text" inputmode="url" name="maps" value="' + esc(m.maps || "") + '" placeholder="https://maps.app.goo.gl/… (vuoto: lo creo dall\'indirizzo)"><small>In Google Maps cerca il posto, tocca <b>Condividi</b> e poi <b>Copia link</b>, e incollalo qui.</small></label>' +
@@ -321,7 +323,7 @@
     var pin = '<button class="ev-pin" data-a="pin" aria-pressed="' + (m.pinned ? "true" : "false") + '" title="' + (m.pinned ? "Togli dai preferiti" : "Tieni in cima") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>';
     var body = editing === id ? editForm(m, id) :
       (hero && isCur ? '<p class="ev-kicker">Aperto adesso</p>' : "") +
-      '<h3 class="ev-t">' + esc(m.title || "Torneo senza nome") + (m.draft ? '<span class="ev-draft">in lavorazione</span>' : "") + '</h3>' + (m.sub ? '<p class="ev-sub">' + esc(m.sub) + '</p>' : "") + whenHtml(m) +
+      '<h3 class="ev-t">' + esc(m.title || "Torneo senza nome") + (m.lang && m.lang !== "it" ? '<span class="ev-lang" data-noi18n title="' + esc((LANGS.filter(function (l) { return l[0] === m.lang; })[0] || [0, m.lang])[1]) + '">' + esc(m.lang.toUpperCase()) + '</span>' : "") + (m.draft ? '<span class="ev-draft">in lavorazione</span>' : "") + '</h3>' + (m.sub ? '<p class="ev-sub">' + esc(m.sub) + '</p>' : "") + whenHtml(m) +
       linksHtml(m) + gamesHtml(m, hero) + statsHtml(m, e) + acts;
     return '<article class="ev' + (hero ? " hero" : "") + (isCur ? " cur" : "") + (e.broken ? " broken" : "") + '" data-id="' + esc(id) + '" style="--ev:' + esc(evColor(m)) + '">' +
       '<div class="ev-band">' + badge(m) + '</div><div class="ev-body">' + body + '</div>' + (editing === id ? "" : pin) + '</article>';

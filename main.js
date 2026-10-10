@@ -233,7 +233,7 @@ function mergeVM(parts) {
   return {
     title: multi ? (vis.length ? vis : parts).map((p) => p.vm.title).join(", ") : head.title, sub: multi ? "" : head.sub,
     draft: parts.every((p) => p.vm.draft), roster: [...new Set([].concat(...parts.map((p) => p.vm.roster || [])))],
-    tournaments: T, hof: head.hof, links: head.links || {}
+    tournaments: T, hof: head.hof, links: head.links || {}, lang: head.lang || "it"
   };
 }
 function distribute() {

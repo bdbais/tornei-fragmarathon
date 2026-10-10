@@ -165,5 +165,14 @@
     brand.appendChild(eb);
     if (row && !row.children.length) row.hidden = true;
   }
+  /* lingua dell'interfaccia */
+  if (brand && window.I18N) {
+    var ls = document.createElement("select");
+    ls.id = "langsel"; ls.setAttribute("data-noi18n", ""); ls.setAttribute("aria-label", "Lingua / Language"); ls.title = "Lingua dell'interfaccia / Interface language";
+    ls.innerHTML = window.I18N.LANGS.map(function (l) { return '<option value="' + l[0] + '">' + l[1] + '</option>'; }).join("");
+    ls.value = window.I18N.ui();
+    ls.addEventListener("change", function () { window.I18N.setUi(ls.value); });
+    brand.appendChild(ls);
+  }
   window.SECTIONS = { search: openSearch, refresh: process };
 })();

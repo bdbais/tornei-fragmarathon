@@ -9,8 +9,10 @@ const out = path.join(root, "site", "public", "app");
 const FILES = [
   "index.html", "manifest.webmanifest", "sw.js",
   "icon.png", "icon-192.png", "icon-512.png", "icon-maskable.png",
-  "js/formats.js", "js/help.js", "js/ai.js", "js/app.js", "js/tokens.js", "js/changelog.js", "js/crypt.js", "js/home.js", "js/sections.js", "css/home.css", "js/pwa.js", "css/ui.css", "css/themes.css"
+  "js/formats.js", "js/help.js", "js/ai.js", "js/i18n-core.js", "js/i18n.js", "js/app.js", "js/tokens.js", "js/changelog.js", "js/crypt.js", "js/home.js", "js/sections.js", "css/home.css", "js/pwa.js", "css/ui.css", "css/themes.css"
 ];
+/* dizionari delle lingue */
+for (const f of fs.readdirSync(path.join(root, "js", "lang"))) if (/\.js$/.test(f)) FILES.push("js/lang/" + f);
 
 fs.rmSync(out, { recursive: true, force: true });
 for (const f of FILES) {

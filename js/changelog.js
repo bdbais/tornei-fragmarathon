@@ -4,6 +4,11 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.6.0", d: "2026-10-10", t: "Dieci lingue", items: [
+      "Il programma parla italiano, inglese, spagnolo, francese, tedesco, rumeno, russo, cinese, giapponese e veneto: la lingua dell'interfaccia si sceglie in alto ed è ricordata su questo PC.",
+      "Ogni torneo ha la sua lingua (nel modulo Modifica): la usano proiettore, diretta, immagini, PDF e bot Telegram, anche i comandi del bot.",
+      "Anche la guida e le novità sono tradotte."
+    ] },
     { v: "3.5.4", d: "2026-10-10", t: "Luogo del torneo e token per versione", items: [
       "Nel torneo: si gioca in presenza, online o in entrambi i modi, indirizzo della location e link Google Maps (se manca lo crea dall'indirizzo); compaiono sulla scheda e nel benvenuto del bot.",
       "Nelle novità, i token di Claude spesi per ogni versione e il totale."

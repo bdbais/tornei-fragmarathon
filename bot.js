@@ -7,6 +7,15 @@
    mai nei backup dei tornei. */
 "use strict";
 const fs = require("fs");
+const path = require("path");
+const I18N = require("./js/i18n-core.js");
+/* dizionari js/lang/<codice>.js, caricati quando servono */
+const DICTS = {};
+function dictOf(code) {
+  code = I18N.pick(code); if (!code || code === "it") return null;
+  if (!(code in DICTS)) { try { DICTS[code] = require(path.join(__dirname, "js", "lang", code + ".js")); } catch { DICTS[code] = null; } }
+  return DICTS[code];
+}
 
 const HELP = [
   "<b>Comandi</b>",
@@ -100,7 +109,28 @@ module.exports = function createBot(opts) {
     } finally { clearTimeout(t); }
   }
   /* invii in coda, con un piccolo intervallo: Telegram limita circa 30 messaggi al secondo */
+  /* lingua del torneo (vm.lang): testi e pulsanti tradotti prima di partire */
+  /* i testi degli utenti (titolo, giochi, giocatori, squadre) restano come sono: si mettono da parte prima di tradurre */
+  let protVm = null, prot = [];
+  function protectList() {
+    if (protVm === vm) return prot;
+    protVm = vm; const set = new Set();
+    if (vm) {
+      [vm.title, vm.sub].concat(vm.roster || []).forEach((x) => x && set.add(String(x)));
+      (vm.tournaments || []).forEach((t) => { [t.l, t.name].concat(t.players || [], Object.keys(t.members || {})).forEach((x) => x && set.add(String(x))); });
+    }
+    prot = [...set].filter((x) => x.length >= 2).flatMap((x) => (esc(x) !== x ? [esc(x), x] : [x])).sort((a, b) => b.length - a.length);
+    return prot;
+  }
+  const L = (s) => {
+    const d = dictOf(vm && vm.lang); if (!d || s == null) return s;
+    let txt = String(s); const keep = [];
+    for (const p of protectList()) if (txt.includes(p)) { txt = txt.split(p).join("\u0001" + keep.length + "\u0001"); keep.push(p); }
+    return I18N.tr(txt, d).replace(/\u0001(\d+)\u0001/g, (_, i) => keep[+i]);
+  };
+  const Lkb = (kb) => kb && kb.map((row) => row.map((b) => Object.assign({}, b, { text: L(b.text) })));
   function send(chatId, text, kb) {
+    text = L(text); kb = Lkb(kb);
     const parts = chunks(text, 3900);
     parts.forEach((p, i) => {
       queue = queue.then(() => api("sendMessage", { chat_id: chatId, text: p, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: i === parts.length - 1 && kb ? { inline_keyboard: kb } : undefined }))
@@ -113,7 +143,7 @@ module.exports = function createBot(opts) {
     queue = queue.then(() => {
       const f = new FormData();
       f.append("chat_id", String(chatId));
-      if (caption) { f.append("caption", caption); f.append("parse_mode", "HTML"); }
+      if (caption) { f.append("caption", L(caption)); f.append("parse_mode", "HTML"); }
       f.append(kind, new Blob([buf], { type }), name);
       return api(kind === "photo" ? "sendPhoto" : "sendDocument", null, f);
     }).catch(() => {}).then(() => sleep(45));
@@ -565,11 +595,13 @@ module.exports = function createBot(opts) {
       }
     }
   }
+  let cmdLang = null;
+  function setCommands() { cmdLang = (vm && vm.lang) || "it"; api("setMyCommands", { commands: COMMANDS.map(([command, description]) => ({ command, description: L(description) })) }).catch(() => {}); }
   async function start() {
     stop();
     if (!cfg.enabled || !cfg.token) return status();
     try { me = await api("getMe"); lastErr = ""; } catch (e) { lastErr = String(e.message || e); me = null; return status(); }
-    api("setMyCommands", { commands: COMMANDS.map(([command, description]) => ({ command, description })) }).catch(() => {});
+    setCommands();
     running = true; loop(); return status();
   }
   function stop() { running = false; if (ctrl) { try { ctrl.abort(); } catch {} ctrl = null; } }
@@ -589,7 +621,7 @@ module.exports = function createBot(opts) {
   }
   return {
     start, stop, status,
-    setVM(v) { prev = vm; vm = v; try { notifyDiff(); } catch {} },
+    setVM(v) { prev = vm; vm = v; try { notifyDiff(); } catch {} if (running && vm && (vm.lang || "it") !== cmdLang) setCommands(); },
     async configure(c) {
       c = c || {};
       if (typeof c.token === "string" && c.token.trim()) {
