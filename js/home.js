@@ -73,7 +73,7 @@
     return thumb(S.ui && S.ui.logo).then(function (lg) {
       var acc = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim(), ev = S.ev || {};
       return {
-        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", place: ev.place || "",
+        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", place: ev.place || "",
         color: ev.color || "", accent: acc, logo: lg, games: A.games(JSON.parse(JSON.stringify(S))),
         players: (S.roster || []).length, bot: ev.bot || "", pinned: !!ev.pinned, draft: !!ev.draft, created: ev.created || Date.now(), updated: Date.now()
       };
@@ -152,7 +152,7 @@
         if (!keep) { st.roster = []; st.teams = []; }
       } else st = { cur: "quake", roster: [], games: {}, ui: {} };
       st.ui = st.ui || {}; st.ui.title = f.title; st.ui.sub = f.sub;
-      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
+      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
       A.load(st); useBot(st); creating = false; laterOthers();
       return flush().then(function () { close(); A.toast("Torneo creato: " + f.title + ". Aggiungi giochi e giocatori."); });
     }).catch(function (e) { A.toast("Non riesco a creare il torneo: " + ((e && e.message) || e)); });
@@ -160,7 +160,7 @@
   function editEv(id, f) {
     function apply(st) {
       st.ui = st.ui || {}; st.ev = st.ev || {};
-      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); }
+      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); }
       if (f.bot !== undefined) st.ev.bot = f.bot;
       if (f.pinned !== undefined) st.ev.pinned = f.pinned;
     }
@@ -171,7 +171,7 @@
     return store.read(id).then(function (t) {
       var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
       apply(st);
-      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.place = st.ev.place || ""; m.color = st.ev.color || "";
+      m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.place = st.ev.place || ""; m.color = st.ev.color || "";
       m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
       return store.write(id, wrap(st, m));
     }).then(render).catch(function (e) { A.toast("Modifica non salvata: " + ((e && e.message) || e)); });
@@ -266,12 +266,18 @@
   function linkOk(u, kind) {
     u = String(u || "").trim(); if (!u) return "";
     if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+    if (kind === "maps") return /^https:\/\/((www\.)?google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)[\/?]/i.test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
     return (kind === "wa" ? /^https:\/\/(chat\.whatsapp\.com|wa\.me|whatsapp\.com\/channel)\/[\w\/-]+$/i : /^https:\/\/(t\.me|telegram\.me)\/[\w+\/-]+$/i).test(u.replace(/^http:/i, "https:")) ? u.replace(/^http:/i, "https:") : "";
   }
+  /* link della mappa: quello incollato, oppure una ricerca di Google Maps con l'indirizzo */
+  function mapsUrl(m) { return m.maps || (m.addr && m.mode !== "online" ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(m.addr) : ""); }
   function linksHtml(m) {
     var a = [], bu = bots ? (bots.filter(function (x) { return x.id === (m.bot || bots[0].id); })[0] || {}).username : "";
     if (bu) a.push('<a class="ev-link tg" href="https://t.me/' + esc(bu) + '" target="_blank" rel="noopener">Bot @' + esc(bu) + '</a>');
     if (m.tg) a.push('<a class="ev-link tg" href="' + esc(m.tg) + '" target="_blank" rel="noopener">Canale Telegram</a>');
+    var mp = mapsUrl(m);
+    if (m.mode === "online") a.push('<span class="ev-link loc">Online' + (m.addr ? ": " + esc(m.addr) : "") + '</span>');
+    else if (mp) a.push('<a class="ev-link loc" href="' + esc(mp) + '" target="_blank" rel="noopener" title="Apri in Google Maps">' + (m.mode === "ibrido" ? "In presenza e online: " : "") + esc(m.addr || "Mappa") + '</a>');
     if (m.wa) a.push('<a class="ev-link wa" href="' + esc(m.wa) + '" target="_blank" rel="noopener">Gruppo WhatsApp</a>');
     return a.length ? '<p class="ev-links">' + a.join("") + '</p>' : "";
   }
@@ -296,6 +302,9 @@
       '<label>Ora<input type="time" name="time" value="' + esc(m.time || "") + '"></label>' +
       '<label>Luogo<input name="place" maxlength="80" value="' + esc(m.place || "") + '" placeholder="Città o sala"></label>' +
       '<label class="col">Colore<input type="color" name="color" value="' + esc(evColor(m)) + '"></label>' + bo +
+      '<label>Si gioca<select name="mode"><option value="lan"' + (m.mode !== "online" && m.mode !== "ibrido" ? " selected" : "") + '>In presenza (LAN party)</option><option value="online"' + (m.mode === "online" ? " selected" : "") + '>Online</option><option value="ibrido"' + (m.mode === "ibrido" ? " selected" : "") + '>In presenza e online</option></select></label>' +
+      '<label class="wide">Indirizzo della location<input name="addr" maxlength="160" value="' + esc(m.addr || "") + '" placeholder="Via, numero, città (per l\'online: piattaforma o server, es. Discord)"></label>' +
+      '<label class="wide">Link Google Maps<input type="text" inputmode="url" name="maps" value="' + esc(m.maps || "") + '" placeholder="https://maps.app.goo.gl/… (vuoto: lo creo dall\'indirizzo)"><small>In Google Maps cerca il posto, tocca <b>Condividi</b> e poi <b>Copia link</b>, e incollalo qui.</small></label>' +
       '<label class="wide">Gruppo WhatsApp (link di invito)<input type="text" inputmode="url" name="wa" value="' + esc(m.wa || "") + '" placeholder="https://chat.whatsapp.com/…"></label>' +
       '<label class="wide">Canale o gruppo Telegram (facoltativo)<input type="text" inputmode="url" name="tg" value="' + esc(m.tg || "") + '" placeholder="https://t.me/…"></label>' +
       '<label class="wide chk"><span><input type="checkbox" name="draft"' + (m.draft ? " checked" : "") + '> In lavorazione</span><small>Nel bot lo vedono solo amministratori e organizzatori; nessun avviso ai partecipanti finché non lo togli.</small></label>' +

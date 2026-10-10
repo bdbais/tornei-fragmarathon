@@ -228,6 +228,8 @@ module.exports = function createBot(opts) {
   function linksInfo() {
     const L = (vm && vm.links) || {}, a = [];
     if (L.when) a.push("📅 " + esc(L.when) + (L.place ? ", " + esc(L.place) : ""));
+    if (L.mode === "online") a.push("🌐 Online" + (L.addr ? ": " + esc(L.addr) : ""));
+    else if (L.addr || L.maps) a.push("📍 " + (L.mode === "ibrido" ? "In presenza e online – " : "") + esc(L.addr || "Mappa") + (L.maps ? "\n🗺 " + esc(L.maps) : ""));
     if (L.wa) a.push("💬 Gruppo WhatsApp: " + esc(L.wa));
     if (L.tg) a.push("📣 Canale Telegram: " + esc(L.tg));
     return a.length ? "\n\n" + a.join("\n") : "";

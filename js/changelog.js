@@ -4,6 +4,10 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.5.4", d: "2026-10-10", t: "Luogo del torneo e token per versione", items: [
+      "Nel torneo: si gioca in presenza, online o in entrambi i modi, indirizzo della location e link Google Maps (se manca lo crea dall'indirizzo); compaiono sulla scheda e nel benvenuto del bot.",
+      "Nelle novità, i token di Claude spesi per ogni versione e il totale."
+    ] },
     { v: "3.5.3", d: "2026-10-10", t: "Bot nei gruppi e nei canali", items: [
       "Quando qualcuno aggiunge il bot a un gruppo o canale, gli amministratori ricevono un messaggio con Abilita, Esci ed Esci e blocca; finché non è abilitato il bot non scrive nulla lì.",
       "Abilitato, il bot si presenta con il link per scrivergli in privato, risponde a /tornei, /classifica, /partite, /risultati, /diretta e riceve annunci e diretta.",
@@ -89,13 +93,20 @@
   var VER = CHANGELOG[0].v, dlg = null;
 
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  /* token di Claude spesi per ogni versione (js/tokens.js, generato da tools/tokens.mjs) */
+  function tk(n) { return n >= 1e6 ? (n / 1e6).toLocaleString("it-IT", { maximumFractionDigits: 1 }) + " M" : n >= 1e3 ? Math.round(n / 1e3) + " k" : String(n || 0); }
+  function tokLine(v) { var T = window.TOKENS, b = T && T.byVersion && T.byVersion[v]; return b ? '<span class="cl-tok" title="Token di Claude per questa versione: ' + tk(b.tot) + ' in tutto, di cui ' + tk(b.out) + ' scritti">' + tk(b.tot) + ' token</span>' : ""; }
+  function tokHead() {
+    var T = window.TOKENS; if (!T || !T.total) return "";
+    return '<p class="cl-toks">Per costruire il programma con Claude sono serviti <b>' + tk(T.total.tot) + ' token</b> (' + tk(T.total.out) + ' scritti dal modello, il resto letto e riletto come contesto), in ' + T.total.msgs.toLocaleString("it-IT") + ' risposte. Sotto, il conto di ogni versione.</p>';
+  }
   function fmt(d) { var x = new Date(d + "T12:00:00"); return isNaN(x) ? "" : x.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }); }
   function open() {
     if (!dlg) {
       dlg = document.createElement("dialog"); dlg.id = "changelog"; dlg.setAttribute("aria-labelledby", "cl-h");
       dlg.innerHTML = '<div class="cl-head"><h2 id="cl-h">Novità</h2><span class="cl-cur">Hai la versione ' + esc(VER) + '</span><button type="button" class="cl-x" aria-label="Chiudi">Chiudi</button></div>' +
-        '<ol class="cl-list">' + CHANGELOG.map(function (r, i) {
-          return '<li' + (i === 0 ? ' class="now"' : "") + '><div class="cl-v"><b>' + esc(r.v) + '</b><time datetime="' + esc(r.d) + '">' + esc(fmt(r.d)) + '</time></div>' +
+        tokHead() + '<ol class="cl-list">' + CHANGELOG.map(function (r, i) {
+          return '<li' + (i === 0 ? ' class="now"' : "") + '><div class="cl-v"><b>' + esc(r.v) + '</b><time datetime="' + esc(r.d) + '">' + esc(fmt(r.d)) + '</time>' + tokLine(r.v) + '</div>' +
             '<div class="cl-b"><h3>' + esc(r.t) + '</h3><ul>' + r.items.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ul></div></li>';
         }).join("") + '</ol>';
       dlg.addEventListener("click", function (e) { if (e.target === dlg || e.target.closest(".cl-x")) dlg.close(); });

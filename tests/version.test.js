@@ -13,3 +13,9 @@ test("ogni versione ha data, titolo e almeno una novità", () => {
     assert.ok(r.t && r.items.length, r.v);
   }
 });
+test("i token per versione sono numeri coerenti", () => {
+  const T = require("../js/tokens.js");
+  assert.ok(T.total.tot > 0);
+  const sum = Object.values(T.byVersion).reduce((a, b) => a + b.tot, 0);
+  assert.strictEqual(sum, T.total.tot);
+});

@@ -231,3 +231,8 @@ input.rnin{padding:2px 6px;border:1px solid var(--acc);border-radius:6px;backgro
 .vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .fr .fn{min-width:0;overflow-wrap:anywhere;line-height:1.2}
 .gbox{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.cl-toks{margin:0;padding:10px 20px;border-bottom:1px solid var(--line);color:var(--mut);font-size:.88rem;max-width:none}
+.cl-toks b{color:var(--ink)}
+.cl-tok{display:block;margin-top:4px;font-size:.78rem;color:var(--mut)}
+.ev-link.loc{border-color:#EA4335}
+.ev-form label small{font-weight:400;font-size:.78rem;color:var(--mut)}
