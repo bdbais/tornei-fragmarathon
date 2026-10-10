@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "de", name: "Deutsch",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus.",
-    "Versione per telefono": "Handy-Ansicht",
+   "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Auf dem Handy ist das Banner kompakt, die Reiter scrollen seitlich und die Formularfelder nutzen die volle Breite: nichts ragt mehr über den Bildschirm hinaus.",
+   "Versione per telefono": "Handy-Ansicht",
    "Nome squadra": "Teamname",
    "Aggiungi giocatore": "Spieler hinzufügen",
    " (1 sconfitta)": " (1 Niederlage)",
@@ -1265,7 +1265,45 @@
    "Elenco giocatori con Excel e Google Sheets": "Spielerliste mit Excel und Google Sheets",
    "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Exportiere die Teilnehmerliste für Excel (.xlsx) oder als CSV, mit Team und Spielen jedes Teilnehmers.",
    "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importiere aus einer .xlsx- oder .csv-Datei, über den Link einer Google-Sheets-Tabelle oder durch Einfügen kopierter Zellen: mit einer Spalte Team werden die Teams erstellt und gefüllt, ohne doppelte Namen.",
-   "L'app installata parte in italiano finché non scegli un'altra lingua.": "Die installierte App startet auf Italienisch, bis du eine andere Sprache wählst."
+   "L'app installata parte in italiano finché non scegli un'altra lingua.": "Die installierte App startet auf Italienisch, bis du eine andere Sprache wählst.",
+   " (funziona anche senza scheda video, più lentamente).": " (funktioniert auch ohne Grafikkarte, nur langsamer).",
+   " con il Blocco note e metti questa riga, poi riavvia ": " mit dem Editor, füge diese Zeile ein und starte dann erneut ",
+   " e aggiungi ": " und füge hinzu: ",
+   " e scarica il pacchetto per Windows (one-click package).": " und lade das Paket für Windows herunter (one-click package).",
+   "--gpus all": "--gpus all",
+   ". Ora premi Genera 4 proposte.": ". Drücke jetzt 4 Vorschläge erzeugen.",
+   ": la prima volta scarica i modelli e ci mette un po'.": ": beim ersten Mal lädt es die Modelle herunter und braucht eine Weile.",
+   "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "Öffne die Eingabeaufforderung und starte LocalAI mit allen Modellen:",
+   "Apri la pagina di Stable Diffusion Forge": "Seite von Stable Diffusion Forge öffnen",
+   "Cerca sul PC": "Auf dem PC suchen",
+   "Cerco…": "Suche…",
+   "Con una scheda NVIDIA usa l'immagine ": "Mit einer NVIDIA-Grafikkarte verwende das Image ",
+   "Copia": "Kopieren",
+   "Copiato.": "Kopiert.",
+   "Docker Desktop": "Docker Desktop",
+   "Estrai l'archivio in una cartella, avvia ": "Entpacke das Archiv in einen Ordner, starte ",
+   "Generale": "Allgemein",
+   "Installa ": "Installiere ",
+   "La prima volta scarica diversi GB. Guida completa: ": "Beim ersten Mal werden mehrere GB heruntergeladen. Vollständige Anleitung: ",
+   "Non hai ancora il servizio su questo PC? Installalo": "Du hast den Dienst noch nicht auf diesem PC? Installiere ihn",
+   "Non trovo LocalAI: il contenitore Docker è avviato?": "LocalAI nicht gefunden: läuft der Docker-Container?",
+   "Non trovo Stable Diffusion: è avviato con --api?": "Stable Diffusion nicht gefunden: wurde es mit --api gestartet?",
+   "Per far parlare il programma con Forge apri ": "Damit das Programm mit Forge sprechen kann, öffne ",
+   "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "Wenn sich im Browser die Forge-Seite öffnet, komm hierher zurück und drücke ",
+   "Quando è avviato, premi ": "Wenn er läuft, drücke ",
+   "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "Du brauchst eine NVIDIA-Grafikkarte mit mindestens 6 GB Speicher und etwa 15 GB freien Speicherplatz.",
+   "Sezioni delle impostazioni": "Bereiche der Einstellungen",
+   "Trovato e pronto: ": "Gefunden und bereit: ",
+   "Verifica l'indirizzo indicato": "Prüfe die angegebene Adresse",
+   "dialog[open]": "dialog[open]",
+   "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+   "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+   "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+   "webui\\webui-user.bat": "webui\\webui-user.bat",
+   "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "Musik auf dem Beamer, Einstellungen mit Menü, geführte KI-Installation auf dem PC",
+   "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "Musik-Playlist auf dem Beamer im Vollbild: Musikdateien oder Internetradio, Zufallswiedergabe, Wiederholung, Lautstärke, Titel des Songs auf dem Bildschirm; Steuerung über den Beamer (M, N, B, + und -) oder in der Hauptapp mit der Schaltfläche ♪.",
+   "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "Einstellungen im Vollbild: Menü der Bereiche links und jeweils ein Bereich rechts; dort ist auch das Archiv der Turniere und Backups. Esc schließt.",
+   "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "Logo-Erzeugung mit Stable Diffusion oder LocalAI auf dem PC: antwortet der Dienst nicht, schlägt das Programm die Installation vor, mit den Schritten, den Befehlen zum Kopieren und der automatischen Suche auf dem PC."
   },
   help: {
    "tornei": {
@@ -1318,7 +1356,7 @@
    },
    "proiettore": {
     "t": "Beamer-Bildschirm",
-    "h": "<p>Jedes Panel (eine Gruppe, ein Bracket, eine Rangliste, das Podium) hat oben rechts das Beamer-Symbol. Klicke darauf: es öffnet sich ein separates Fenster, das <b>nur dieses Panel</b> zeigt, so groß, wie der Bildschirm es zulässt. Das Symbol des gezeigten Panels wird orange.</p><ul><li>Ist ein zweiter Bildschirm angeschlossen, öffnet sich das Fenster dort, bereits im Vollbild. Mit nur einem Bildschirm verwende <kbd>F</kbd> für Vollbild.</li><li><kbd>Bild↓</kbd> und <kbd>Bild↑</kbd> (oder die Pfeiltasten) wechseln zum nächsten oder vorherigen Panel derselben Seite.</li><li><b>Galerie</b>: die Panels wechseln automatisch. Wähle alle wie viele Sekunden (ab 3) und ob nur die Panels der Seite oder alle Spiele, die Ergebnisse und die Hall of Fame gezeigt werden. Mit <kbd>G</kbd> startest und stoppst du sie.</li><li><b>Bildschirm füllen</b> (Taste <kbd>R</kbd>): nutzt die ganze Fläche auch auf Bildschirmen, die nicht 16:9 sind, und verkleinert die Kopfzeile, damit das Panel so groß wie möglich ist.</li><li>Der Beamer aktualisiert sich von selbst, sobald du eine Punktzahl eingibst.</li><li>Bewege die Maus über den Beamer, um die Steuerung zu sehen; <kbd>Esc</kbd> schließt ihn.</li></ul><p><kbd>F5</kbd> öffnet den Beamer auf dem ersten Panel der geöffneten Seite.</p>"
+    "h": "<p>Jedes Panel (eine Gruppe, ein Bracket, eine Rangliste, das Podium) hat oben rechts das Beamer-Symbol. Klicke darauf: es öffnet sich ein separates Fenster, das <b>nur dieses Panel</b> zeigt, so groß, wie der Bildschirm es zulässt. Das Symbol des gezeigten Panels wird orange.</p><ul><li>Ist ein zweiter Bildschirm angeschlossen, öffnet sich das Fenster dort, bereits im Vollbild. Mit nur einem Bildschirm verwende <kbd>F</kbd> für Vollbild.</li><li><kbd>Bild↓</kbd> und <kbd>Bild↑</kbd> (oder die Pfeiltasten) wechseln zum nächsten oder vorherigen Panel derselben Seite.</li><li><b>Galerie</b>: die Panels wechseln automatisch. Wähle alle wie viele Sekunden (ab 3) und ob nur die Panels der Seite oder alle Spiele, die Ergebnisse und die Hall of Fame gezeigt werden. Mit <kbd>G</kbd> startest und stoppst du sie.</li><li><b>Bildschirm füllen</b> (Taste <kbd>R</kbd>): nutzt die ganze Fläche auch auf Bildschirmen, die nicht 16:9 sind, und verkleinert die Kopfzeile, damit das Panel so groß wie möglich ist.</li><li>Der Beamer aktualisiert sich von selbst, sobald du eine Punktzahl eingibst.</li><li>Bewege die Maus über den Beamer, um die Steuerung zu sehen; <kbd>Esc</kbd> schließt ihn.</li></ul><p><kbd>F5</kbd> öffnet den Beamer auf dem ersten Panel der geöffneten Seite.</p><h4>Musik</h4><p>Die Schaltfläche <b>♪ Musik</b> in der Beamer-Steuerung oder die Schaltfläche ♪ oben in der Hauptapp öffnet die Playlist: füge Musikdateien (MP3, OGG, WAV, FLAC, M4A) oder den Link eines Internetradios hinzu, wähle Zufallswiedergabe und Wiederholung, die Lautstärke und ob der Titel des Songs auf dem Bildschirm erscheint. Die Musik läuft über den Beamer; die Songs bleiben auf diesem PC gespeichert. Tasten im Beamer: <kbd>M</kbd> startet oder stoppt, <kbd>N</kbd> nächster Song, <kbd>B</kbd> vorheriger, <kbd>+</kbd> und <kbd>-</kbd> Lautstärke.</p>"
    },
    "diretta": {
     "t": "Livestream auf YouTube und Twitch",

@@ -154,7 +154,7 @@ ipcMain.handle("backup:write", (_e, label, data) => {
 ipcMain.handle("backup:list", () => { ensureDirs(); return listJson(DIRS.backup).slice(0, 60); });
 ipcMain.handle("backup:read", (_e, file) => fs.readFileSync(safeFile(DIRS.backup, file), "utf8"));
 ipcMain.handle("folder:open", (_e, which) => { ensureDirs(); return shell.openPath(DIRS[which] || ROOT); });
-ipcMain.handle("wall:open", () => openWall());
+ipcMain.handle("wall:open", () => { openWall(); return true; });
 /* Generazione loghi: la richiesta parte da qui, senza i limiti CORS della pagina. */
 ipcMain.handle("ai:image", async (_e, cfg, prompt, seed, size) => {
   try { return { data: await AI.generate(cfg || {}, prompt, seed, Math.min(1024, Math.max(256, size || 512))) }; }

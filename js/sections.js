@@ -22,6 +22,9 @@
     if (!box) return;
     var kids = Array.prototype.slice.call(box.children), cur = null;
     if (!kids.some(function (k) { return k.tagName === "H3"; })) return;
+    if (kids[0] && kids[0].tagName !== "H3" && !kids[0].classList.contains("sect")) {
+      cur = document.createElement("div"); cur.className = "sect"; cur.innerHTML = "<h3>Generale</h3>"; box.insertBefore(cur, kids[0]);
+    }
     kids.forEach(function (k) {
       if (k.tagName === "H3") { cur = document.createElement("div"); cur.className = "sect"; box.insertBefore(cur, k); }
       if (cur) cur.appendChild(k);
@@ -49,8 +52,44 @@
       var h = p.querySelector("h2"); if (!h || h.closest(".panel") !== p) return;
       arm(p, h, p.id && p.id !== "out" && p.id !== "setup" ? "#" + p.id : keyOf(p, h));
     });
-    document.querySelectorAll("#editform > .sect").forEach(function (s) { var h = s.querySelector(":scope > h3"); if (h) arm(s, h, "imp:" + norm(headText(h))); });
+    setNav();
   }
+  /* ---------- Impostazioni: menu a sinistra, una sezione alla volta a destra ---------- */
+  var NK = "tornei-setsec";
+  function panes() {
+    var L = Array.prototype.map.call(document.querySelectorAll("#editform > .sect"), function (s) { var h = s.querySelector(":scope > h3"); return { el: s, label: h ? headText(h) : "" }; });
+    var bk = document.getElementById("backup"); if (bk) L.push({ el: bk, label: headText(bk.querySelector("h2")) || "Archivio tornei e backup" });
+    return L.filter(function (p) { return p.label; });
+  }
+  function setNav(want) {
+    var eb = document.getElementById("editbox"), form = document.getElementById("editform"); if (!eb || !form) return;
+    var bk = document.getElementById("backup");
+    /* l'archivio (tornei salvati e backup) entra nelle impostazioni */
+    if (bk && bk.parentElement !== eb) { eb.insertBefore(bk, form.nextSibling); bk.classList.add("setpane"); }
+    var P = panes(); if (!P.length) return;
+    var nav = document.getElementById("editnav");
+    if (!nav) { nav = document.createElement("nav"); nav.id = "editnav"; nav.setAttribute("aria-label", "Sezioni delle impostazioni"); eb.insertBefore(nav, form); eb.classList.add("tabbed"); }
+    var keyOf = function (p) { return norm(p.label).slice(0, 40); };
+    var act = want || lsGetS(NK); if (!P.some(function (p) { return keyOf(p) === act; })) act = keyOf(P[0]);
+    var html = P.map(function (p) { return '<button type="button" data-sec="' + keyOf(p).replace(/"/g, "") + '"' + (keyOf(p) === act ? ' aria-current="page"' : "") + '>' + p.label.replace(/[&<>]/g, "") + '</button>'; }).join("");
+    if (nav.getAttribute("data-sig") !== html) { nav.innerHTML = html; nav.setAttribute("data-sig", html); }
+    P.forEach(function (p) { var on = keyOf(p) === act; if (p.el.classList.contains("sact") !== on) p.el.classList.toggle("sact", on); });
+    var cb = nav.querySelector("[aria-current]"); if (cb && nav.scrollWidth > nav.clientWidth + 2) nav.scrollLeft = Math.max(0, cb.offsetLeft - (nav.clientWidth - cb.offsetWidth) / 2);
+  }
+  function lsGetS(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("#editnav [data-sec]"); if (!b) return;
+    try { localStorage.setItem(NK, b.getAttribute("data-sec")); } catch (x) {}
+    setNav(b.getAttribute("data-sec"));
+    var f = document.getElementById("editbox"); if (f) f.scrollTop = 0;
+  });
+  /* aperte le impostazioni: schermata intera, Esc chiude */
+  var ebo = new MutationObserver(function () { var eb = document.getElementById("editbox"); document.documentElement.classList.toggle("set-on", !!eb && !eb.hidden); });
+  var ebx = document.getElementById("editbox"); if (ebx) ebo.observe(ebx, { attributes: true, attributeFilter: ["hidden"] });
+  document.addEventListener("keydown", function (e) {
+    var eb = document.getElementById("editbox");
+    if (e.key === "Escape" && eb && !eb.hidden && !document.querySelector("dialog[open]")) { var c = document.getElementById("ecancel"); if (c) { e.preventDefault(); c.click(); } }
+  });
   var pend = 0;
   new MutationObserver(function () { if (!pend) pend = requestAnimationFrame(function () { pend = 0; process(); }); })
     .observe(document.body, { childList: true, subtree: true });
@@ -73,12 +112,16 @@
     if (eb && eb.hidden) { var bt = document.getElementById("editbtn"); if (bt) bt.click(); }
     setTimeout(then, 250);
   }
+  /* le impostazioni si ridisegnano quando si aprono: si ritrova il titolo per testo */
+  function findSet(t) { return Array.prototype.filter.call(document.querySelectorAll("#editform > .sect > h3, #editbox > .setpane > h2"), function (x) { return norm(headText(x)).indexOf(norm(t).slice(0, 8)) === 0; })[0] || null; }
   function reveal(el) {
+    var sp = el.closest("#editform > .sect, #editbox > .setpane");
+    if (sp) { var h = sp.querySelector("h3,h2"); var k = norm(headText(h)).slice(0, 40); try { localStorage.setItem(NK, k); } catch (x) {} setNav(k); }
     var box = el.closest("[data-ckey]"); if (box && box.classList.contains("collapsed")) setCol(box, false);
     el.scrollIntoView({ block: "start", behavior: "smooth" });
     el.classList.add("flash"); setTimeout(function () { el.classList.remove("flash"); }, 1600);
   }
-  var SETTINGS = ["Titolo e nomi dei giochi", "Logo dell'evento", "Genera un logo con l'AI", "CSS personalizzato", "Bot Telegram", "Diretta su YouTube e Twitch"];
+  var SETTINGS = ["Generale", "Nomi dei giochi", "Archivio tornei e backup", "Logo dell'evento", "Genera un logo con l'AI", "CSS personalizzato", "Bot Telegram", "Diretta su YouTube e Twitch"];
   function collect() {
     var out = [], seen = {};
     function add(o) { var k = o.g + "|" + norm(o.t); if (seen[k]) return; seen[k] = 1; out.push(o); }
@@ -91,7 +134,7 @@
       var t = headText(h); if (!t) return;
       var inSet = !!h.closest("#editbox");
       if (!inSet && !visible(h)) return;
-      add({ t: t, g: inSet ? "Impostazioni" : "Sezione", run: function () { if (inSet) openSettings(function () { reveal(h); }); else reveal(h); } });
+      add({ t: t, g: inSet ? "Impostazioni" : "Sezione", run: function () { if (inSet) openSettings(function () { reveal(findSet(t) || h); }); else reveal(h); } });
     });
     SETTINGS.forEach(function (t) {
       add({ t: t, g: "Impostazioni", run: function () { openSettings(function () {

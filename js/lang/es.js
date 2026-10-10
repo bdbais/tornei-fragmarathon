@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "es", name: "Español",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "En el móvil el banner es compacto, las pestañas se desplazan en horizontal y los campos de los formularios ocupan todo el ancho: ya nada se sale de la pantalla.",
-    "Versione per telefono": "Versión para móvil",
+ "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "En el móvil el banner es compacto, las pestañas se desplazan en horizontal y los campos de los formularios ocupan todo el ancho: ya nada se sale de la pantalla.",
+ "Versione per telefono": "Versión para móvil",
  "Nome squadra": "Nombre del equipo",
  "Aggiungi giocatore": "Añadir jugador",
  " (1 sconfitta)": " (1 derrota)",
@@ -1265,7 +1265,45 @@
  "Elenco giocatori con Excel e Google Sheets": "Lista de jugadores con Excel y Google Sheets",
  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Exporta la lista de participantes para Excel (.xlsx) o en CSV, con el equipo y los juegos de cada uno.",
  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importa desde un archivo .xlsx o .csv, desde el enlace de una hoja de Google Sheets o pegando las celdas copiadas: con una columna de equipo crea y llena los equipos, sin duplicar los nombres.",
- "L'app installata parte in italiano finché non scegli un'altra lingua.": "La app instalada arranca en italiano hasta que eliges otro idioma."
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "La app instalada arranca en italiano hasta que eliges otro idioma.",
+ " (funziona anche senza scheda video, più lentamente).": " (funciona también sin tarjeta gráfica, más despacio).",
+ " con il Blocco note e metti questa riga, poi riavvia ": " con el Bloc de notas y pon esta línea, luego reinicia ",
+ " e aggiungi ": " y añade ",
+ " e scarica il pacchetto per Windows (one-click package).": " y descarga el paquete para Windows (one-click package).",
+ "--gpus all": "--gpus all",
+ ". Ora premi Genera 4 proposte.": ". Ahora pulsa Generar 4 propuestas.",
+ ": la prima volta scarica i modelli e ci mette un po'.": ": la primera vez descarga los modelos y tarda un rato.",
+ "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "Abre el Símbolo del sistema e inicia LocalAI con todos los modelos listos:",
+ "Apri la pagina di Stable Diffusion Forge": "Abrir la página de Stable Diffusion Forge",
+ "Cerca sul PC": "Buscar en el PC",
+ "Cerco…": "Buscando…",
+ "Con una scheda NVIDIA usa l'immagine ": "Con una tarjeta NVIDIA usa la imagen ",
+ "Copia": "Copiar",
+ "Copiato.": "Copiado.",
+ "Docker Desktop": "Docker Desktop",
+ "Estrai l'archivio in una cartella, avvia ": "Extrae el archivo en una carpeta, inicia ",
+ "Generale": "General",
+ "Installa ": "Instalar ",
+ "La prima volta scarica diversi GB. Guida completa: ": "La primera vez descarga varios GB. Guía completa: ",
+ "Non hai ancora il servizio su questo PC? Installalo": "¿Todavía no tienes el servicio en este PC? Instálalo",
+ "Non trovo LocalAI: il contenitore Docker è avviato?": "No encuentro LocalAI: ¿está iniciado el contenedor Docker?",
+ "Non trovo Stable Diffusion: è avviato con --api?": "No encuentro Stable Diffusion: ¿está iniciado con --api?",
+ "Per far parlare il programma con Forge apri ": "Para que el programa se comunique con Forge abre ",
+ "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "Cuando se abra en el navegador la página de Forge, vuelve aquí y pulsa ",
+ "Quando è avviato, premi ": "Cuando esté iniciado, pulsa ",
+ "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "Hace falta una tarjeta gráfica NVIDIA con al menos 6 GB de memoria y unos 15 GB libres en el disco.",
+ "Sezioni delle impostazioni": "Secciones de los ajustes",
+ "Trovato e pronto: ": "Encontrado y listo: ",
+ "Verifica l'indirizzo indicato": "Comprobar la dirección indicada",
+ "dialog[open]": "dialog[open]",
+ "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+ "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+ "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+ "webui\\webui-user.bat": "webui\\webui-user.bat",
+ "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "Música en el proyector, ajustes con menú, IA en el PC guiada",
+ "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "Lista de reproducción de música en el proyector a pantalla completa: archivos de música o radio por internet, aleatorio, repetición, volumen, título de la canción en pantalla; se controla desde el proyector (M, N, B, + y -) o desde la app principal con el botón ♪.",
+ "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "Ajustes a pantalla completa: menú de secciones a la izquierda y una sección cada vez a la derecha; dentro está también el archivo de torneos y copias de seguridad. Esc cierra.",
+ "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "Generación del logo con Stable Diffusion o LocalAI en el PC: si el servicio no responde, el programa propone la instalación con los pasos, los comandos para copiar y la búsqueda automática en el PC."
 },
   help: {
  "tornei": {
@@ -1318,7 +1356,7 @@
  },
  "proiettore": {
   "t": "Pantalla del proyector",
-  "h": "<p>Cada panel (un grupo, un cuadro, una clasificación, el podio) tiene arriba a la derecha el icono del proyector. Haz clic en él: se abre una ventana aparte que muestra <b>solo ese panel</b>, ampliado al máximo que permite la pantalla. El icono del panel en emisión se vuelve naranja.</p><ul><li>Con una segunda pantalla conectada la ventana se abre allí, ya a pantalla completa. Con una sola pantalla usa <kbd>F</kbd> para la pantalla completa.</li><li><kbd>AvPág</kbd> y <kbd>RePág</kbd> (o las flechas) pasan al panel siguiente o anterior de la misma ficha.</li><li><b>Galería</b>: los paneles pasan solos. Elige cada cuántos segundos (a partir de 3) y si mostrar solo los paneles de la ficha o todos los juegos, los resultados y el Hall of Fame. Se activa y se detiene con <kbd>G</kbd>.</li><li><b>Llenar la pantalla</b> (tecla <kbd>R</kbd>): usa toda la superficie también en pantallas que no son 16:9 y reduce la cabecera, para que el panel sea lo más grande posible.</li><li>El proyector se actualiza solo en cuanto introduces una puntuación.</li><li>Mueve el ratón sobre el proyector para ver los controles; <kbd>Esc</kbd> cierra.</li></ul><p><kbd>F5</kbd> abre el proyector en el primer panel de la ficha abierta.</p>"
+  "h": "<p>Cada panel (un grupo, un cuadro, una clasificación, el podio) tiene arriba a la derecha el icono del proyector. Haz clic en él: se abre una ventana aparte que muestra <b>solo ese panel</b>, ampliado al máximo que permite la pantalla. El icono del panel en emisión se vuelve naranja.</p><ul><li>Con una segunda pantalla conectada la ventana se abre allí, ya a pantalla completa. Con una sola pantalla usa <kbd>F</kbd> para la pantalla completa.</li><li><kbd>AvPág</kbd> y <kbd>RePág</kbd> (o las flechas) pasan al panel siguiente o anterior de la misma ficha.</li><li><b>Galería</b>: los paneles pasan solos. Elige cada cuántos segundos (a partir de 3) y si mostrar solo los paneles de la ficha o todos los juegos, los resultados y el Hall of Fame. Se activa y se detiene con <kbd>G</kbd>.</li><li><b>Llenar la pantalla</b> (tecla <kbd>R</kbd>): usa toda la superficie también en pantallas que no son 16:9 y reduce la cabecera, para que el panel sea lo más grande posible.</li><li>El proyector se actualiza solo en cuanto introduces una puntuación.</li><li>Mueve el ratón sobre el proyector para ver los controles; <kbd>Esc</kbd> cierra.</li></ul><p><kbd>F5</kbd> abre el proyector en el primer panel de la ficha abierta.</p><h4>Música</h4><p>El botón <b>♪ Música</b> en los controles del proyector, o el botón ♪ de arriba en la app principal, abre la lista de reproducción: añade archivos de música (MP3, OGG, WAV, FLAC, M4A) o el enlace de una radio en streaming, elige aleatorio y repetición, el volumen y si mostrar el título de la canción en pantalla. La música suena desde el proyector; las canciones quedan guardadas en este PC. Teclas en el proyector: <kbd>M</kbd> inicia o detiene, <kbd>N</kbd> siguiente, <kbd>B</kbd> anterior, <kbd>+</kbd> y <kbd>-</kbd> volumen.</p>"
  },
  "diretta": {
   "t": "Directo en YouTube y Twitch",

@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "vec", name: "Vèneto",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo.",
-    "Versione per telefono": "Version par telefonin",
+ "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Sul telefonin el banner xe pì picolo, le schede le score de lado e i campi dei moduli i ocupa tuta la larghessa: gnente vien pì fora dal schermo.",
+ "Versione per telefono": "Version par telefonin",
  "Nome squadra": "Nome de la squadra",
  "Aggiungi giocatore": "Zonta zogador",
  " (1 sconfitta)": " (1 sconfita)",
@@ -1265,7 +1265,45 @@
  "Elenco giocatori con Excel e Google Sheets": "Elenco zogadori co Excel e Google Sheets",
  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Esporta l'elenco dei partecipanti par Excel (.xlsx) o in CSV, co la squadra e i zoghi de ognun.",
  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importa da un file .xlsx o .csv, dal link de un foglio Google Sheets o incolando le cele copiade: co na colona Squadra el crea e el impinisse le squadre, sensa dopiar i nomi.",
- "L'app installata parte in italiano finché non scegli un'altra lingua.": "L'app instalada la parte in italian fin che no te sielzi n'altra lengua."
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "L'app instalada la parte in italian fin che no te sielzi n'altra lengua.",
+ " (funziona anche senza scheda video, più lentamente).": " (el funsiona anca sensa scheda video, pì pian).",
+ " con il Blocco note e metti questa riga, poi riavvia ": " col Blocco note e meti sta riga, dopo riavia ",
+ " e aggiungi ": " e zonta ",
+ " e scarica il pacchetto per Windows (one-click package).": " e scarica el pacheto par Windows (one-click package).",
+ "--gpus all": "--gpus all",
+ ". Ora premi Genera 4 proposte.": ". Desso struca Genera 4 proposte.",
+ ": la prima volta scarica i modelli e ci mette un po'.": ": la prima volta el scarica i modei e el ghe mete un fià.",
+ "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "Verzi el Prompt dei comandi e avia LocalAI coi modei tuti pronti:",
+ "Apri la pagina di Stable Diffusion Forge": "Verzi la pagina de Stable Diffusion Forge",
+ "Cerca sul PC": "Serca sul PC",
+ "Cerco…": "Serco…",
+ "Con una scheda NVIDIA usa l'immagine ": "Co na scheda NVIDIA dopara l'imagine ",
+ "Copia": "Copia",
+ "Copiato.": "Copià.",
+ "Docker Desktop": "Docker Desktop",
+ "Estrai l'archivio in una cartella, avvia ": "Tira fora l'archivio in na cartela, avia ",
+ "Generale": "Generale",
+ "Installa ": "Instala ",
+ "La prima volta scarica diversi GB. Guida completa: ": "La prima volta el scarica diversi GB. Guida completa: ",
+ "Non hai ancora il servizio su questo PC? Installalo": "No te ghe gnancora el servizio su sto PC? Instalilo",
+ "Non trovo LocalAI: il contenitore Docker è avviato?": "No cato LocalAI: el contenitor Docker xe partìo?",
+ "Non trovo Stable Diffusion: è avviato con --api?": "No cato Stable Diffusion: el xe partìo co --api?",
+ "Per far parlare il programma con Forge apri ": "Par far parlar el programa co Forge verzi ",
+ "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "Quando nel browser se verze la pagina de Forge, torna qua e struca ",
+ "Quando è avviato, premi ": "Quando el xe partìo, struca ",
+ "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "Ghe vol na scheda video NVIDIA co almanco 6 GB de memoria e circa 15 GB liberi sul disco.",
+ "Sezioni delle impostazioni": "Sezion de le impostasion",
+ "Trovato e pronto: ": "Catà e pronto: ",
+ "Verifica l'indirizzo indicato": "Controla l'indirisso indicà",
+ "dialog[open]": "dialog[open]",
+ "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+ "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+ "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+ "webui\\webui-user.bat": "webui\\webui-user.bat",
+ "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "Musica sul proietor, impostasion a menu, AI sul PC guidada",
+ "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "Playlist de musica sul proietor a schermo intiero: file musicali o radio via internet, a caso, ripetision, volume, titolo del toco sul schermo; se la comanda dal proietor (M, N, B, + e -) o da l'app prinsipale col boton ♪.",
+ "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "Impostasion a schermo intiero: menu de le sezion a sinistra e na sezion a la volta a destra; drento ghe xe anca l'archivio dei tornei e dei backup. Esc el sara.",
+ "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "Generasion del logo co Stable Diffusion o LocalAI sul PC: se el servizio no risponde, el programa el propone l'instalasion coi passi, i comandi da copiar e la riserca automatica sul PC."
 },
   help: {
  "tornei": {
@@ -1318,7 +1356,7 @@
  },
  "proiettore": {
   "t": "Schermo proietor",
-  "h": "<p>Ogni panel (un girone, un tabelon, na classifica, el podio) el ga in alto a destra l'icona del proietor. Clicala: se verze na finestra a parte che la mostra <b>solo quel panel</b>, ingrandìo al massimo che el schermo el consente. L'icona del panel in onda la deventa naransa.</p><ul><li>Co un secondo schermo colegà la finestra la se verze là, zà a tuto schermo. Co un schermo solo dopara <kbd>F</kbd> par el tuto schermo.</li><li><kbd>PgDn</kbd> e <kbd>PgUp</kbd> (o le freccie) i passa al panel dopo o prima de la stessa scheda.</li><li><b>Galeria</b>: i paneli i score da soli. Sielzi ogni quanti secondi (da 3 in su) e se mostrar solo i paneli de la scheda o tuti i zoghi, i risultati e la Hall of Fame. La se ativa e la se ferma co <kbd>G</kbd>.</li><li><b>Impinissi el schermo</b> (tasto <kbd>R</kbd>): el dopara tuta la superficie anca su schermi no 16:9 e el riduse l'intestasion, cussì el panel el xe el pì grando possibile.</li><li>El proietor el se agiorna da solo apena che te meti un puntegio.</li><li>Movi el mouse sul proietor par vedar i comandi; <kbd>Esc</kbd> el sara.</li></ul><p><kbd>F5</kbd> el verze el proietor sul primo panel de la scheda verta.</p>"
+  "h": "<p>Ogni panel (un girone, un tabelon, na classifica, el podio) el ga in alto a destra l'icona del proietor. Clicala: se verze na finestra a parte che la mostra <b>solo quel panel</b>, ingrandìo al massimo che el schermo el consente. L'icona del panel in onda la deventa naransa.</p><ul><li>Co un secondo schermo colegà la finestra la se verze là, zà a tuto schermo. Co un schermo solo dopara <kbd>F</kbd> par el tuto schermo.</li><li><kbd>PgDn</kbd> e <kbd>PgUp</kbd> (o le freccie) i passa al panel dopo o prima de la stessa scheda.</li><li><b>Galeria</b>: i paneli i score da soli. Sielzi ogni quanti secondi (da 3 in su) e se mostrar solo i paneli de la scheda o tuti i zoghi, i risultati e la Hall of Fame. La se ativa e la se ferma co <kbd>G</kbd>.</li><li><b>Impinissi el schermo</b> (tasto <kbd>R</kbd>): el dopara tuta la superficie anca su schermi no 16:9 e el riduse l'intestasion, cussì el panel el xe el pì grando possibile.</li><li>El proietor el se agiorna da solo apena che te meti un puntegio.</li><li>Movi el mouse sul proietor par vedar i comandi; <kbd>Esc</kbd> el sara.</li></ul><p><kbd>F5</kbd> el verze el proietor sul primo panel de la scheda verta.</p><h4>Musica</h4><p>El boton <b>♪ Musica</b> nei comandi del proietor, o el boton ♪ in alto ne l'app prinsipale, el verze la playlist: zonta file musicali (MP3, OGG, WAV, FLAC, M4A) o el link de na radio in streaming, sielzi a caso e ripetision, el volume e se mostrar el titolo del toco sul schermo. La musica la sona dal proietor; i tochi i resta salvà su sto PC. Tasti nel proietor: <kbd>M</kbd> avia o ferma, <kbd>N</kbd> dopo, <kbd>B</kbd> prima, <kbd>+</kbd> e <kbd>-</kbd> volume.</p>"
  },
  "diretta": {
   "t": "Direta su YouTube e Twitch",

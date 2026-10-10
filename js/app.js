@@ -899,12 +899,46 @@ function aiTargetName(t){return t==="event"?(S.ui.title||UI0.title):DEF[t]?DEF[t
 function aiPrompt(c){var st=AISTYLE.filter(function(s){return s[0]===c.style})[0]||AISTYLE[0];return st[2]+", for a gaming tournament called \""+aiTargetName(c.target)+"\", centered icon, solid dark background, high contrast, no text"}
 function aiHost(c){try{return new URL(c.url||AI.DEF[c.prov].url).host}catch(e){return""}}
 function aiLocal(c){return/^(127\.0\.0\.1|localhost)(:|$)/.test(aiHost(c))}
+/* Servizio AI sul PC (Stable Diffusion o LocalAI) non ancora installato: istruzioni guidate,
+   ricerca automatica della porta e verifica. Si apre da solo se il servizio non risponde. */
+var aiInstOpen=false,aiInstMsg="";
+function aiInstallHtml(c){
+  if(c.prov!=="a1111"&&c.prov!=="openai")return"";
+  var sd=c.prov==="a1111",cmd=sd?"set COMMANDLINE_ARGS=--api":"docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu";
+  return'<details class="aiinst"'+(aiInstOpen?" open":"")+'><summary>Non hai ancora il servizio su questo PC? Installalo</summary>'
+   +(sd?'<ol><li>Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.</li>'
+     +'<li><button type="button" data-aiopen="https://github.com/lllyasviel/stable-diffusion-webui-forge">Apri la pagina di Stable Diffusion Forge</button> e scarica il pacchetto per Windows (one-click package).</li>'
+     +'<li>Estrai l&#39;archivio in una cartella, avvia <b>update.bat</b> e poi <b>run.bat</b>: la prima volta scarica i modelli e ci mette un po&#39;.</li>'
+     +'<li>Per far parlare il programma con Forge apri <b>webui\\webui-user.bat</b> con il Blocco note e metti questa riga, poi riavvia <b>run.bat</b>:<div class="row aicmd"><code>'+esc(cmd)+'</code><button type="button" data-aicopy="'+esc(cmd)+'">Copia</button></div></li>'
+     +'<li>Quando nel browser si apre la pagina di Forge, torna qui e premi <b>Cerca sul PC</b>.</li></ol>'
+    :'<ol><li>Installa <button type="button" data-aiopen="https://www.docker.com/products/docker-desktop/">Docker Desktop</button> (funziona anche senza scheda video, più lentamente).</li>'
+     +'<li>Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:<div class="row aicmd"><code>'+esc(cmd)+'</code><button type="button" data-aicopy="'+esc(cmd)+'">Copia</button></div>Con una scheda NVIDIA usa l&#39;immagine <code>localai/localai:latest-aio-gpu-nvidia-cuda-12</code> e aggiungi <code>--gpus all</code>.</li>'
+     +'<li>La prima volta scarica diversi GB. Guida completa: <button type="button" data-aiopen="https://localai.io/basics/getting_started/">localai.io</button></li>'
+     +'<li>Quando è avviato, premi <b>Cerca sul PC</b>.</li></ol>')
+   +'<div class="row"><button type="button" class="p" id="aifind">Cerca sul PC</button><button type="button" id="aicheck">Verifica l&#39;indirizzo indicato</button><span class="hint" style="margin:0" id="aiinstmsg" role="status">'+esc(aiInstMsg)+'</span></div></details>';
+}
+function aiProbe(base,prov){
+  var u=base.replace(/\/+$/,"")+(prov==="a1111"?"/sdapi/v1/options":"/models"),ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},2500);
+  return fetch(u,{signal:ctl.signal}).then(function(r){clearTimeout(t);return r.ok}).catch(function(){clearTimeout(t);return false});
+}
+function aiFind(check){
+  var c=aiReadForm(),sd=c.prov==="a1111",cur=(c.url||AI.DEF[c.prov].url).replace(/\/+$/,"");
+  var cands=check?[cur]:[cur].concat(sd?["http://127.0.0.1:7860","http://127.0.0.1:7861","http://127.0.0.1:7862","http://127.0.0.1:7865"]:["http://127.0.0.1:8080/v1","http://127.0.0.1:8081/v1","http://localhost:8080/v1"]).filter(function(x,i,a){return a.indexOf(x)===i});
+  aiInstMsg="Cerco…";var m=$("aiinstmsg");if(m)m.textContent=aiInstMsg;
+  /* tutte le porte insieme: al massimo 2,5 secondi */
+  Promise.all(cands.map(function(u){return aiProbe(u,c.prov)})).then(function(ok){
+    var i=ok.indexOf(true);
+    if(i<0){aiInstMsg=sd?"Non trovo Stable Diffusion: è avviato con --api?":"Non trovo LocalAI: il contenitore Docker è avviato?";aiInstOpen=true;renderEdit();return}
+    c.url=cands[i]===AI.DEF[c.prov].url?"":cands[i];aiSaveCfg(c);aiInstMsg="Trovato e pronto: "+cands[i]+". Ora premi Genera 4 proposte.";aiInstOpen=false;aiMsg="";renderEdit();
+  });
+}
 function renderAi(){
   var c=aiCfg(),d=AI.DEF[c.prov],h='<h3 style="margin-top:20px">Genera un logo con l&#39;AI</h3>'
    +'<div class="row"><label class="row" style="gap:6px">Logo per <select id="aitarget"><option value="event"'+(c.target==="event"?" selected":"")+'>L&#39;evento</option>'+Object.keys(DEF).map(function(k){return'<option value="'+k+'"'+(c.target===k?" selected":"")+'>Torneo di '+esc(DEF[k].l)+'</option>'}).join("")+'</select></label>'
    +'<label class="row" style="gap:6px">Stile <select id="aistyle">'+AISTYLE.map(function(s){return'<option value="'+s[0]+'"'+(c.style===s[0]?" selected":"")+'>'+s[1]+'</option>'}).join("")+'</select></label></div>'
    +'<div class="row" style="margin-top:8px"><label class="row" style="gap:6px">Servizio <select id="aiprov"><option value="pollinations"'+(c.prov==="pollinations"?" selected":"")+'>Pollinations: online, chiave gratuita</option><option value="hf"'+(c.prov==="hf"?" selected":"")+'>Hugging Face: online, token gratuito</option><option value="a1111"'+(c.prov==="a1111"?" selected":"")+'>Stable Diffusion sul tuo PC (AUTOMATIC1111, Forge)</option><option value="openai"'+(c.prov==="openai"?" selected":"")+'>Server compatibile OpenAI (LocalAI o remoto)</option></select></label></div>'
    +'<div class="row" style="margin-top:8px"><input type="text" id="aiurl" placeholder="'+esc(d.url)+'" value="'+esc(c.url||"")+'" aria-label="Indirizzo del servizio"><input type="text" id="aimodel" placeholder="Modello: '+esc(d.model||"predefinito")+'" value="'+esc(c.model||"")+'" aria-label="Modello">'+(c.prov!=="a1111"?'<input type="password" id="aikey" placeholder="'+(d.key?"Chiave personale (obbligatoria)":"Chiave (facoltativa)")+'" value="'+esc(c.key||"")+'" aria-label="Chiave del servizio" autocomplete="off">':'')+'</div>'
+   +aiInstallHtml(c)
    +'<textarea id="aiprompt" class="aiprompt" spellcheck="false" aria-label="Descrizione del logo">'+esc(c.prompt||aiPrompt(c))+'</textarea>'
    +'<div class="row"><button class="p" id="aigo"'+(aiBusy?" disabled":"")+'>'+(aiBusy?"Genero…":"Genera 4 proposte")+'</button><button id="aireset">Descrizione automatica</button><span class="hint" style="margin:0" id="aimsg" role="status">'+esc(aiMsg)+'</span></div>'
    +'<p class="hint">'+(aiLocal(c)?'Il servizio gira su questo PC: nulla esce dalla rete locale.':'La descrizione viene inviata a <b>'+esc(aiHost(c))+'</b> per creare le immagini; non vengono inviati nomi di partecipanti né altri dati.')+(d.key?' Serve una chiave personale gratuita: <a href="'+d.keyUrl+'" target="_blank" rel="noopener">'+d.keyUrl.replace(/^https:\/\//,"")+'</a>. Resta salvata solo su questo PC, non nei backup.':'')+(c.prov==="a1111"?' Avvia Stable Diffusion con l&#39;opzione <code>--api</code>.':'')+(!DESK&&(c.prov==="a1111"||c.prov==="openai")?' Dalla versione web i servizi locali possono essere bloccati dal browser: usa l&#39;app installata.':'')+'</p>';
@@ -921,7 +955,7 @@ async function aiRun(){
   var prompt=c.prompt||aiPrompt(c),base=Math.floor(Math.random()*1e8);
   for(var i=0;i<4;i++){
     try{aiRes.push(await aiOne(c,prompt,base+i));aiMsg=i<3?"Genero "+(i+2)+" di 4…":"Fatto: scegli la proposta che preferisci."}
-    catch(e){aiMsg="Non riuscito: "+(e&&e.message||e)+(/fetch|network|Failed/i.test(String(e&&e.message))?(AI.DEF[c.prov].key?" (controlla la connessione a internet)":" (il servizio è avviato all'indirizzo indicato?)"):"");break}
+    catch(e){if(aiLocal(c)&&/fetch|network|Failed|ECONN/i.test(String(e&&e.message)))aiInstOpen=true;aiMsg="Non riuscito: "+(e&&e.message||e)+(/fetch|network|Failed/i.test(String(e&&e.message))?(AI.DEF[c.prov].key?" (controlla la connessione a internet)":" (il servizio è avviato all'indirizzo indicato?)"):"");break}
     renderEdit();
   }
   aiBusy=false;renderEdit();
@@ -1239,6 +1273,9 @@ $("editbox").onclick=function(e){
   if(b.id==="ecancel"){$("editbox").hidden=true;return}
   if(b.id==="elogo"){$("elf").click();return}
   if(b.id==="aigo"){if(!aiBusy)aiRun();return}
+  if(b.id==="aifind"||b.id==="aicheck"){aiFind(b.id==="aicheck");return}
+  if(b.dataset.aiopen){window.open(b.dataset.aiopen,"_blank","noopener");return}
+  if(b.dataset.aicopy){var tx=b.dataset.aicopy;(navigator.clipboard?navigator.clipboard.writeText(tx):Promise.reject()).then(function(){toast("Copiato.")}).catch(function(){toast(tx)});return}
   if(b.id==="s_ok"){strSave();return}
   if(b.id==="s_open"){var lb=$("livebox");lb.hidden=false;renderLive();lb.scrollIntoView({block:"start"});return}
   if(b.id==="bottokshow"){var ti=$("bottok"),sh=ti.type==="password";ti.type=sh?"text":"password";b.textContent=sh?"Nascondi":"Mostra";b.setAttribute("aria-pressed",String(sh));return}

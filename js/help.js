@@ -114,7 +114,8 @@ window.HELP = {
       "<li><b>Riempi lo schermo</b> (tasto <kbd>R</kbd>): usa tutta la superficie anche su schermi non 16:9 e riduce l'intestazione, così il pannello è il più grande possibile.</li>" +
       "<li>Il proiettore si aggiorna da solo appena inserisci un punteggio.</li>" +
       "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
-      "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
+      "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" +
+      "<h4>Musica</h4><p>Il pulsante <b>♪ Musica</b> nei comandi del proiettore, o il pulsante ♪ in alto nell'app principale, apre la playlist: aggiungi file musicali (MP3, OGG, WAV, FLAC, M4A) o il link di una radio in streaming, scegli casuale e ripetizione, il volume e se mostrare il titolo del brano sullo schermo. La musica suona dal proiettore; i brani restano salvati su questo PC. Tasti nel proiettore: <kbd>M</kbd> avvia o ferma, <kbd>N</kbd> successivo, <kbd>B</kbd> precedente, <kbd>+</kbd> e <kbd>-</kbd> volume.</p>" },
 
     diretta: { t: "Diretta su YouTube e Twitch", h:
       "<p>Il programma può trasmettere in diretta lo schermo del proiettore insieme a una o più telecamere, su YouTube, Twitch o un altro server RTMP, anche su più destinazioni insieme. Non serve installare altro (né OBS né altri programmi). Funziona nell'app installata per Windows.</p>" +

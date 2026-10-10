@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "zh", name: "中文",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。",
-    "Versione per telefono": "手机版布局",
+ "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "在手机上，横幅更紧凑，标签页可横向滚动，表单字段占满整行宽度：内容不再超出屏幕。",
+ "Versione per telefono": "手机版布局",
  "Nome squadra": "队伍名称",
  "Aggiungi giocatore": "添加选手",
  " (1 sconfitta)": " (1 负)",
@@ -1265,7 +1265,45 @@
  "Elenco giocatori con Excel e Google Sheets": "使用 Excel 和 Google Sheets 管理选手名单",
  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "将参赛者列表导出为 Excel (.xlsx) 或 CSV,包含每个人的队伍和游戏。",
  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "可从 .xlsx 或 .csv 文件、Google Sheets 表格链接导入,或直接粘贴复制的单元格:如果有 Squadra (队伍) 列,会自动创建并填充队伍,不会重复添加名字。",
- "L'app installata parte in italiano finché non scegli un'altra lingua.": "在你选择其他语言之前,已安装的应用默认使用意大利语。"
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "在你选择其他语言之前,已安装的应用默认使用意大利语。",
+ " (funziona anche senza scheda video, più lentamente).": " (没有显卡也能运行,但速度较慢)。",
+ " con il Blocco note e metti questa riga, poi riavvia ": " 用记事本打开,加入这一行,然后重新启动 ",
+ " e aggiungi ": " 并添加 ",
+ " e scarica il pacchetto per Windows (one-click package).": " 并下载 Windows 版软件包 (one-click package)。",
+ "--gpus all": "--gpus all",
+ ". Ora premi Genera 4 proposte.": "。现在点击“生成 4 个方案”。",
+ ": la prima volta scarica i modelli e ci mette un po'.": ":首次运行会下载模型,需要一些时间。",
+ "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "打开命令提示符,启动带有全部现成模型的 LocalAI:",
+ "Apri la pagina di Stable Diffusion Forge": "打开 Stable Diffusion Forge 页面",
+ "Cerca sul PC": "在电脑上查找",
+ "Cerco…": "正在查找…",
+ "Con una scheda NVIDIA usa l'immagine ": "如果是 NVIDIA 显卡,请使用镜像 ",
+ "Copia": "复制",
+ "Copiato.": "已复制。",
+ "Docker Desktop": "Docker Desktop",
+ "Estrai l'archivio in una cartella, avvia ": "将压缩包解压到一个文件夹,运行 ",
+ "Generale": "常规",
+ "Installa ": "安装 ",
+ "La prima volta scarica diversi GB. Guida completa: ": "首次运行会下载数 GB 的数据。完整指南: ",
+ "Non hai ancora il servizio su questo PC? Installalo": "这台电脑上还没有该服务?安装它",
+ "Non trovo LocalAI: il contenitore Docker è avviato?": "找不到 LocalAI:Docker 容器是否已启动?",
+ "Non trovo Stable Diffusion: è avviato con --api?": "找不到 Stable Diffusion:是否已使用 --api 启动?",
+ "Per far parlare il programma con Forge apri ": "要让程序与 Forge 通信,请打开 ",
+ "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "当浏览器中打开 Forge 页面后,回到这里并点击 ",
+ "Quando è avviato, premi ": "启动后,点击 ",
+ "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "需要一块至少 6 GB 显存的 NVIDIA 显卡,以及约 15 GB 的可用磁盘空间。",
+ "Sezioni delle impostazioni": "设置的各个部分",
+ "Trovato e pronto: ": "已找到并就绪: ",
+ "Verifica l'indirizzo indicato": "请检查所填写的地址",
+ "dialog[open]": "dialog[open]",
+ "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+ "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+ "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+ "webui\\webui-user.bat": "webui\\webui-user.bat",
+ "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "投影仪音乐、菜单式设置、引导式本地 AI 安装",
+ "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "全屏投影仪上的音乐播放列表:音乐文件或网络电台,随机播放、循环、音量,屏幕上显示曲名;可在投影仪上控制 (M、N、B、+ 和 -),也可在主程序中用 ♪ 按钮控制。",
+ "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "全屏设置:左侧为各部分菜单,右侧一次显示一个部分;其中还包括锦标赛和备份存档。Esc 关闭。",
+ "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "在电脑上用 Stable Diffusion 或 LocalAI 生成标志:如果服务没有响应,程序会提供安装步骤、可复制的命令以及在电脑上自动查找。"
 },
   help: {
  "tornei": {
@@ -1318,7 +1356,7 @@
  },
  "proiettore": {
   "t": "投影仪屏幕",
-  "h": "<p>每个面板 (一个小组、一张对阵表、一个排名、领奖台) 的右上角都有投影仪图标。点击它:会打开一个独立窗口,<b>只显示该面板</b>,并在屏幕允许的范围内尽量放大。正在播出的面板图标会变成橙色。</p><ul><li>如果连接了第二块屏幕,窗口会在那里打开,并直接全屏。只有一块屏幕时,按 <kbd>F</kbd> 全屏。</li><li><kbd>PgDn</kbd> 和 <kbd>PgUp</kbd> (或方向键) 切换到同一标签页的下一个或上一个面板。</li><li><b>图库</b>:面板自动轮播。可选择间隔秒数 (3 秒及以上),以及只显示本标签页的面板还是所有游戏、结果和 Hall of Fame。按 <kbd>G</kbd> 开启或停止。</li><li><b>填满屏幕</b> (<kbd>R</kbd> 键):即使在非 16:9 的屏幕上也使用整个屏幕区域,并缩小页眉,使面板尽可能大。</li><li>录入分数后,投影仪会立即自动更新。</li><li>在投影仪上移动鼠标即可看到控制按钮;<kbd>Esc</kbd> 关闭。</li></ul><p><kbd>F5</kbd> 会在当前标签页的第一个面板上打开投影仪。</p>"
+  "h": "<p>每个面板 (一个小组、一张对阵表、一个排名、领奖台) 的右上角都有投影仪图标。点击它:会打开一个独立窗口,<b>只显示该面板</b>,并在屏幕允许的范围内尽量放大。正在播出的面板图标会变成橙色。</p><ul><li>如果连接了第二块屏幕,窗口会在那里打开,并直接全屏。只有一块屏幕时,按 <kbd>F</kbd> 全屏。</li><li><kbd>PgDn</kbd> 和 <kbd>PgUp</kbd> (或方向键) 切换到同一标签页的下一个或上一个面板。</li><li><b>图库</b>:面板自动轮播。可选择间隔秒数 (3 秒及以上),以及只显示本标签页的面板还是所有游戏、结果和 Hall of Fame。按 <kbd>G</kbd> 开启或停止。</li><li><b>填满屏幕</b> (<kbd>R</kbd> 键):即使在非 16:9 的屏幕上也使用整个屏幕区域,并缩小页眉,使面板尽可能大。</li><li>录入分数后,投影仪会立即自动更新。</li><li>在投影仪上移动鼠标即可看到控制按钮;<kbd>Esc</kbd> 关闭。</li></ul><p><kbd>F5</kbd> 会在当前标签页的第一个面板上打开投影仪。</p><h4>音乐</h4><p>投影仪控制中的 <b>♪ 音乐</b> 按钮,或主程序顶部的 ♪ 按钮,会打开播放列表:添加音乐文件 (MP3、OGG、WAV、FLAC、M4A) 或网络电台的流媒体链接,选择随机播放和循环、音量,以及是否在屏幕上显示曲名。音乐从投影仪播放;曲目保存在这台电脑上。投影仪中的按键:<kbd>M</kbd> 播放或停止,<kbd>N</kbd> 下一首,<kbd>B</kbd> 上一首,<kbd>+</kbd> 和 <kbd>-</kbd> 调节音量。</p>"
  },
  "diretta": {
   "t": "在 YouTube 和 Twitch 上直播",

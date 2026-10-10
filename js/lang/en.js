@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "en", name: "English",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "On phones the banner is compact, tabs scroll sideways and form fields use the full width: nothing spills off the screen any more.",
-    "Versione per telefono": "Phone layout",
+ "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "On phones the banner is compact, tabs scroll sideways and form fields use the full width: nothing spills off the screen any more.",
+ "Versione per telefono": "Phone layout",
  "Nome squadra": "Team name",
  "Aggiungi giocatore": "Add player",
  " (1 sconfitta)": " (1 loss)",
@@ -1265,7 +1265,45 @@
  "Elenco giocatori con Excel e Google Sheets": "Player list with Excel and Google Sheets",
  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Export the participant list for Excel (.xlsx) or as CSV, with each player's team and games.",
  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Import from an .xlsx or .csv file, from the link of a Google Sheets sheet or by pasting copied cells: with a Squadra (team) column it creates and fills the teams, without duplicating names.",
- "L'app installata parte in italiano finché non scegli un'altra lingua.": "The installed app starts in Italian until you choose another language."
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "The installed app starts in Italian until you choose another language.",
+ " (funziona anche senza scheda video, più lentamente).": " (it also works without a graphics card, more slowly).",
+ " con il Blocco note e metti questa riga, poi riavvia ": " with Notepad and add this line, then restart ",
+ " e aggiungi ": " and add ",
+ " e scarica il pacchetto per Windows (one-click package).": " and download the package for Windows (one-click package).",
+ "--gpus all": "--gpus all",
+ ". Ora premi Genera 4 proposte.": ". Now press Generate 4 proposals.",
+ ": la prima volta scarica i modelli e ci mette un po'.": ": the first time it downloads the models and takes a while.",
+ "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "Open Command Prompt and start LocalAI with all the models ready:",
+ "Apri la pagina di Stable Diffusion Forge": "Open the Stable Diffusion Forge page",
+ "Cerca sul PC": "Search on this PC",
+ "Cerco…": "Searching…",
+ "Con una scheda NVIDIA usa l'immagine ": "With an NVIDIA card use the image ",
+ "Copia": "Copy",
+ "Copiato.": "Copied.",
+ "Docker Desktop": "Docker Desktop",
+ "Estrai l'archivio in una cartella, avvia ": "Extract the archive into a folder, run ",
+ "Generale": "General",
+ "Installa ": "Install ",
+ "La prima volta scarica diversi GB. Guida completa: ": "The first time it downloads several GB. Full guide: ",
+ "Non hai ancora il servizio su questo PC? Installalo": "Don't have the service on this PC yet? Install it",
+ "Non trovo LocalAI: il contenitore Docker è avviato?": "Can't find LocalAI: is the Docker container running?",
+ "Non trovo Stable Diffusion: è avviato con --api?": "Can't find Stable Diffusion: was it started with --api?",
+ "Per far parlare il programma con Forge apri ": "To let the program talk to Forge open ",
+ "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "When the Forge page opens in the browser, come back here and press ",
+ "Quando è avviato, premi ": "When it is running, press ",
+ "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "You need an NVIDIA graphics card with at least 6 GB of memory and about 15 GB free on disk.",
+ "Sezioni delle impostazioni": "Settings sections",
+ "Trovato e pronto: ": "Found and ready: ",
+ "Verifica l'indirizzo indicato": "Check the given address",
+ "dialog[open]": "dialog[open]",
+ "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+ "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+ "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+ "webui\\webui-user.bat": "webui\\webui-user.bat",
+ "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "Music on the projector, settings with a menu, guided AI on the PC",
+ "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "Music playlist on the full-screen projector: music files or internet radio, shuffle, repeat, volume, track title on screen; controlled from the projector (M, N, B, + and -) or from the main app with the ♪ button.",
+ "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "Full-screen settings: section menu on the left and one section at a time on the right; the tournament and backup archive is in there too. Esc closes.",
+ "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "Logo generation with Stable Diffusion or LocalAI on the PC: if the service doesn't respond, the program offers the installation with the steps, the commands to copy and an automatic search on the PC."
 },
   help: {
  "tornei": {
@@ -1318,7 +1356,7 @@
  },
  "proiettore": {
   "t": "Projector screen",
-  "h": "<p>Every panel (a group, a bracket, a standings table, the podium) has the projector icon at the top right. Click it: a separate window opens showing <b>only that panel</b>, enlarged as much as the screen allows. The icon of the panel on air turns orange.</p><ul><li>With a second screen connected the window opens there, already full screen. With a single screen use <kbd>F</kbd> for full screen.</li><li><kbd>PgDn</kbd> and <kbd>PgUp</kbd> (or the arrows) move to the next or previous panel of the same tab.</li><li><b>Gallery</b>: the panels cycle automatically. Choose every how many seconds (from 3 up) and whether to show only the tab's panels or all games, results and the Hall of Fame. Turn it on and off with <kbd>G</kbd>.</li><li><b>Fill the screen</b> (<kbd>R</kbd> key): uses the whole area even on non-16:9 screens and shrinks the header, so the panel is as large as possible.</li><li>The projector updates by itself as soon as you enter a score.</li><li>Move the mouse over the projector to see the controls; <kbd>Esc</kbd> closes it.</li></ul><p><kbd>F5</kbd> opens the projector on the first panel of the open tab.</p>"
+  "h": "<p>Every panel (a group, a bracket, a standings table, the podium) has the projector icon at the top right. Click it: a separate window opens showing <b>only that panel</b>, enlarged as much as the screen allows. The icon of the panel on air turns orange.</p><ul><li>With a second screen connected the window opens there, already full screen. With a single screen use <kbd>F</kbd> for full screen.</li><li><kbd>PgDn</kbd> and <kbd>PgUp</kbd> (or the arrows) move to the next or previous panel of the same tab.</li><li><b>Gallery</b>: the panels cycle automatically. Choose every how many seconds (from 3 up) and whether to show only the tab's panels or all games, results and the Hall of Fame. Turn it on and off with <kbd>G</kbd>.</li><li><b>Fill the screen</b> (<kbd>R</kbd> key): uses the whole area even on non-16:9 screens and shrinks the header, so the panel is as large as possible.</li><li>The projector updates by itself as soon as you enter a score.</li><li>Move the mouse over the projector to see the controls; <kbd>Esc</kbd> closes it.</li></ul><p><kbd>F5</kbd> opens the projector on the first panel of the open tab.</p><h4>Music</h4><p>The <b>♪ Music</b> button in the projector controls, or the ♪ button at the top of the main app, opens the playlist: add music files (MP3, OGG, WAV, FLAC, M4A) or the link of a streaming radio, choose shuffle and repeat, the volume and whether to show the track title on screen. The music plays from the projector; the tracks stay saved on this PC. Keys on the projector: <kbd>M</kbd> play or stop, <kbd>N</kbd> next, <kbd>B</kbd> previous, <kbd>+</kbd> and <kbd>-</kbd> volume.</p>"
  },
  "diretta": {
   "t": "Live on YouTube and Twitch",

@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ja", name: "日本語",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。",
-    "Versione per telefono": "スマートフォン表示",
+ "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "スマートフォンではバナーがコンパクトになり、タブは横にスクロールし、フォームの入力欄は全幅で表示されます。画面からはみ出す要素はなくなりました。",
+ "Versione per telefono": "スマートフォン表示",
  "Nome squadra": "チーム名",
  "Aggiungi giocatore": "プレイヤーを追加",
  " (1 sconfitta)": " (1敗)",
@@ -1265,7 +1265,45 @@
  "Elenco giocatori con Excel e Google Sheets": "Excel と Google Sheets でプレイヤー一覧を管理",
  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "参加者一覧を Excel (.xlsx) または CSV でエクスポート。各参加者のチームとゲームも含みます。",
  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": ".xlsx または .csv ファイル、Google Sheets のシートのリンク、コピーしたセルの貼り付けからインポート: Squadra の列があればチームを作成して埋め、名前は重複しません。",
- "L'app installata parte in italiano finché non scegli un'altra lingua.": "インストール版アプリは、別の言語を選ぶまでイタリア語で起動します。"
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "インストール版アプリは、別の言語を選ぶまでイタリア語で起動します。",
+ " (funziona anche senza scheda video, più lentamente).": " (ビデオカードがなくても動作しますが、遅くなります)。",
+ " con il Blocco note e metti questa riga, poi riavvia ": " をメモ帳で開いてこの行を追加し、次を再起動してください: ",
+ " e aggiungi ": " を開いて次を追加してください: ",
+ " e scarica il pacchetto per Windows (one-click package).": " を開き、Windows 用パッケージ (one-click package) をダウンロードしてください。",
+ "--gpus all": "--gpus all",
+ ". Ora premi Genera 4 proposte.": "。「4つの案を生成」を押してください。",
+ ": la prima volta scarica i modelli e ci mette un po'.": ": 初回はモデルをダウンロードするため時間がかかります。",
+ "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "コマンド プロンプトを開き、すべてのモデルを用意した状態で LocalAI を起動します:",
+ "Apri la pagina di Stable Diffusion Forge": "Stable Diffusion Forge のページを開く",
+ "Cerca sul PC": "PC 上を検索",
+ "Cerco…": "検索中…",
+ "Con una scheda NVIDIA usa l'immagine ": "NVIDIA のビデオカードの場合は次のイメージを使います: ",
+ "Copia": "コピー",
+ "Copiato.": "コピーしました。",
+ "Docker Desktop": "Docker Desktop",
+ "Estrai l'archivio in una cartella, avvia ": "アーカイブをフォルダーに展開し、次を起動してください: ",
+ "Generale": "一般",
+ "Installa ": "インストール: ",
+ "La prima volta scarica diversi GB. Guida completa: ": "初回は数 GB をダウンロードします。詳しいガイド: ",
+ "Non hai ancora il servizio su questo PC? Installalo": "このPCにまだサービスがありませんか? インストールしましょう",
+ "Non trovo LocalAI: il contenitore Docker è avviato?": "LocalAI が見つかりません: Docker コンテナーは起動していますか?",
+ "Non trovo Stable Diffusion: è avviato con --api?": "Stable Diffusion が見つかりません: --api 付きで起動していますか?",
+ "Per far parlare il programma con Forge apri ": "プログラムと Forge を連携させるには、次を開いてください: ",
+ "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "ブラウザーで Forge のページが開いたら、ここに戻って次を押してください: ",
+ "Quando è avviato, premi ": "起動したら、次を押してください: ",
+ "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "6 GB 以上のメモリーを持つ NVIDIA のビデオカードと、約 15 GB のディスク空き容量が必要です。",
+ "Sezioni delle impostazioni": "設定のセクション",
+ "Trovato e pronto: ": "見つかりました。準備完了: ",
+ "Verifica l'indirizzo indicato": "指定したアドレスを確認",
+ "dialog[open]": "dialog[open]",
+ "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+ "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+ "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+ "webui\\webui-user.bat": "webui\\webui-user.bat",
+ "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "プロジェクターで音楽、メニュー式の設定、PC 上の AI をガイド付きで導入",
+ "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "全画面のプロジェクターで音楽プレイリスト: 音楽ファイルやインターネットラジオ、シャッフル、リピート、音量、曲名の画面表示。プロジェクター (M、N、B、+、-) またはメインアプリの ♪ ボタンで操作できます。",
+ "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "全画面の設定: 左にセクションのメニュー、右に1つずつセクションを表示。トーナメントとバックアップのアーカイブもここにあります。Esc で閉じます。",
+ "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "PC 上の Stable Diffusion または LocalAI でロゴを生成: サービスが応答しない場合、手順、コピー用のコマンド、PC 上の自動検索付きでインストールを案内します。"
 },
   help: {
  "tornei": {
@@ -1318,7 +1356,7 @@
  },
  "proiettore": {
   "t": "プロジェクター画面",
-  "h": "<p>各パネル (グループ、トーナメント表、順位表、表彰台) の右上にプロジェクターのアイコンがあります。クリックすると別ウィンドウが開き、<b>そのパネルだけ</b> を画面いっぱいまで拡大して表示します。表示中のパネルのアイコンはオレンジ色になります。</p><ul><li>2台目の画面が接続されている場合、ウィンドウはそちらで最初から全画面で開きます。画面が1台だけの場合は <kbd>F</kbd> で全画面にします。</li><li><kbd>PgDn</kbd> と <kbd>PgUp</kbd> (または矢印キー) で、同じタブの次または前のパネルに移動します。</li><li><b>ギャラリー</b>: パネルが自動で切り替わります。切り替え間隔 (3秒以上) と、タブのパネルだけを表示するか、全ゲーム、結果、Hall of Fame を表示するかを選べます。<kbd>G</kbd> で開始/停止します。</li><li><b>画面いっぱいに表示</b> (<kbd>R</kbd> キー): 16:9 以外の画面でも全面を使い、ヘッダーを小さくして、パネルをできるだけ大きく表示します。</li><li>スコアを入力すると、プロジェクターはすぐに自動更新されます。</li><li>プロジェクター上でマウスを動かすとコントロールが表示されます。<kbd>Esc</kbd> で閉じます。</li></ul><p><kbd>F5</kbd> で、開いているタブの最初のパネルをプロジェクターに表示します。</p>"
+  "h": "<p>各パネル (グループ、トーナメント表、順位表、表彰台) の右上にプロジェクターのアイコンがあります。クリックすると別ウィンドウが開き、<b>そのパネルだけ</b> を画面いっぱいまで拡大して表示します。表示中のパネルのアイコンはオレンジ色になります。</p><ul><li>2台目の画面が接続されている場合、ウィンドウはそちらで最初から全画面で開きます。画面が1台だけの場合は <kbd>F</kbd> で全画面にします。</li><li><kbd>PgDn</kbd> と <kbd>PgUp</kbd> (または矢印キー) で、同じタブの次または前のパネルに移動します。</li><li><b>ギャラリー</b>: パネルが自動で切り替わります。切り替え間隔 (3秒以上) と、タブのパネルだけを表示するか、全ゲーム、結果、Hall of Fame を表示するかを選べます。<kbd>G</kbd> で開始/停止します。</li><li><b>画面いっぱいに表示</b> (<kbd>R</kbd> キー): 16:9 以外の画面でも全面を使い、ヘッダーを小さくして、パネルをできるだけ大きく表示します。</li><li>スコアを入力すると、プロジェクターはすぐに自動更新されます。</li><li>プロジェクター上でマウスを動かすとコントロールが表示されます。<kbd>Esc</kbd> で閉じます。</li></ul><p><kbd>F5</kbd> で、開いているタブの最初のパネルをプロジェクターに表示します。</p><h4>音楽</h4><p>プロジェクターのコントロールにある <b>♪ 音楽</b> ボタン、またはメインアプリ上部の ♪ ボタンでプレイリストを開きます: 音楽ファイル (MP3、OGG、WAV、FLAC、M4A) やストリーミングラジオのリンクを追加し、シャッフルとリピート、音量、曲名を画面に表示するかどうかを選べます。音楽はプロジェクターから再生され、曲はこのPCに保存されます。プロジェクターでのキー操作: <kbd>M</kbd> 再生/停止、<kbd>N</kbd> 次の曲、<kbd>B</kbd> 前の曲、<kbd>+</kbd> と <kbd>-</kbd> 音量。</p>"
  },
  "diretta": {
   "t": "YouTube と Twitch で配信",

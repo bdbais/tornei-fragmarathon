@@ -1,8 +1,8 @@
 (function (d) { if (typeof module !== "undefined") module.exports = d; else (window.I18N_DICT = window.I18N_DICT || {})[d.code] = d; })({
   code: "ro", name: "Română",
   s: {
-    "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran.",
-    "Versione per telefono": "Versiunea pentru telefon",
+ "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo.": "Pe telefon bannerul este compact, filele se derulează orizontal, iar câmpurile formularelor ocupă toată lățimea: nimic nu mai iese din ecran.",
+ "Versione per telefono": "Versiunea pentru telefon",
  "Nome squadra": "Numele echipei",
  "Aggiungi giocatore": "Adaugă jucător",
  " (1 sconfitta)": " (1 înfrângere)",
@@ -1265,7 +1265,45 @@
  "Elenco giocatori con Excel e Google Sheets": "Lista jucătorilor cu Excel și Google Sheets",
  "Esporta l'elenco dei partecipanti per Excel (.xlsx) o in CSV, con squadra e giochi di ciascuno.": "Exportă lista participanților pentru Excel (.xlsx) sau în CSV, cu echipa și jocurile fiecăruia.",
  "Importa da un file .xlsx o .csv, dal link di un foglio Google Sheets o incollando le celle copiate: con una colonna Squadra crea e riempie le squadre, senza duplicare i nomi.": "Importă dintr-un fișier .xlsx sau .csv, din linkul unei foi Google Sheets sau lipind celulele copiate: cu o coloană Team (sau Squadra) creează și completează echipele, fără a dubla numele.",
- "L'app installata parte in italiano finché non scegli un'altra lingua.": "Aplicația instalată pornește în italiană până când alegi altă limbă."
+ "L'app installata parte in italiano finché non scegli un'altra lingua.": "Aplicația instalată pornește în italiană până când alegi altă limbă.",
+ " (funziona anche senza scheda video, più lentamente).": " (funcționează și fără placă video, mai lent).",
+ " con il Blocco note e metti questa riga, poi riavvia ": " cu Notepad și pune acest rând, apoi repornește ",
+ " e aggiungi ": " și adaugă ",
+ " e scarica il pacchetto per Windows (one-click package).": " și descarcă pachetul pentru Windows (one-click package).",
+ "--gpus all": "--gpus all",
+ ". Ora premi Genera 4 proposte.": ". Acum apasă Generează 4 propuneri.",
+ ": la prima volta scarica i modelli e ci mette un po'.": ": prima dată descarcă modelele și durează puțin.",
+ "Apri il Prompt dei comandi e avvia LocalAI con tutti i modelli pronti:": "Deschide Linia de comandă (Command Prompt) și pornește LocalAI cu toate modelele gata:",
+ "Apri la pagina di Stable Diffusion Forge": "Deschide pagina Stable Diffusion Forge",
+ "Cerca sul PC": "Caută pe PC",
+ "Cerco…": "Caut…",
+ "Con una scheda NVIDIA usa l'immagine ": "Cu o placă NVIDIA folosește imaginea ",
+ "Copia": "Copiază",
+ "Copiato.": "Copiat.",
+ "Docker Desktop": "Docker Desktop",
+ "Estrai l'archivio in una cartella, avvia ": "Extrage arhiva într-un folder, pornește ",
+ "Generale": "General",
+ "Installa ": "Instalează ",
+ "La prima volta scarica diversi GB. Guida completa: ": "Prima dată descarcă mai mulți GB. Ghid complet: ",
+ "Non hai ancora il servizio su questo PC? Installalo": "Nu ai încă serviciul pe acest PC? Instalează-l",
+ "Non trovo LocalAI: il contenitore Docker è avviato?": "Nu găsesc LocalAI: containerul Docker este pornit?",
+ "Non trovo Stable Diffusion: è avviato con --api?": "Nu găsesc Stable Diffusion: este pornit cu --api?",
+ "Per far parlare il programma con Forge apri ": "Pentru ca programul să comunice cu Forge deschide ",
+ "Quando nel browser si apre la pagina di Forge, torna qui e premi ": "Când în browser se deschide pagina Forge, revino aici și apasă ",
+ "Quando è avviato, premi ": "Când este pornit, apasă ",
+ "Serve una scheda video NVIDIA con almeno 6 GB di memoria e circa 15 GB liberi sul disco.": "E nevoie de o placă video NVIDIA cu cel puțin 6 GB de memorie și circa 15 GB liberi pe disc.",
+ "Sezioni delle impostazioni": "Secțiunile setărilor",
+ "Trovato e pronto: ": "Găsit și gata: ",
+ "Verifica l'indirizzo indicato": "Verifică adresa indicată",
+ "dialog[open]": "dialog[open]",
+ "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu": "docker run -p 8080:8080 --name local-ai -ti localai/localai:latest-aio-cpu",
+ "localai/localai:latest-aio-gpu-nvidia-cuda-12": "localai/localai:latest-aio-gpu-nvidia-cuda-12",
+ "set COMMANDLINE_ARGS=--api": "set COMMANDLINE_ARGS=--api",
+ "webui\\webui-user.bat": "webui\\webui-user.bat",
+ "Musica sul proiettore, impostazioni a menu, AI sul PC guidata": "Muzică pe proiector, setări cu meniu, AI pe PC ghidat",
+ "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.": "Playlist de muzică pe proiectorul pe tot ecranul: fișiere muzicale sau radio pe internet, aleatoriu, repetare, volum, titlul piesei pe ecran; se controlează din proiector (M, N, B, + și -) sau din aplicația principală cu butonul ♪.",
+ "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.": "Setări pe tot ecranul: meniul secțiunilor în stânga și o secțiune pe rând în dreapta; înăuntru se află și arhiva turneelor și a backupurilor. Esc închide.",
+ "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC.": "Generarea logoului cu Stable Diffusion sau LocalAI pe PC: dacă serviciul nu răspunde, programul propune instalarea cu pașii, comenzile de copiat și căutarea automată pe PC."
 },
   help: {
  "tornei": {
@@ -1318,7 +1356,7 @@
  },
  "proiettore": {
   "t": "Ecranul proiectorului",
-  "h": "<p>Fiecare panou (o grupă, un bracket, un clasament, podiumul) are în dreapta sus pictograma proiectorului. Dă clic pe ea: se deschide o fereastră separată care arată <b>doar acel panou</b>, mărit cât permite ecranul. Pictograma panoului afișat devine portocalie.</p><ul><li>Cu un al doilea ecran conectat, fereastra se deschide acolo, direct pe tot ecranul. Cu un singur ecran folosește <kbd>F</kbd> pentru ecran complet.</li><li><kbd>PgDn</kbd> și <kbd>PgUp</kbd> (sau săgețile) trec la panoul următor sau anterior din aceeași fișă.</li><li><b>Galerie</b>: panourile se derulează singure. Alegi la câte secunde (de la 3 în sus) și dacă arăți doar panourile fișei sau toate jocurile, rezultatele și Hall of Fame. Se pornește și se oprește cu <kbd>G</kbd>.</li><li><b>Umple ecranul</b> (tasta <kbd>R</kbd>): folosește toată suprafața și pe ecrane care nu sunt 16:9 și reduce antetul, astfel încât panoul să fie cât mai mare.</li><li>Proiectorul se actualizează singur de îndată ce introduci un punctaj.</li><li>Mișcă mouse-ul pe proiector pentru a vedea comenzile; <kbd>Esc</kbd> închide.</li></ul><p><kbd>F5</kbd> deschide proiectorul pe primul panou al fișei deschise.</p>"
+  "h": "<p>Fiecare panou (o grupă, un bracket, un clasament, podiumul) are în dreapta sus pictograma proiectorului. Dă clic pe ea: se deschide o fereastră separată care arată <b>doar acel panou</b>, mărit cât permite ecranul. Pictograma panoului afișat devine portocalie.</p><ul><li>Cu un al doilea ecran conectat, fereastra se deschide acolo, direct pe tot ecranul. Cu un singur ecran folosește <kbd>F</kbd> pentru ecran complet.</li><li><kbd>PgDn</kbd> și <kbd>PgUp</kbd> (sau săgețile) trec la panoul următor sau anterior din aceeași fișă.</li><li><b>Galerie</b>: panourile se derulează singure. Alegi la câte secunde (de la 3 în sus) și dacă arăți doar panourile fișei sau toate jocurile, rezultatele și Hall of Fame. Se pornește și se oprește cu <kbd>G</kbd>.</li><li><b>Umple ecranul</b> (tasta <kbd>R</kbd>): folosește toată suprafața și pe ecrane care nu sunt 16:9 și reduce antetul, astfel încât panoul să fie cât mai mare.</li><li>Proiectorul se actualizează singur de îndată ce introduci un punctaj.</li><li>Mișcă mouse-ul pe proiector pentru a vedea comenzile; <kbd>Esc</kbd> închide.</li></ul><p><kbd>F5</kbd> deschide proiectorul pe primul panou al fișei deschise.</p><h4>Muzică</h4><p>Butonul <b>♪ Muzică</b> din comenzile proiectorului, sau butonul ♪ din partea de sus a aplicației principale, deschide playlistul: adaugă fișiere muzicale (MP3, OGG, WAV, FLAC, M4A) sau linkul unui radio în streaming, alege aleatoriu și repetare, volumul și dacă arăți titlul piesei pe ecran. Muzica se aude din proiector; piesele rămân salvate pe acest PC. Taste în proiector: <kbd>M</kbd> pornește sau oprește, <kbd>N</kbd> următoarea, <kbd>B</kbd> anterioara, <kbd>+</kbd> și <kbd>-</kbd> volumul.</p>"
  },
  "diretta": {
   "t": "Live pe YouTube și Twitch",

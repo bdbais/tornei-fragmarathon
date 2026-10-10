@@ -4,6 +4,11 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.6.3", d: "2026-10-10", t: "Musica sul proiettore, impostazioni a menu, AI sul PC guidata", items: [
+      "Playlist di musica sul proiettore a schermo intero: file musicali o radio via internet, casuale, ripetizione, volume, titolo del brano sullo schermo; si comanda dal proiettore (M, N, B, + e -) o dall'app principale con il pulsante ♪.",
+      "Impostazioni a schermo intero: menu delle sezioni a sinistra e una sezione alla volta a destra; dentro c'è anche l'archivio dei tornei e dei backup. Esc chiude.",
+      "Generazione del logo con Stable Diffusion o LocalAI sul PC: se il servizio non risponde, il programma propone l'installazione con i passi, i comandi da copiare e la ricerca automatica sul PC."
+    ] },
     { v: "3.6.2", d: "2026-10-10", t: "Versione per telefono", items: [
       "Su telefono il banner è compatto, le schede scorrono in orizzontale e i campi dei moduli occupano tutta la larghezza: niente esce più dallo schermo."
     ] },
