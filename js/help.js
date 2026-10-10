@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "bot", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     inizio: { t: "Come si inizia", h:
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +
@@ -102,19 +102,38 @@ window.HELP = {
       "<li>Muovi il mouse sul proiettore per vedere i comandi; <kbd>Esc</kbd> chiude.</li></ul>" +
       "<p><kbd>F5</kbd> apre il proiettore sul primo pannello della scheda aperta.</p>" },
 
+    bot: { t: "Bot Telegram", h:
+      "<p>Con un bot Telegram i partecipanti possono vedere tornei, classifiche, partite e Hall of Fame dal telefono, seguire un torneo per ricevere gli avvisi e iscriversi. Il bot è tuo: lo crei una volta sola, gratis, in due minuti.</p>" +
+      "<h4>1. Crea il tuo bot</h4><ol><li>In Telegram apri la chat con <b>@BotFather</b> (quello ufficiale, con la spunta blu).</li>" +
+      "<li>Scrivi <code>/newbot</code>, poi il nome che vedranno tutti (per esempio <i>Tornei del Lanparty</i>) e uno username che finisca con <i>bot</i> (per esempio <i>lanparty_tornei_bot</i>).</li>" +
+      "<li>BotFather risponde con il <b>token</b>, una riga tipo <code>123456789:AAH…</code>. È la chiave del bot: non condividerla e non pubblicarla.</li>" +
+      "<li>Facoltativo: con <code>/setdescription</code> e <code>/setuserpic</code> aggiungi descrizione e logo.</li></ol>" +
+      "<h4>2. Collegalo al programma</h4><ol><li>In fondo alla pagina apri <b>IMPOSTAZIONI</b>, sezione <b>Bot Telegram</b>.</li>" +
+      "<li>Incolla il token e premi <b>Salva e collega</b>: lo stato diventa «Attivo come @nomebot».</li>" +
+      "<li>Dal tuo Telegram scrivi al bot <code>/admin</code> seguito dal codice mostrato nelle impostazioni: diventi organizzatore e ricevi le richieste di iscrizione con i pulsanti Accetta e Rifiuta. Ogni organizzatore usa un codice nuovo.</li>" +
+      "<li>Condividi il link del bot (<code>t.me/nomebot</code>) con i partecipanti, magari con un QR code all'ingresso.</li></ol>" +
+      "<h4>Cosa possono chiedere i partecipanti</h4><ul><li><code>/tornei</code>, <code>/torneo</code>, <code>/classifica</code>, <code>/partite</code>, <code>/risultati</code>: tornei, stato, classifiche, tabelloni e partite da giocare (anche con i pulsanti).</li>" +
+      "<li><code>/hof</code>: Hall of Fame, con il file CSV da scaricare. <code>/immagine</code>: l'immagine del torneo.</li>" +
+      "<li><code>/giocatore nome</code>, oppure <code>/io nome</code> e poi <code>/miepartite</code>: dove gioca, posizioni e prossime partite.</li>" +
+      "<li><code>/segui nome</code> o <code>/segui tutti</code>: avvisi a ogni cambio di turno o fase e alla fine con il podio (e, se lo attivi, a ogni risultato).</li>" +
+      "<li><code>/iscrivimi torneo</code>: iscrizione ai tornei non ancora iniziati. Con «conferma dell'organizzatore» la richiesta arriva agli organizzatori sul telefono e nelle impostazioni; con «automatiche» il nome entra subito; con «chiuse» il bot non accetta iscrizioni. Nei giochi a squadre il nome entra nei partecipanti e la squadra la decidi tu.</li>" +
+      "<li><code>/stop</code>: il bot dimentica quella chat.</li></ul>" +
+      "<p>Gli organizzatori hanno anche <code>/richieste</code> e <code>/annuncio testo</code>, che manda un messaggio a tutti.</p>" +
+      "<p class='note'>Il bot risponde finché questo programma è aperto e connesso a internet. Il token, le chat e le richieste restano solo su questo PC e non finiscono nei backup: su un altro PC rimetti il token. Un bot può essere collegato a un solo programma alla volta. Il bot conserva l'ID della chat e il nome Telegram di chi gli scrive, solo per rispondere e mandare gli avvisi; con /stop vengono cancellati.</p>" },
+
     temi: { t: "Temi, logo, AI e CSS", h:
       "<p>Scegli il tema dal menu <b>Tema</b> in alto a destra. Vale per la finestra principale e per il proiettore e viene salvato con i dati dell'evento.</p>" +
       "<ul><li><b>Automatico</b>: ogni gioco ha i suoi colori (Quake lava e metallo, Team Fortress 2 retrò, Wreckfest cantiere, Counter-Strike 2 tattico, FIFA campo da calcio); le altre schede usano Fragmarathon. Sul proiettore, in galleria, il tema cambia con il gioco mostrato.</li>" +
       "<li><b>Fragmarathon</b>: il tema dell'evento; segue chiaro o scuro di Windows.</li>" +
       "<li><b>Ispirati alle piattaforme</b>: Bracket chiaro (stile Challonge), Arena notturna (stile start.gg), Lega pro (stile ESL), Wiki (stile Liquipedia), Neon (stile Battlefy). Riprendono solo i colori, non loghi o marchi.</li>" +
       "<li><b>Temi dei giochi</b>: puoi anche fissare il tema di un gioco per tutto il programma.</li></ul>" +
-      "<h4>Logo dell'evento</h4><p>In fondo alla pagina premi <b>MODIFICA</b>, poi <b>Carica logo</b>: PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Compare nell'intestazione, nelle immagini PNG e nei PDF. <b>Torna al logo Fragmarathon</b> rimette quello di base.</p>" +
-      "<h4>Logo generato con l'AI</h4><p>In <b>MODIFICA</b>, sotto il logo: scegli se il logo è per l'evento o per un torneo, lo stile e il servizio, poi <b>Genera 4 proposte</b> e <b>Usa questo</b> su quella che preferisci. Servizi:</p><ul>" +
+      "<h4>Logo dell'evento</h4><p>In fondo alla pagina premi <b>IMPOSTAZIONI</b>, poi <b>Carica logo</b>: PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Compare nell'intestazione, nelle immagini PNG e nei PDF. <b>Torna al logo Fragmarathon</b> rimette quello di base.</p>" +
+      "<h4>Logo generato con l'AI</h4><p>In <b>IMPOSTAZIONI</b>, sotto il logo: scegli se il logo è per l'evento o per un torneo, lo stile e il servizio, poi <b>Genera 4 proposte</b> e <b>Usa questo</b> su quella che preferisci. Servizi:</p><ul>" +
       "<li><b>Stable Diffusion sul tuo PC</b> (AUTOMATIC1111, Forge o SD.Next avviati con <code>--api</code>, indirizzo di base <code>http://127.0.0.1:7860</code>): gratuito e tutto in locale.</li>" +
       "<li><b>Server compatibile OpenAI</b>, per esempio LocalAI in locale (<code>http://127.0.0.1:8080/v1</code>) o un servizio remoto con la sua chiave.</li>" +
       "<li><b>Pollinations</b> e <b>Hugging Face</b>: online, con una chiave personale gratuita (enter.pollinations.ai/keys oppure huggingface.co/settings/tokens).</li></ul>" +
       "<p class='note'>Le impostazioni e le chiavi restano su questo PC e non finiscono nei backup. Ai servizi online viene inviata solo la descrizione del logo.</p>" +
-      "<h4>CSS personalizzato</h4><p>Sempre in <b>MODIFICA</b>: <b>Importa file .css</b> carica un foglio di stile preparato fuori dal programma, oppure lo scrivi nella casella e premi <b>Salva</b>. <b>Scarica il modello</b> ti dà un file di partenza con tutte le variabili dei colori (--bg, --panel, --ink, --mut, --line, --edge, --acc, --accink, --wacc per il proiettore). Il CSS vale sopra al tema scelto, anche sul proiettore, e viaggia con i backup.</p>" +
+      "<h4>CSS personalizzato</h4><p>Sempre in <b>IMPOSTAZIONI</b>: <b>Importa file .css</b> carica un foglio di stile preparato fuori dal programma, oppure lo scrivi nella casella e premi <b>Salva</b>. <b>Scarica il modello</b> ti dà un file di partenza con tutte le variabili dei colori (--bg, --panel, --ink, --mut, --line, --edge, --acc, --accink, --wacc per il proiettore). Il CSS vale sopra al tema scelto, anche sul proiettore, e viaggia con i backup.</p>" +
       "<p class='note'>Per sicurezza il CSS non può caricare nulla da internet (url(https://…) e @import vengono bloccati). Le immagini vanno incorporate come url(data:…).</p>" },
 
     archivio: { t: "Archivio tornei e backup", h:

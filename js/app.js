@@ -791,8 +791,8 @@ function renderEdit(){
    +renderAi()
    +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row"><button id="ecssimp">Importa file .css…</button><button id="ecssexp">Scarica il modello</button>'+(S.ui.css?'<button id="ecssdel">Rimuovi il CSS</button>':'')+'<input type="file" id="ecf" accept=".css,text/css" hidden></div>'
    +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
-   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>';
-  $("editform").innerHTML=h;
+   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings();
+  $("editform").innerHTML=h;botRefresh();
 }
 
 /* ---------- logo con l'AI (impostazioni per questo PC, fuori dai backup perché possono contenere una chiave) ---------- */
@@ -844,7 +844,86 @@ function aiUse(i){
   im.src=src;
 }
 
-var CSSTPL="/* Tornei Fragmarathon: CSS personalizzato.\n   Importalo da MODIFICA > CSS personalizzato. Vale sopra a qualsiasi tema.\n   :root:not(#x) serve a vincere su tema e chiaro/scuro di Windows. */\n\n:root:not(#x){\n  --bg:#101418;      /* sfondo della pagina */\n  --panel:#182028;   /* sfondo dei pannelli */\n  --ink:#F2F4F7;     /* testo */\n  --mut:#A9B4C2;     /* testo secondario */\n  --line:#2A3542;    /* righe sottili */\n  --edge:#3E4C5C;    /* bordi e intestazioni delle tabelle */\n  --acc:#FF5A1F;     /* colore principale: pulsanti, qualificati, vincitori */\n  --accink:#111111;  /* testo sopra al colore principale */\n  --win:var(--acc);\n  --gold:var(--acc);\n  --wacc:#FF5A1F;    /* colore principale sul proiettore (su fondo nero) */\n}\n\n/* Intestazione: righe e bagliore */\n.brand{}\n.brand h1{}\n.brand .tag{}\n\n/* Proiettore: il pannello mostrato */\n#wfit{}\n#wall .wh{}\n";
+
+/* ======================================================================
+   Bot Telegram (solo nell'app installata: il bot vive nel processo principale, vedi bot.js).
+   Qui si prepara la "vista" dei tornei che il bot usa per rispondere e per gli avvisi.
+   ====================================================================== */
+function mres(m){return m.sa!=null&&m.sb!=null?m.a+" "+m.sa+"–"+m.sb+" "+m.b:m.w+" batte "+(m.w===m.a?m.b:m.a)}
+function botLines(g,k){
+  var L=[],r=result(g,k);
+  if(r.status==="Concluso"){var pl=placements(g,k);Object.keys(pl).sort(function(a,b){return pl[a]-pl[b]}).forEach(function(n){L.push(pl[n]+"º "+n)});return L}
+  if(g.phase==="setup")return g.players.map(function(n,i){return(i+1)+". "+n});
+  if(g.ffa){var F=g.ffa,ri=F.rounds.length-1,rd=F.rounds[ri],fin=rd.groups.length===1;L.push(fin?"Finale":"Turno "+(ri+1));
+    rd.groups.forEach(function(gr,gi){var e=gEval(gr,fin,F.adv);if(!fin)L.push("Girone "+letter(gi));e.sorted.forEach(function(x){L.push("  "+(e.full?x.pos+"º ":"– ")+x.n+": "+(gr.s[x.n]==null?"–":gr.s[x.n])+(e.full&&!fin&&e.adv.indexOf(x.n)>=0?" ✓":""))})});return L}
+  if(g.de){var E=deState(g).ev,loss={};Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.l)loss[m.l]=(loss[m.l]||0)+1});
+    L.push("In gara: "+g.players.filter(function(n){return(loss[n]||0)<2}).map(function(n){return n+(loss[n]?" (1 sconfitta)":"")}).join(", "));
+    var out=g.players.filter(function(n){return(loss[n]||0)>=2});if(out.length)L.push("Eliminati: "+out.join(", "));return L}
+  if(g.rounds){g.rounds.forEach(function(rd,ri){var dn=rd.filter(function(m){return m.w&&m.a&&m.b});if(!dn.length)return;L.push(roundName(ri,g.rounds.length));dn.forEach(function(m){L.push("  "+mres(m))})});return L}
+  if(g.sw){TF.swStandings(g.players,g.sw.rounds,rankFx(g)).forEach(function(t,i){L.push((i+1)+"º "+t.n+": "+t.pts+" pt ("+t.w+"V "+t.d+"N "+t.l+"P)")});return L}
+  if(g.groups){g.groups.forEach(function(x,gi){if(g.groups.length>1)L.push("Girone "+letter(gi));standings(x,g).forEach(function(t,i){L.push("  "+(i+1)+"º "+t.n+": "+t.pt+" pt ("+t.w+"V "+t.d+"N "+t.l+"P)")})});return L}
+  return L;
+}
+function botNext(g,k){
+  var N=[];if(g.phase==="setup"||result(g,k).status==="Concluso")return N;
+  if(g.ffa){var F=g.ffa,rd=F.rounds[F.rounds.length-1],fin=rd.groups.length===1;rd.groups.forEach(function(gr,gi){if(gr.p.some(function(n){return gr.s[n]==null}))N.push((fin?"Finale":"Girone "+letter(gi))+": "+gr.p.join(", "))});return N}
+  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.w===undefined)N.push((id==="GF"?"Finale":id==="GF2"?"Bella":id.charAt(0)==="W"?"Vincenti":"Perdenti")+": "+m.a+" vs "+m.b)});return N}
+  if(g.rounds){var R=g.rounds,ci=R.findIndex(function(rd){return rd.some(function(m){return m.a&&m.b&&!m.w})});if(ci>=0)R[ci].forEach(function(m){if(m.a&&m.b&&!m.w)N.push(roundName(ci,R.length)+": "+m.a+" vs "+m.b)});var t=g.third;if(t&&t.match&&t.a&&t.b&&!t.w)N.push("Finale 3º posto: "+t.a+" vs "+t.b);return N}
+  if(g.sw){var W=g.sw;W.rounds[W.rounds.length-1].forEach(function(m){if(m.b&&m.w==null)N.push("Turno "+W.rounds.length+": "+m.a+" vs "+m.b)});return N}
+  if(g.groups){g.groups.forEach(function(x,gi){var op=x.matches.filter(function(m){return m.sa==null||m.sb==null});if(!op.length)return;var d=op[0].day;op.filter(function(m){return m.day===d}).forEach(function(m){N.push((g.groups.length>1?"Girone "+letter(gi)+", ":"")+"giornata "+d+": "+m.a+" vs "+m.b)})});return N}
+  return N;
+}
+function botResults(g,k){
+  var R=[];
+  if(g.ffa)g.ffa.rounds.forEach(function(rd,ri){var fin=rd.groups.length===1;rd.groups.forEach(function(gr,gi){var e=gEval(gr,fin,g.ffa.adv);if(e.full)R.push({id:"f"+ri+"-"+gi+":"+gr.p.join(","),text:(fin?"Finale":"Turno "+(ri+1)+", girone "+letter(gi))+": "+e.sorted.slice(0,3).map(function(x){return x.pos+"º "+x.n+" ("+gr.s[x.n]+")"}).join(", ")})})});
+  if(g.groups)g.groups.forEach(function(x,gi){x.matches.forEach(function(m,mi){if(m.sa!=null&&m.sb!=null)R.push({id:"g"+gi+"-"+mi+":"+m.sa+"-"+m.sb,text:m.a+" "+m.sa+"–"+m.sb+" "+m.b})})});
+  if(g.sw)g.sw.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(m.b&&m.w!=null)R.push({id:"s"+ri+"-"+mi+":"+m.a+m.b+m.w,text:m.sa!=null&&m.sb!=null?m.a+" "+m.sa+"–"+m.sb+" "+m.b:(m.w==="="?m.a+" e "+m.b+" pareggiano":mres(m))})})});
+  if(g.rounds)g.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){if(m.w&&m.a&&m.b)R.push({id:"e"+ri+"-"+mi+":"+m.a+m.b+m.w,text:roundName(ri,g.rounds.length)+": "+mres(m)})})});
+  if(g.third&&g.third.w&&g.third.a&&g.third.b)R.push({id:"t3:"+g.third.w,text:"Finale 3º posto: "+mres(g.third)});
+  if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var m=E.M[id];if(m.ready&&m.w!==undefined)R.push({id:"d"+id+":"+m.a+m.b+m.w,text:mres(m)})})}
+  return R;
+}
+function botVM(){
+  var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
+  function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
+  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,roster:S.roster.slice(),
+    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k);return{k:k,l:DEF[k].l,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),next:botNext(g,k),results:botResults(g,k)}}),
+    hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
+}
+var botT=null;
+function botPush(){if(!DESK||!DESK.botState||WALL)return;clearTimeout(botT);botT=setTimeout(function(){try{DESK.botState(botVM())}catch(e){}},700)}
+function botJoin(m){
+  var g=S.games[m.k],nm=String(m.name||"").trim();if(!nm)return;
+  if(!S.roster.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))S.roster.push(nm);
+  if(g&&g.phase==="setup"&&!isTeam(g,m.k)&&!g.players.some(function(p){return p.toLowerCase()===nm.toLowerCase()}))g.players.push(nm);
+  save();renderRoster();render();toast("Iscritto dal bot Telegram: "+nm+(DEF[m.k]?" ("+DEF[m.k].l+")":"")+".");
+}
+if(window.desk&&window.desk.onBot)window.desk.onBot(function(m){
+  if(m.type==="join")botJoin(m);
+  else if(m.type==="png"){makePng(m.k).then(function(cv){window.desk.botPng(m.id,cv.toDataURL("image/png"))}).catch(function(){window.desk.botPng(m.id,null)})}
+  else if(m.type==="status"&&$("botbox"))botRefresh();
+});
+function botHtml(st){
+  if(!st)return'<p class="hint">Il bot non è disponibile.</p>';
+  var state=st.running?'<span class="ok">Attivo come <b>@'+esc(st.username||"")+'</b></span>':(st.enabled&&st.hasToken?'<span class="cres err">Non collegato'+(st.lastErr?': '+esc(st.lastErr):'')+'</span>':'Spento');
+  var h='<p style="margin:6px 0 10px">Stato: '+state+'</p>'
+   +'<div class="row"><input type="password" id="bottok" autocomplete="off" placeholder="'+(st.hasToken?"Token salvato: lascialo vuoto per non cambiarlo":"Token del bot (da @BotFather)")+'" aria-label="Token del bot Telegram"><button class="p" id="botsave">Salva e collega</button>'+(st.hasToken?'<button id="botdel">Rimuovi token</button>':'')+'</div>'
+   +'<div class="row" style="margin-top:10px"><label class="row chk"><input type="checkbox" id="boton"'+(st.enabled?" checked":"")+'>Bot attivo</label>'
+   +'<label class="row" style="gap:6px">Iscrizioni dal bot <select id="botjoin"><option value="approve"'+(st.join==="approve"?" selected":"")+'>Con conferma dell&#39;organizzatore</option><option value="auto"'+(st.join==="auto"?" selected":"")+'>Automatiche</option><option value="off"'+(st.join==="off"?" selected":"")+'>Chiuse</option></select></label></div>'
+   +'<div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Avvisi a chi segue un torneo:</span><label class="row chk"><input type="checkbox" class="botn" data-n="stage"'+(st.notify.stage?" checked":"")+'>cambio di turno o fase</label><label class="row chk"><input type="checkbox" class="botn" data-n="final"'+(st.notify.final?" checked":"")+'>podio finale</label><label class="row chk"><input type="checkbox" class="botn" data-n="results"'+(st.notify.results?" checked":"")+'>ogni risultato</label></div>'
+   +'<p class="hint">Organizzatori: scrivete al bot <code>/admin '+esc(st.code)+'</code> per ricevere le richieste di iscrizione e poter mandare annunci (il codice cambia dopo ogni uso). '+(st.admins.length?'Già organizzatori: '+st.admins.map(esc).join(", ")+'. <button id="botadm">Rimuovi gli organizzatori</button>':'')+' <button id="botcode">Nuovo codice</button></p>'
+   +'<p class="hint">'+st.chats+' chat hanno scritto al bot, '+st.followers+' seguono almeno un torneo.</p>';
+  if(st.pending.length)h+='<h4 style="margin:12px 0 4px">Iscrizioni da confermare</h4><table class="res"><tr><th>Nome</th><th>Torneo</th><th>Da</th><th></th></tr>'+st.pending.map(function(p){return'<tr><td><b>'+esc(p.name)+'</b></td><td>'+esc(p.l)+'</td><td>'+esc(p.user||"")+'</td><td><button class="p" data-botok="'+esc(p.id)+'">Accetta</button> <button data-botno="'+esc(p.id)+'">Rifiuta</button></td></tr>'}).join("")+'</table>';
+  return h;
+}
+function botRefresh(){var b=$("botbox");if(!b||!DESK||!DESK.botStatus)return;DESK.botStatus().then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st)}).catch(function(){})}
+function renderBotSettings(){
+  return'<h3 style="margin-top:20px">Bot Telegram</h3><p class="hint">I partecipanti chiedono al bot tornei, classifiche, partite e Hall of Fame, seguono un torneo per ricevere gli avvisi e si iscrivono. Il bot funziona mentre questo programma è aperto e connesso a internet. Come crearlo: guida (F1), «Bot Telegram».</p>'
+   +(DESK&&DESK.botStatus?'<div id="botbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">Disponibile solo nell&#39;app installata per Windows.</p>');
+}
+function botCfg(c){if(!DESK||!DESK.botConfig)return;DESK.botConfig(c).then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st);if(st&&st.running)botPush()}).catch(function(){})}
+
+var CSSTPL="/* Tornei Fragmarathon: CSS personalizzato.\n   Importalo da IMPOSTAZIONI > CSS personalizzato. Vale sopra a qualsiasi tema.\n   :root:not(#x) serve a vincere su tema e chiaro/scuro di Windows. */\n\n:root:not(#x){\n  --bg:#101418;      /* sfondo della pagina */\n  --panel:#182028;   /* sfondo dei pannelli */\n  --ink:#F2F4F7;     /* testo */\n  --mut:#A9B4C2;     /* testo secondario */\n  --line:#2A3542;    /* righe sottili */\n  --edge:#3E4C5C;    /* bordi e intestazioni delle tabelle */\n  --acc:#FF5A1F;     /* colore principale: pulsanti, qualificati, vincitori */\n  --accink:#111111;  /* testo sopra al colore principale */\n  --win:var(--acc);\n  --gold:var(--acc);\n  --wacc:#FF5A1F;    /* colore principale sul proiettore (su fondo nero) */\n}\n\n/* Intestazione: righe e bagliore */\n.brand{}\n.brand h1{}\n.brand .tag{}\n\n/* Proiettore: il pannello mostrato */\n#wfit{}\n#wall .wh{}\n";
 function readLogo(file){
   var rd=new FileReader();
   rd.onload=function(){
@@ -867,6 +946,9 @@ $("editbox").addEventListener("change",function(e){
     aiSaveCfg(c);if(/^ai(target|style|prov)$/.test(e.target.id))renderEdit();return;
   }
   if(e.target.id==="aiprompt"){aiSaveCfg(aiReadForm());return}
+  if(e.target.id==="boton"){botCfg({enabled:e.target.checked});return}
+  if(e.target.id==="botjoin"){botCfg({join:e.target.value});return}
+  if(e.target.classList.contains("botn")){var nn={};nn[e.target.dataset.n]=e.target.checked;botCfg({notify:nn});return}
   var f=e.target.files&&e.target.files[0];if(!f)return;
   if(e.target.id==="elf")readLogo(f);
   if(e.target.id==="ecf"){
@@ -881,6 +963,11 @@ $("editbox").onclick=function(e){
   if(b.id==="ecancel"){$("editbox").hidden=true;return}
   if(b.id==="elogo"){$("elf").click();return}
   if(b.id==="aigo"){if(!aiBusy)aiRun();return}
+  if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
+  if(b.id==="botdel"){botCfg({removeToken:true});return}
+  if(b.id==="botcode"){botCfg({newCode:true});return}
+  if(b.id==="botadm"){botCfg({removeAdmins:true});return}
+  if(b.dataset.botok||b.dataset.botno){DESK.botDecide(b.dataset.botok||b.dataset.botno,!!b.dataset.botok).then(botRefresh);return}
   if(b.id==="aireset"){var c0=aiReadForm();delete c0.prompt;aiSaveCfg(c0);renderEdit();return}
   if(b.dataset.aiuse!==undefined){aiUse(+b.dataset.aiuse);return}
   if(b.id==="elogodef"){delete S.ui.logo;applyUi();save();renderEdit();toast("Ripristinato il logo Fragmarathon.");return}
@@ -1378,6 +1465,7 @@ function autoBackup(label){
   try{var L=JSON.parse(localStorage.getItem(KEY+"-auto")||"[]");L.unshift({t:Date.now(),label:label,data:data});localStorage.setItem(KEY+"-auto",JSON.stringify(L.slice(0,3)));toast("Backup automatico salvato nel browser ("+label+").");renderArch()}catch(e){}
 }
 function afterSave(){
+  botPush();
   saveAt=new Date();var se=$("savest");if(se)se.textContent="Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
   if(WALL)return;
   var now=statusMap();
@@ -1680,7 +1768,7 @@ function hofEditor(){
    +'<p class="hint">Variabili: pos (posizione finale), punti (punti fatti nel torneo, secondo la sua formula «Punti per la Hall of Fame»), partecipanti, concluso (1 o 0). Funzioni e operatori come nelle altre formule (F1).</p></details>';
 }
 function hofSet(src){try{TF.fxCompile(src,HOF_VARS)}catch(e){toast("Formula non salvata: "+e.message);return}S.ui.hof=src.trim();save();render();toast("Hall of Fame ricalcolata.")}
-function renderHof2(){
+function hofCompute(){
   var fx=fxSafe(hofFormula(),HOF_VARS)||TF.fxCompile(HOF_DEF,HOF_VARS),P={},T={};
   function add(M,n,k,o){var e=M[n]||(M[n]={n:n,tot:0,by:{}});e.tot+=o.v;e.by[k]=o}
   Object.keys(DEF).forEach(function(k){
@@ -1691,7 +1779,11 @@ function renderHof2(){
       if(team){add(T,n,k,o);((g.members||{})[n]||[]).forEach(function(m){add(P,m,k,o)})}else add(P,n,k,o);
     });
   });
-  function top(M){return Object.keys(M).map(function(k){return M[k]}).sort(function(a,b){return b.tot-a.tot||a.n.localeCompare(b.n)}).slice(0,10)}
+  function all(M){var L=Object.keys(M).map(function(k){return M[k]}).sort(function(a,b){return b.tot-a.tot||a.n.localeCompare(b.n)}),prev=null,pos=0;L.forEach(function(e,i){if(e.tot!==prev){pos=i+1;prev=e.tot}e.pos=pos});return L}
+  return{P:all(P),T:all(T)};
+}
+function renderHof2(){
+  var H=hofCompute();function top(L){return L.slice(0,10)}
   function panel(title,list,isT){
     var h='<section class="panel"><h2>'+title+'</h2>';
     if(!list.length)return h+'<p class="empty">Nessun punteggio inserito.</p></section>';
@@ -1705,7 +1797,7 @@ function renderHof2(){
     });
     return h+'</table></section>';
   }
-  $("hofbox").innerHTML=hofEditor()+'<p class="hint" style="margin:12px 0">Classifica di tutti i giochi dell&#39;evento. Accanto all&#39;icona di ogni gioco: posizione finale e punti Hall of Fame. Nei giochi a squadre i punti della squadra contano anche per ogni componente.</p>'+panel("Hall of Fame · Giocatori",top(P),false)+panel("Hall of Fame · Squadre",top(T),true);
+  $("hofbox").innerHTML=hofEditor()+'<p class="hint" style="margin:12px 0">Classifica di tutti i giochi dell&#39;evento. Accanto all&#39;icona di ogni gioco: posizione finale e punti Hall of Fame. Nei giochi a squadre i punti della squadra contano anche per ogni componente.</p>'+panel("Hall of Fame · Giocatori",top(H.P),false)+panel("Hall of Fame · Squadre",top(H.T),true);
 }
 $("hofbox").addEventListener("change",function(e){
   var id=e.target.id;
@@ -1731,5 +1823,5 @@ renderOut=function(){_renderOut();fitProj();decorateProj()};
 window.addEventListener("resize",fitProj);
 document.addEventListener("fullscreenchange",fitProj);
 lastJ=JSON.stringify(S);
-if(WALL)wallInit();else{lastStat=statusMap();applyUi();renderRoster();render()}
+if(WALL)wallInit();else{lastStat=statusMap();applyUi();renderRoster();render();botPush()}
 })();

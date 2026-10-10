@@ -12,6 +12,12 @@ contextBridge.exposeInMainWorld("desk", {
   openFolder: (which) => ipcRenderer.invoke("folder:open", which),
   openWall: () => ipcRenderer.invoke("wall:open"),
   aiImage: (cfg, prompt, seed, size) => ipcRenderer.invoke("ai:image", cfg, prompt, seed, size),
+  botState: (vm) => ipcRenderer.invoke("bot:state", vm),
+  botStatus: () => ipcRenderer.invoke("bot:status"),
+  botConfig: (c) => ipcRenderer.invoke("bot:config", c),
+  botDecide: (id, ok) => ipcRenderer.invoke("bot:decide", id, ok),
+  botPng: (id, data) => ipcRenderer.invoke("bot:png", id, data),
+  onBot: (cb) => ipcRenderer.on("bot", (_e, m) => cb(m)),
   checkUpdate: () => ipcRenderer.invoke("update:check"),
   installUpdate: () => ipcRenderer.invoke("update:install"),
   onUpdate: (cb) => ipcRenderer.on("update", (_e, s) => cb(s))

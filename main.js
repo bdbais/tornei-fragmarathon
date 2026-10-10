@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, ipcMain, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const AI = require("./js/ai.js");
+const createBot = require("./bot.js");
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -156,6 +157,14 @@ ipcMain.handle("ai:image", async (_e, cfg, prompt, seed, size) => {
   try { return { data: await AI.generate(cfg || {}, prompt, seed, Math.min(1024, Math.max(256, size || 512))) }; }
   catch (e) { return { error: String((e && e.name === "TimeoutError") ? "Il servizio non ha risposto in tempo" : (e && e.message) || e).slice(0, 300) }; }
 });
+/* Bot Telegram: gira qui, con i dati che la pagina gli manda già calcolati. */
+let bot = null;
+function toPage(msg) { if (win) win.webContents.send("bot", msg); }
+ipcMain.handle("bot:state", (_e, vm) => { if (bot) bot.setVM(vm); });
+ipcMain.handle("bot:status", () => (bot ? bot.status() : null));
+ipcMain.handle("bot:config", (_e, c) => (bot ? bot.configure(c) : null));
+ipcMain.handle("bot:decide", (_e, id, ok) => (bot ? bot.decide(id, ok) : false));
+ipcMain.handle("bot:png", (_e, id, data) => { if (bot) bot.pngReply(id, data); });
 ipcMain.handle("update:check", async () => {
   if (!updater) return { state: app.isPackaged ? "error" : "dev" };
   try { await updater.checkForUpdates(); return { state: "checking" }; } catch (e) { return { state: "error", message: String(e.message || e) }; }
@@ -169,5 +178,13 @@ app.whenReady().then(() => {
   try { ensureDirs(); } catch {}
   createWindow();
   initUpdater();
+  bot = createBot({
+    file: path.join(app.getPath("userData"), "telegram.json"),
+    onJoin: (req) => toPage({ type: "join", name: req.name, k: req.k }),
+    onPng: (r) => toPage({ type: "png", id: r.id, k: r.k }),
+    onChange: () => toPage({ type: "status" })
+  });
+  bot.start().catch(() => {});
 });
+app.on("before-quit", () => { if (bot) bot.stop(); });
 app.on("window-all-closed", () => app.quit());

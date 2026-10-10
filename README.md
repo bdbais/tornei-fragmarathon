@@ -28,9 +28,10 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 - **Hall of Fame** dell'evento: punti per la posizione finale di ogni torneo più i punti fatti con il peso che scegli (o una formula), con posizione e punti per ogni gioco.
 - **Temi**: automatico per gioco (Quake, Team Fortress 2, Wreckfest, Counter-Strike 2, FIFA), Fragmarathon, e temi ispirati alle piattaforme di tornei (stile Challonge, start.gg, ESL, Liquipedia, Battlefy). Il proiettore segue il tema.
 - **Calcolo dei punti con formule** per ogni torneo: campi a scelta nel free for all (es. posizione e uccisioni) con modelli pronti, punti in classifica e punti per la Hall of Fame nei formati a partite. Linguaggio di formule sicuro, senza `eval`, testato in `tests/`.
+- **Bot Telegram** configurabile dalle impostazioni: tornei, classifiche, partite, Hall of Fame con CSV, immagini, avvisi per torneo seguito, iscrizioni con conferma degli organizzatori, annunci. Gira nell'app (long polling), token solo sul PC. Come creare il proprio bot: guida in app (F1, «Bot Telegram»).
 - **Logo con l'AI** per l'evento o per ogni torneo: Stable Diffusion locale (AUTOMATIC1111/Forge), server compatibili OpenAI (LocalAI), Pollinations o Hugging Face con chiave gratuita.
 - **Proiettore "Riempi lo schermo"**: usa tutta la superficie anche su schermi non 16:9.
-- **Logo e CSS personalizzati**: da MODIFICA si carica il logo dell'evento e si importa un file `.css` (c'è un modello da scaricare). Una CSP impedisce al CSS di caricare risorse da internet.
+- **Logo e CSS personalizzati**: da IMPOSTAZIONI si carica il logo dell'evento e si importa un file `.css` (c'è un modello da scaricare). Una CSP impedisce al CSS di caricare risorse da internet.
 - **Aggiornamenti automatici** dalla release GitHub (versione installata).
 - Scorciatoie: `F1` guida, `Ctrl+S` salva torneo, `Ctrl+Z` annulla, `F5` proiettore (`PgUp`/`PgDn` pannelli, `G` galleria).
 
