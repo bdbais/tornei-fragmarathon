@@ -1,0 +1,165 @@
+/* Tornei Fragmarathon: schermata dei tornei (js/home.js).
+   Usa i token del tema (--bg, --panel, --ink, --mut, --line, --acc). Ogni torneo porta il suo
+   colore in --ev: la fascia a sinistra della scheda è il "laccio del pass" di quella LAN. */
+
+html.home-on body{overflow:hidden}
+#home{position:fixed;inset:0;z-index:30;overflow:auto;background:var(--bg);color:var(--ink);overscroll-behavior:contain}
+#home[hidden]{display:none}
+.hm-wrap{max-width:1240px;margin:0 auto;padding:28px 16px 64px}
+
+/* intestazione */
+.hm-top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px;margin-bottom:26px}
+.hm-title{display:flex;align-items:flex-start;gap:10px}
+.hm-title h1{font-size:clamp(2.6rem,7vw,5rem);line-height:.9;letter-spacing:.01em}
+.hm-n{font:700 1rem Inter,system-ui,sans-serif;color:var(--mut);padding-top:.35em}
+.hm-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hm-tools input[type=search]{min-width:min(260px,100%);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit}
+.hm-imp{display:inline-flex;align-items:center;font:600 .95rem Inter,sans-serif;padding:10px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+.hm-imp:focus-within{outline:3px solid var(--acc);outline-offset:2px}
+
+/* scheda di un torneo */
+.ev{position:relative;display:grid;grid-template-columns:76px 1fr;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-width:0}
+.ev-band{position:relative;display:flex;align-items:flex-start;justify-content:center;padding-top:14px;
+  background:repeating-linear-gradient(-55deg,var(--ev) 0 14px,color-mix(in srgb,var(--ev) 82%,#000) 14px 28px)}
+.ev-band img{width:56px;height:56px;object-fit:contain;background:#fff;border-radius:10px;padding:4px;box-shadow:0 0 0 3px color-mix(in srgb,var(--ev) 60%,#000)}
+.ev-ini{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:#fff;color:#111;font:400 1.25rem "FragDisplay","Arial Black",Impact,sans-serif}
+.ev-body{padding:16px 46px 16px 18px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ev-t{margin:0;font-size:1.25rem;line-height:1.15;overflow-wrap:anywhere}
+.ev-sub{margin:-4px 0 0;color:var(--mut);font-size:.92rem}
+.ev-when{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;font-size:.9rem;font-weight:600}
+.ev-when span+span::before{content:"";display:inline-block;width:6px;height:6px;margin:0 10px 2px 0;border-radius:50%;background:var(--ev)}
+.ev-empty{margin:0;color:var(--mut);font-size:.9rem}
+.ev-games{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.ev-games li{display:flex;align-items:baseline;gap:8px;font-size:.92rem;min-width:0}
+.ev-games b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.ev-games small{color:var(--mut);font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-games .dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;border:2px solid var(--mut);transform:translateY(-1px)}
+.ev-games .st-live .dot{border-color:var(--ev);background:var(--ev)}
+.ev-games .st-done .dot{border-color:var(--ink);background:var(--ink)}
+.ev-bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden;margin-top:4px}
+.ev-bar i{display:block;height:100%;background:var(--ev)}
+.ev-stats{display:flex;flex-wrap:wrap;gap:2px 14px;margin:0;color:var(--mut);font-size:.82rem}
+.ev-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ev-act button{padding:7px 11px;font-size:.86rem}
+.ev-act button.p{background:var(--ev);border-color:var(--ev);color:#fff}
+button.danger{background:#C62828;border-color:#C62828;color:#fff}
+.ev-pin{position:absolute;top:10px;right:10px;width:34px;height:34px;padding:0;display:grid;place-items:center;border:0;background:none;color:var(--mut)}
+.ev-pin svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+.ev-pin[aria-pressed=true]{color:var(--ev)}
+.ev-pin[aria-pressed=true] svg{fill:currentColor}
+.ev.broken{opacity:.6}
+
+/* il torneo aperto: grande, in cima */
+.ev.hero{grid-template-columns:clamp(110px,16vw,190px) 1fr;margin-bottom:28px;border-width:2px;border-color:var(--ev)}
+.ev.hero .ev-band{align-items:center;padding:0}
+.ev.hero .ev-band img{width:clamp(76px,11vw,130px);height:clamp(76px,11vw,130px);border-radius:14px}
+.ev.hero .ev-ini{width:clamp(70px,10vw,110px);height:clamp(70px,10vw,110px);font-size:clamp(1.6rem,3vw,2.4rem)}
+.ev.hero .ev-body{padding:22px 56px 22px 26px;gap:10px}
+.ev-kicker{margin:0;font-weight:700;font-size:.86rem;color:var(--ev)}
+.ev.hero .ev-t{font-size:clamp(1.9rem,4.6vw,3.4rem);line-height:1}
+.ev.hero .ev-sub{font-size:1.02rem}
+.ev-games.big{flex-direction:row;flex-wrap:wrap;gap:8px}
+.ev-games.big li{flex-direction:column;align-items:flex-start;gap:2px;padding:9px 13px 9px 30px;position:relative;border:1px solid var(--line);border-radius:10px;background:var(--bg);min-width:150px;max-width:100%}
+.ev-games.big .dot{position:absolute;left:11px;top:15px}
+.ev-games.big b{max-width:100%;font-size:1rem}
+.ev.hero .ev-bar{height:8px}
+.ev.hero .ev-act button{padding:10px 15px;font-size:.95rem}
+.ev.hero .ev-go{min-width:140px;font-size:1.05rem}
+@media (prefers-reduced-motion:no-preference){
+  .ev-games .st-live .dot{animation:evlive 1.8s ease-in-out infinite}
+  @keyframes evlive{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--ev) 25%,transparent)}}
+}
+
+/* tutti gli altri */
+.hm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:16px}
+.hm-grid.list{grid-template-columns:1fr;gap:8px}
+.hm-grid.list .ev{grid-template-columns:10px 1fr}
+.hm-grid.list .ev-band{padding:0}
+.hm-grid.list .ev-band>*{display:none}
+.hm-grid.list .ev-body{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(0,2fr) auto;align-items:center;gap:4px 18px;padding:10px 50px 10px 14px}
+.hm-grid.list .ev-sub,.hm-grid.list .ev-bar{display:none}
+.hm-grid.list .ev-when{grid-column:1}
+.hm-grid.list .ev-games{grid-column:2;grid-row:1/span 2;flex-direction:row;flex-wrap:wrap;gap:4px 14px}
+.hm-grid.list .ev-stats{grid-column:1/3}
+.hm-grid.list .ev-act{grid-column:3;grid-row:1/span 3;margin:0}
+.hm-none{color:var(--mut);max-width:60ch}
+
+/* modifica e nuovo torneo */
+.ev.new{margin-bottom:22px;border-width:2px;border-color:var(--ev)}
+.ev-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:12px 14px;margin-top:4px}
+.ev-form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600;color:var(--mut)}
+.ev-form label.wide{grid-column:1/-1}
+.ev-form input,.ev-form select{width:100%;min-width:0;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:400 1rem Inter,system-ui,sans-serif}
+.ev-form input[type=color]{height:42px;padding:3px;cursor:pointer}
+.ev-formact{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+
+/* bot */
+.hm-bots{margin-top:44px;padding-top:22px;border-top:2px solid var(--line)}
+.hm-sechead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-bottom:14px}
+.hm-sechead h2{margin:0;font-size:1.5rem}
+.hm-note{margin:0;flex:1 1 320px;color:var(--mut);font-size:.9rem;max-width:70ch}
+.hm-botlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(360px,100%),1fr));gap:12px}
+.bt{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;padding:14px;border:1px solid var(--line);border-left:6px solid var(--bt);border-radius:10px;background:var(--panel)}
+.bt.on{box-shadow:inset 0 0 0 1px var(--bt)}
+.bt-col{width:34px;height:34px;padding:2px;border:1px solid var(--line);border-radius:50%;background:none;cursor:pointer}
+.bt-main{min-width:0}
+.bt-main p{margin:2px 0 0;font-size:.86rem;color:var(--mut)}
+.bt-name{width:100%;padding:3px 6px;margin-left:-6px;border:1px solid transparent;border-radius:6px;background:none;color:var(--ink);font:700 1.05rem Inter,system-ui,sans-serif}
+.bt-name:hover{border-color:var(--line)}
+.bt-name:focus{border-color:var(--acc);background:var(--bg);outline:none}
+.bt-use{overflow-wrap:anywhere}
+.bt-act{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.bt-act button{padding:6px 10px;font-size:.84rem}
+
+/* pulsante nell'intestazione */
+#homebtn{display:inline-flex;align-items:center;gap:8px;margin-left:auto;align-self:flex-start}
+#homebtn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+.botpick{margin-bottom:6px}
+.botwel{display:flex;flex-direction:column;gap:4px;margin-top:10px;font-size:.9rem}
+.botwel textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+
+@media (max-width:640px){
+  .hm-wrap{padding-top:18px}
+  .ev,.ev.hero{grid-template-columns:1fr}
+  .ev-band,.ev.hero .ev-band{height:64px;padding:0 16px;justify-content:flex-start;align-items:center}
+  .ev.hero .ev-band img,.ev-band img{width:46px;height:46px}
+  .ev.hero .ev-ini,.ev-ini{width:44px;height:44px;font-size:1.1rem}
+  .ev.hero .ev-body{padding:16px}
+  .hm-grid.list .ev-body{grid-template-columns:1fr}
+  .hm-grid.list .ev-games,.hm-grid.list .ev-stats,.hm-grid.list .ev-act{grid-column:1;grid-row:auto}
+}
+
+/* giochi "in lavorazione" */
+.tab.draft{opacity:.7;font-style:italic}
+.tab.draft::after{content:"";display:inline-block;width:7px;height:7px;margin-left:7px;border-radius:2px;background:repeating-linear-gradient(45deg,var(--acc) 0 2px,transparent 2px 4px);vertical-align:middle}
+#gdraft[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+.draftnote{border-left:3px dashed var(--acc);padding-left:10px}
+.ev-draft{display:inline-block;margin-left:8px;padding:1px 8px;border:1px dashed currentColor;border-radius:999px;font:600 .72rem Inter,system-ui,sans-serif;vertical-align:middle;color:var(--ev)}
+.bt-col::-webkit-color-swatch-wrapper{padding:0}
+.bt-col::-webkit-color-swatch{border:0;border-radius:50%}
+.ev-form label.chk{font-weight:400}
+.ev-form label.chk span{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--ink);font-size:.95rem}
+.ev-form label.chk input{width:18px;height:18px;padding:0;accent-color:var(--ev)}
+
+/* versione e novità */
+.verbtn{padding:3px 9px;border-radius:999px;font:600 .78rem Inter,system-ui,sans-serif;color:var(--mut);background:none;border:1px solid var(--line)}
+.verbtn:hover{color:var(--acc);border-color:var(--acc)}
+.hm-title .verbtn{align-self:flex-start;margin-top:.45em}
+.verbtn.inbrand{align-self:flex-start}
+#changelog{width:min(720px,calc(100vw - 32px));max-height:min(86vh,900px);padding:0;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);overflow:hidden}
+#changelog[open]{display:flex;flex-direction:column}
+#changelog::backdrop{background:rgba(0,0,0,.55)}
+.cl-head{display:flex;align-items:center;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+.cl-head h2{margin:0;font-size:1.6rem}
+.cl-cur{color:var(--mut);font-size:.9rem}
+.cl-x{margin-left:auto}
+.cl-list{list-style:none;margin:0;padding:8px 20px 24px;overflow:auto}
+.cl-list>li{display:grid;grid-template-columns:110px 1fr;gap:16px;padding:16px 0;border-bottom:1px solid var(--line)}
+.cl-list>li:last-child{border-bottom:0}
+.cl-v b{display:block;font:400 1.35rem "FragDisplay","Arial Black",Impact,sans-serif}
+.cl-v time{font-size:.8rem;color:var(--mut)}
+.cl-list>li.now .cl-v b{color:var(--acc)}
+.cl-b h3{margin:2px 0 6px;font:700 1.02rem Inter,system-ui,sans-serif}
+.cl-b ul{margin:0;padding-left:18px;line-height:1.5;font-size:.93rem}
+.cl-b li{max-width:64ch;margin-bottom:3px}
+@media (max-width:560px){.cl-list>li{grid-template-columns:1fr;gap:4px}}

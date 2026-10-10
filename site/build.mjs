@@ -9,7 +9,7 @@ const out = path.join(root, "site", "public", "app");
 const FILES = [
   "index.html", "manifest.webmanifest", "sw.js",
   "icon.png", "icon-192.png", "icon-512.png", "icon-maskable.png",
-  "js/formats.js", "js/help.js", "js/ai.js", "js/app.js", "js/pwa.js", "css/ui.css", "css/themes.css"
+  "js/formats.js", "js/help.js", "js/ai.js", "js/app.js", "js/changelog.js", "js/home.js", "css/home.css", "js/pwa.js", "css/ui.css", "css/themes.css"
 ];
 
 fs.rmSync(out, { recursive: true, force: true });

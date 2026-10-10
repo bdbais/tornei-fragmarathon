@@ -72,7 +72,7 @@ module.exports = function createBot(opts) {
   const waits = {}, pngWait = {};
   let queue = Promise.resolve();
 
-  function defaults() { return { token: "", enabled: false, join: "approve", notify: { stage: true, final: true, results: false, player: true }, admins: [], adminUsers: [], userRoles: {}, chats: {}, pending: [], offset: 0, code: newCode(), apiBase: "" }; }
+  function defaults() { return { token: "", enabled: false, join: "approve", notify: { stage: true, final: true, results: false, player: true }, admins: [], adminUsers: [], userRoles: {}, chats: {}, pending: [], offset: 0, code: newCode(), apiBase: "", welcome: "" }; }
   function load() {
     try {
       const c = Object.assign(defaults(), JSON.parse(fs.readFileSync(file, "utf8"))); c.notify = Object.assign(defaults().notify, c.notify);
@@ -121,7 +121,10 @@ module.exports = function createBot(opts) {
   }
 
   /* ---------- lettura della vista ---------- */
-  const T = () => (vm && vm.tournaments) || [];
+  /* chi sta scrivendo: i tornei "in lavorazione" li vedono solo amministratori e organizzatori */
+  let viewer = null;
+  const hiddenFor = (id, t) => (t.draft || (vm && vm.draft)) && !(id != null && canManage(id, t.k));
+  const T = () => ((vm && vm.tournaments) || []).filter((t) => !hiddenFor(viewer, t));
   function find(q) {
     const L = T(); q = norm(q);
     if (!q) return null;
@@ -129,7 +132,7 @@ module.exports = function createBot(opts) {
     return L.find((t) => t.k === q) || L.find((t) => norm(t.l) === q || norm(t.name) === q)
       || L.find((t) => norm(t.l).includes(q) || norm(t.name).includes(q) || norm(t.l + " " + t.name).includes(q)) || null;
   }
-  function tTitle(t) { return "<b>" + esc(t.l) + "</b>" + (t.name ? " – " + esc(t.name) : ""); }
+  function tTitle(t) { return "<b>" + esc(t.l) + "</b>" + (t.name ? " – " + esc(t.name) : "") + (t.draft || (vm && vm.draft) ? " 🛠 <i>in lavorazione</i>" : ""); }
   function followers(k) { return Object.keys(cfg.chats).filter((id) => { const f = cfg.chats[id].follow || {}; return f.all || (f.games || []).includes(k); }); }
   function podium(t) { const m = ["🥇", "🥈", "🥉"]; return t.top.map((n, i) => m[Math.min(i, 2)] + " " + esc(n)).join("\n"); }
   function tKb(t, chatId) {
@@ -174,7 +177,7 @@ module.exports = function createBot(opts) {
   }
   function listMsg() {
     const L = T();
-    if (!L.length) return { text: "Ancora nessun torneo." };
+    if (!L.length) return { text: vm && vm.draft ? "<b>" + esc(vm.title) + "</b> è in preparazione: i tornei compariranno qui appena saranno pronti." : "Ancora nessun torneo." };
     const text = "<b>" + esc(vm.title) + "</b>\n" + (vm.sub ? esc(vm.sub) + "\n" : "") + "\n" + L.map((t, i) =>
       (i + 1) + ". " + tTitle(t) + "\n   " + esc(t.mode) + ", " + t.players.length + (t.team ? " squadre" : " iscritti") + ": <i>" + esc(t.open ? "iscrizioni aperte" : t.status) + "</i>").join("\n");
     const kb = []; for (let i = 0; i < L.length; i += 2) kb.push(L.slice(i, i + 2).map((t) => ({ text: t.l.slice(0, 30), callback_data: "T:" + t.k })));
@@ -228,7 +231,7 @@ module.exports = function createBot(opts) {
     const old = {}; prev.tournaments.forEach((t) => (old[t.k] = t));
     vm.tournaments.forEach((t) => {
       const o = old[t.k]; if (!o) return;
-      const fol = followers(t.k); if (!fol.length) return;
+      const fol = followers(t.k).filter((id) => !hiddenFor(id, t)); if (!fol.length) return;
       if (o.status !== t.status && !t.open) {
         let msg = null;
         if (t.done && cfg.notify.final) msg = "🏆 " + tTitle(t) + " è concluso!\n\n" + podium(t);
@@ -247,7 +250,7 @@ module.exports = function createBot(opts) {
     Object.keys(cfg.chats).forEach((id) => {
       const P = cfg.chats[id].player; if (!P) return;
       vm.tournaments.forEach((t) => {
-        const o = old[t.k]; if (!o) return;
+        const o = old[t.k]; if (!o || hiddenFor(id, t)) return;
         const me = [P].concat(Object.keys(t.members || {}).filter((tn) => (t.members[tn] || []).includes(P)));
         const mine = (x) => (x.p || []).some((n) => me.includes(n));
         const was = new Set((o.nextP || []).map((x) => x.t)), turn = (t.nextP || []).filter((x) => mine(x) && !was.has(x.t));
@@ -340,6 +343,7 @@ module.exports = function createBot(opts) {
   }
   async function handle(chatId, from, text, data) {
     const c = chat(chatId, from); const isAdmin = roleOf(chatId) === "admin", isOrg = !!roleOf(chatId);
+    viewer = chatId;
     if (!vm) return send(chatId, "Il programma dei tornei si sta avviando, riprova tra qualche secondo.");
     if (data) {
       const [a, k] = [data.slice(0, 1), data.slice(2)], t = k ? find(k) : null;
@@ -371,7 +375,7 @@ module.exports = function createBot(opts) {
       case "start": case "aiuto": case "help": {
         const m = listMsg();
         const kb = c.player || isOrg ? m.kb : [[{ text: "🎮 Sono un giocatore: collega il mio nome", callback_data: "ME" }]].concat(m.kb || []);
-        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
+        return send(chatId, "Ciao! Sono il bot di <b>" + esc(vm.title) + "</b>." + (cfg.welcome ? "\n\n" + esc(cfg.welcome) : "") + (c.player ? " Sei collegato come <b>" + esc(c.player) + "</b>." : "") + (liveLinks ? "\n\n🔴 <b>Siamo in diretta!</b>\n" + linksText(liveLinks) : "") + "\n\n" + HELP + (isOrg ? "\n\n<b>Organizzatori tornei</b>\n/richieste – iscrizioni da confermare" : "") + (isAdmin ? "\n\n<b>Amministratori</b>\n/annuncio <i>testo</i> – messaggio a tutti\n/diretta avvia, /diretta ferma, /diretta scena – la diretta" : ""), kb);
       }
       case "tornei": { const m = listMsg(); return send(chatId, m.text, m.kb); }
       case "torneo": { const t = find(arg); if (!t) { const m = listMsg(); return send(chatId, (arg ? "Non trovo «" + esc(arg) + "».\n\n" : "") + m.text, m.kb); } const d = detailMsg(t, chatId); return send(chatId, d.text, d.kb); }
@@ -453,7 +457,7 @@ module.exports = function createBot(opts) {
     const chats = Object.keys(cfg.chats);
     return {
       enabled: cfg.enabled, hasToken: !!cfg.token, tokenHint: cfg.token ? cfg.token.split(":")[0] + ":…" + cfg.token.slice(-4) : "", running, username: me && me.username, lastErr: tokErr || friendly(lastErr), lastOk,
-      join: cfg.join, notify: cfg.notify, code: cfg.code,
+      join: cfg.join, notify: cfg.notify, code: cfg.code, welcome: cfg.welcome || "",
       userRoles: Object.keys(cfg.userRoles).map((u) => ({ u: "@" + u, role: cfg.userRoles[u].role, games: cfg.userRoles[u].games || [] })),
       people: chats.map((id) => { const c = cfg.chats[id], f = c.follow || {}; return { id, name: c.name || c.first || String(id), role: roleOf(id), games: c.games || [], player: c.player || "", follow: f.all ? "tutti" : (f.games || []).length, seen: c.seen || 0 }; })
         .sort((a, b) => ({ admin: 0, org: 1, "": 2 })[a.role] - ({ admin: 0, org: 1, "": 2 })[b.role] || b.seen - a.seen).slice(0, 300),
@@ -481,6 +485,7 @@ module.exports = function createBot(opts) {
       if (["off", "approve", "auto"].includes(c.join)) cfg.join = c.join;
       if (c.notify) cfg.notify = Object.assign(cfg.notify, c.notify);
       if (typeof c.apiBase === "string") cfg.apiBase = c.apiBase;
+      if (typeof c.welcome === "string") cfg.welcome = c.welcome.trim().slice(0, 800);
       if (c.newCode) cfg.code = newCode();
       const uname = (x) => String(x || "").replace(/^https?:\/\/t\.me\//i, "").replace(/^@/, "").trim().toLowerCase();
       const gamesOk = (g) => (Array.isArray(g) ? g : []).map(String).slice(0, 50);

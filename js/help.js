@@ -1,8 +1,18 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "tornei", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
   topics: {
+    tornei: { t: "Elenco dei tornei", h:
+      "<p>All'avvio si apre l'elenco dei tornei (una LAN, una serata): ognuno ha giochi, giocatori, tema, logo, formule e bot Telegram suoi. Lo riapri quando vuoi con il pulsante <b>Tornei</b> in alto.</p>" +
+      "<ul><li><b>Continua</b> o <b>Apri</b>: scegli quale torneo amministrare. Quello aperto si salva da solo.</li>" +
+      "<li><b>Nuovo torneo</b>: vuoto, con le impostazioni di un altro (giochi, formule, tema, logo) o anche con gli stessi giocatori, senza risultati.</li>" +
+      "<li><b>Modifica</b>: nome, sottotitolo, data, luogo, colore, bot e <b>In lavorazione</b>.</li>" +
+      "<li><b>In lavorazione</b>: nel bot il torneo lo vedono solo amministratori e organizzatori e i partecipanti non ricevono avvisi. Lo stesso vale per un singolo gioco (pulsante <b>Segna in lavorazione</b> nella sua scheda), che sparisce anche dal proiettore.</li>" +
+      "<li><b>Duplica</b>, <b>Esporta</b> (file da portare su un altro PC), <b>Importa</b>, la stella per tenerlo in cima.</li>" +
+      "<li><b>Elimina</b> (si preme due volte): nell'app installata il file va in <code>Documenti&#92;Tornei Fragmarathon&#92;cestino</code>, da cui si recupera.</li></ul>" +
+      "<h4>Bot Telegram</h4><p>In fondo all'elenco ci sono i bot: ognuno ha token, ruoli, iscritti, avvisi e messaggio di benvenuto propri. Ogni torneo usa il bot che scegli; gira quello del torneo aperto. Rinominalo cliccando sul nome.</p>" +
+      "<p>Il numero di versione accanto al titolo apre le novità di tutte le versioni.</p>" },
     inizio: { t: "Come si inizia", h:
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +
       "<li>Se ci sono giochi a squadre, crea le squadre fisse nella stessa scheda.</li>" +

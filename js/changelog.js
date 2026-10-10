@@ -1,0 +1,90 @@
+/* Tornei Fragmarathon: versioni e novità.
+   La prima voce è la versione del programma (un test controlla che coincida con package.json).
+   Il numero si vede nell'intestazione e nella schermata dei tornei; cliccandolo si apre l'elenco. */
+(function () {
+  "use strict";
+  var CHANGELOG = [
+    { v: "3.5.0", d: "2026-10-10", t: "Elenco dei tornei e più bot Telegram", items: [
+      "All'avvio si vede l'elenco dei tornei: scegli quale amministrare, creane uno nuovo (vuoto o partendo da un altro), duplicalo, esportalo, importalo, eliminalo (va nel cestino).",
+      "Ogni torneo ha le sue impostazioni: nome, data, luogo, colore, tema, logo, formule e il bot Telegram scelto.",
+      "Più bot Telegram, ognuno con token, ruoli, iscritti, avvisi e messaggio di benvenuto propri; gira quello del torneo aperto.",
+      "Tornei e singoli giochi \"in lavorazione\": nel bot li vedono solo amministratori e organizzatori, e il proiettore non li mostra.",
+      "Eliminare un gioco dal torneo (con backup automatico); i giochi base si rimettono dal pulsante +.",
+      "Versione visibile in alto: cliccandola si aprono le novità di tutte le versioni."
+    ] },
+    { v: "3.4.2", d: "2026-10-10", t: "Token del bot più semplice", items: [
+      "Incollando il token si prende quello completo anche dal messaggio intero di BotFather o se va a capo; pulsante Mostra; si vede quale token è salvato.",
+      "Errori chiari (token troncato, revocato, Telegram non raggiungibile) e uso del proxy di sistema."
+    ] },
+    { v: "3.4.1", d: "2026-10-10", t: "Ruoli e giocatori nel bot", items: [
+      "Ruoli (amministratore, organizzatore anche per singolo torneo, partecipante) gestibili dalle impostazioni, anche per username.",
+      "Collegamento account Telegram e giocatore, con avvisi personali: tocca a te, risultati, posizione finale."
+    ] },
+    { v: "3.4.0", d: "2026-10-10", t: "Diretta dal programma", items: [
+      "Diretta su YouTube, Twitch o RTMP senza OBS: schermo del proiettore, telecamere, microfono, audio del PC, scene, riconnessione automatica.",
+      "Il bot avvisa tutti quando parte la diretta; /diretta per vedere il link."
+    ] },
+    { v: "3.3.0", d: "2026-10-10", t: "Bot Telegram", items: [
+      "Tornei, classifiche, partite, Hall of Fame, avvisi, iscrizioni e annunci dal telefono.",
+      "Il pulsante Modifica ora si chiama Impostazioni."
+    ] },
+    { v: "3.2.2", d: "2026-10-10", t: "Hall of Fame pesata", items: [
+      "Punti per la posizione finale di ogni torneo più i punti fatti, con peso a scelta o formula libera."
+    ] },
+    { v: "3.2.1", d: "2026-10-10", t: "Ricalcolo delle formule", items: [
+      "Pulsante Ricalcola quando cambi le formule; se cambiano i qualificati di una fase già partita, avviso con Rigenera (backup prima)."
+    ] },
+    { v: "3.2.0", d: "2026-10-10", t: "Formule, logo con l'AI, proiettore pieno", items: [
+      "Calcolo dei punti con formule per ogni torneo.",
+      "Logo generato con l'AI per l'evento o per ogni torneo (locale o remota).",
+      "Proiettore: opzione Riempi lo schermo (tasto R)."
+    ] },
+    { v: "3.1.3", d: "2026-10-10", t: "Logo e CSS personalizzato", items: [
+      "Logo dell'evento in intestazione, immagini e PDF.",
+      "CSS personalizzato importabile da file, con modello da scaricare."
+    ] },
+    { v: "3.1.2", d: "2026-10-10", t: "Temi dei colori", items: [
+      "Tema automatico per gioco, Fragmarathon e temi ispirati a Challonge, start.gg, ESL, Liquipedia, Battlefy.",
+      "La doppia eliminazione indica winner bracket e loser bracket."
+    ] },
+    { v: "3.1.1", d: "2026-10-10", t: "Proiettore per pannello", items: [
+      "Icona del proiettore su ogni pannello: mostra solo quel pannello, ingrandito.",
+      "PgUp e PgDn per passare tra i pannelli; galleria con i secondi tra una schermata e l'altra."
+    ] },
+    { v: "3.1.0", d: "2026-10-10", t: "Nuovi formati e proiettore", items: [
+      "Doppia eliminazione, sistema svizzero, gironi all'italiana con playoff.",
+      "Schermo proiettore separato, leggibile da lontano, aggiornato in tempo reale.",
+      "Trascina giocatori e squadre; free for all con gironi di qualsiasi grandezza; Hall of Fame per gioco.",
+      "Archivio tornei, backup automatici, guida contestuale, aggiornamenti automatici, app installabile dal browser."
+    ] }
+  ];
+  if (typeof module !== "undefined") { module.exports = CHANGELOG; return; }
+  if (/[?&]wall=1/.test(location.search) || /stream\.html$/.test(location.pathname)) return;
+  window.CHANGELOG = CHANGELOG;
+  var VER = CHANGELOG[0].v, dlg = null;
+
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function fmt(d) { var x = new Date(d + "T12:00:00"); return isNaN(x) ? "" : x.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }); }
+  function open() {
+    if (!dlg) {
+      dlg = document.createElement("dialog"); dlg.id = "changelog"; dlg.setAttribute("aria-labelledby", "cl-h");
+      dlg.innerHTML = '<div class="cl-head"><h2 id="cl-h">Novità</h2><span class="cl-cur">Hai la versione ' + esc(VER) + '</span><button type="button" class="cl-x" aria-label="Chiudi">Chiudi</button></div>' +
+        '<ol class="cl-list">' + CHANGELOG.map(function (r, i) {
+          return '<li' + (i === 0 ? ' class="now"' : "") + '><div class="cl-v"><b>' + esc(r.v) + '</b><time datetime="' + esc(r.d) + '">' + esc(fmt(r.d)) + '</time></div>' +
+            '<div class="cl-b"><h3>' + esc(r.t) + '</h3><ul>' + r.items.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + '</ul></div></li>';
+        }).join("") + '</ol>';
+      dlg.addEventListener("click", function (e) { if (e.target === dlg || e.target.closest(".cl-x")) dlg.close(); });
+      document.body.appendChild(dlg);
+    }
+    dlg.showModal(); dlg.querySelector(".cl-list").scrollTop = 0;
+  }
+  function button(cls) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "verbtn " + (cls || ""); b.textContent = "v" + VER; b.title = "Versione del programma: clicca per le novità";
+    b.addEventListener("click", open);
+    return b;
+  }
+  window.VERSION = { v: VER, open: open, button: button };
+  var brand = document.querySelector(".brand");
+  if (brand) brand.appendChild(button("inbrand"));
+})();

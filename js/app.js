@@ -1,15 +1,15 @@
 (function(){
 var KEY="tornei-v2",WALL=/[?&]wall=1/.test(location.search);
 var DEF={quake:{l:"QUAKE LIVE",m:"ffa",t:0},tf2:{l:"Team Fortress 2",m:"elim",t:1},wreck:{l:"Wreckfest",m:"ffa",t:0},cs2:{l:"Counter-Strike 2",m:"elim",t:1},fifa:{l:"FIFA 26",m:"ffa",t:0}};
-var BUILTIN=Object.keys(DEF),ORIGL={};BUILTIN.forEach(function(k){ORIGL[k]=DEF[k].l});
+var BUILTIN=Object.keys(DEF),ORIGL={},ORIGD=JSON.parse(JSON.stringify(DEF));BUILTIN.forEach(function(k){ORIGL[k]=DEF[k].l});
 var UI0={title:"Tornei Fragmarathon",sub:"Gestione dei tornei del 27° Lanparty"};
 function fresh(k){return{name:"",mode:DEF[k].m,ng:2,players:[],members:{},phase:"setup",groups:null,rounds:null}}
 var S={cur:"quake",roster:[],games:{}};
 try{var raw=localStorage.getItem(KEY);if(raw){var p=JSON.parse(raw);if(p&&p.games)S=p;}}catch(e){}
 function initS(){S.v=2;if(!S.roster)S.roster=[];if(!S.teams)S.teams=[];if(!S.ui)S.ui={};if(!S.names)S.names={};if(!S.custom)S.custom=[]}
 function registerCustom(){
-  Object.keys(DEF).forEach(function(k){if(BUILTIN.indexOf(k)<0)delete DEF[k]});
-  BUILTIN.forEach(function(k){DEF[k].l=ORIGL[k]});
+  Object.keys(DEF).forEach(function(k){delete DEF[k]});
+  var off=S.off||[];BUILTIN.forEach(function(k){if(off.indexOf(k)<0)DEF[k]=JSON.parse(JSON.stringify(ORIGD[k]))});
   S.custom.forEach(function(c){DEF[c.k]={l:c.l,m:(["elim","double","swiss","rr"].indexOf(c.m)>=0?c.m:"ffa"),t:c.t}});
   Object.keys(S.names).forEach(function(k){if(DEF[k]&&S.names[k])DEF[k].l=S.names[k]});
 }
@@ -132,7 +132,7 @@ function renderTabs(){
   var STAR=svg+'<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>';
   var HELPI=svg+'<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .8c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.3"/></svg>';
   var TROPHY=svg+'<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/></svg>';
-  function t(k,ic,l){return'<button class="tab" role="tab" data-k="'+k+'" aria-selected="'+(k===S.cur)+'">'+ic+l+'</button>'}
+  function t(k,ic,l){var dr=S.games[k]&&S.games[k].draft;return'<button class="tab'+(dr?" draft":"")+'" role="tab" data-k="'+k+'" aria-selected="'+(k===S.cur)+'"'+(dr?' title="In lavorazione"':'')+'>'+ic+l+'</button>'}
   $("tabs0").innerHTML=t("roster",USERS,"Partecipanti")+t("squadre",FLAG,"Squadre")+t("results",TROPHY,"Risultati finali")+t("hof",STAR,"Hall of Fame")+(window.desk&&window.desk.streamStatus?'<button class="tab" id="livebtn" title="Diretta su YouTube e Twitch"><span class="ldot" aria-hidden="true"></span>Diretta</button>':'')+'<button class="tab" id="helpbtn" title="Guida (F1)">'+HELPI+'Guida</button><button class="tab" id="undo" title="Annulla l\'ultima azione"'+(hist.length?"":" disabled")+'>Annulla</button><label class="skinsel">Tema <select id="skin" aria-label="Tema dei colori">'+skinOpts((S.ui&&S.ui.skin)||"auto")+'</select></label><span class="savest" id="savest" role="status">'+(saveAt?"Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}):"")+'</span>';
   $("tabs").innerHTML=Object.keys(DEF).map(function(k){return t(k,ico(k),esc(DEF[k].l)+platBadge(k))}).join("")+'<button class="tab" id="plus" aria-label="Aggiungi un gioco" title="Aggiungi un gioco">+</button>';
 }
@@ -153,7 +153,7 @@ function renderSetup(){
      +(ms.length?ms.map(function(m,j){return'<span class="chip">'+esc(m)+'<button class="mr" data-t="'+i+'" data-m="'+j+'" aria-label="Rimuovi '+esc(m)+'"'+(lock?" disabled":"")+'>×</button></span>'}).join(""):'<span class="hint" style="margin:0">Nessun giocatore in squadra</span>')
      +'</div><div class="row"><input type="text" class="mi" data-t="'+i+'" placeholder="Nome giocatore" aria-label="Aggiungi giocatore a '+esc(p)+'"'+(lock?" disabled":"")+'><button class="ma" data-t="'+i+'"'+(lock?" disabled":"")+'>Aggiungi</button></div></div>'}).join("");
   else h+=g.players.map(function(p,i){return'<span class="chip">'+esc(p)+'<button data-i="'+i+'" aria-label="Rimuovi '+esc(p)+'"'+(lock?" disabled":"")+'>×</button></span>'}).join("");
-  h+='</div>'+bulkRow(g,d,lock)+'<div class="row" style="margin-top:14px"><button class="p" id="start"'+(lock||g.players.length<2?" disabled":"")+'>START</button><button id="pause"'+(lock?"":" disabled")+'>PAUSA</button><button id="logo">'+(g.logo?'Cambia logo':'Carica logo')+'</button>'+(g.logo?'<button id="nologo">Rimuovi logo</button>':'')+'<button id="reset">Azzera '+esc(d.l)+'</button><input type="file" id="lf" accept="image/*" hidden></div>';
+  h+='</div>'+bulkRow(g,d,lock)+'<div class="row" style="margin-top:14px"><button class="p" id="start"'+(lock||g.players.length<2?" disabled":"")+'>START</button><button id="pause"'+(lock?"":" disabled")+'>PAUSA</button><button id="logo">'+(g.logo?'Cambia logo':'Carica logo')+'</button>'+(g.logo?'<button id="nologo">Rimuovi logo</button>':'')+'<button id="reset">Azzera '+esc(d.l)+'</button><button id="gdraft" aria-pressed="'+(g.draft?"true":"false")+'" title="Nascosto ai partecipanti nel bot e sul proiettore: lo vedono solo amministratori e organizzatori">'+(g.draft?"In lavorazione: rendi visibile":"Segna in lavorazione")+'</button><button id="gdel">Elimina '+esc(d.l)+'</button><input type="file" id="lf" accept="image/*" hidden></div>'+(g.draft?'<p class="hint draftnote">In lavorazione: i partecipanti non lo vedono nel bot né sul proiettore.</p>':'');
   h+=lock?'<p class="hint ok">Torneo in corso: giocatori e squadre sono bloccati. Premi PAUSA per modificarli.</p>':(g.phase!=="setup"?'<p class="hint">Torneo in pausa: puoi modificare giocatori e squadre.'+(g.dirty?" Dopo le modifiche, START rifà il sorteggio e i risultati attuali andranno persi.":" START riprende il torneo.")+'</p>':'');
   if(g.mode==="ffa"){var pl=ffaPlan(g.players.length,ffaGsOf(g),ffaAdvOf(g)),sz=ffaSizes(g.players.length,ffaGsOf(g));h+='<p class="hint">Free for all: in ogni girone i partecipanti giocano tutti insieme (non uno contro uno) e vince chi fa più punti. Passano i primi '+ffaAdvOf(g)+' di ogni girone e formano i gironi del turno dopo, fino a un solo girone finale: i primi 3 della finale sono i vincitori.'+(g.players.length>1?" Con "+g.players.length+" partecipanti: "+pl.map(function(k){return k===1?"finale":k+" gironi"}).join(" → ")+"."+(sz.length>1?" Primo turno: gironi da "+sz.join(", ")+".":""):"")+'</p>'}
   h+=modeHint(g)+renderCalc(g,lock);
@@ -760,7 +760,7 @@ $("tabs0").onclick=$("tabs").onclick=function(e){var b=e.target.closest("button"
   if(b.id==="undo"){undo();return}
   if(b.id==="helpbtn"){openHelp(helpCtx());return}
   if(b.id==="livebtn"){var lb=$("livebox");lb.hidden=!lb.hidden;if(!lb.hidden){renderLive();strRefresh();lb.scrollIntoView({block:"nearest"})}return}
-  if(b.id==="plus"){var ag=$("addgame");ag.hidden=!ag.hidden;if(!ag.hidden)$("agname").focus();return}
+  if(b.id==="plus"){var ag=$("addgame");ag.hidden=!ag.hidden;if(!ag.hidden){var rr=$("agrestore");if(!rr){rr=document.createElement("div");rr.id="agrestore";rr.className="row";ag.appendChild(rr)}rr.innerHTML=(S.off||[]).length?'<span class="hint" style="margin:0">Rimetti un gioco tolto:</span>'+S.off.map(function(k){return'<button data-restore="'+k+'">'+esc(ORIGL[k])+'</button>'}).join(""):"";$("agname").focus()}return}
   S.cur=b.dataset.k;armed=false;save();render()};
 $("tabs0").addEventListener("change",function(e){if(e.target.id==="skin"){S.ui.skin=e.target.value;save();render()}});
 $("addgame").onclick=function(e){
@@ -773,6 +773,7 @@ $("addgame").onclick=function(e){
     S.games[k].plat=$("agplat").value;S.cur=k;$("agname").value="";$("agplat").value="";$("addgame").hidden=true;save();render();
   }
 };
+$("addgame").addEventListener("click",function(e){var b=e.target.closest("[data-restore]");if(b)restoreGame(b.getAttribute("data-restore"))});
 $("addgame").onkeydown=function(e){if(e.key==="Enter"&&e.target.id==="agname")$("agadd").click()};
 var pend=null;
 function refocus(){if(pend!==null){var l=document.querySelectorAll("#out .sc:not(:disabled),#out .bs,#out .fs:not(:disabled),#out .fsv:not(:disabled),#out .ds,#out .ws"),x=l[pend];pend=null;if(x)x.focus()}}
@@ -889,8 +890,8 @@ function botResults(g,k){
 function botVM(){
   var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
   function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
-  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,roster:S.roster.slice(),
-    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
+  return{title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,draft:!!(S.ev&&S.ev.draft),roster:S.roster.slice(),
+    tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,draft:!!g.draft,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
     hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
 }
 var botT=null;
@@ -909,11 +910,13 @@ if(window.desk&&window.desk.onBot)window.desk.onBot(function(m){
 function botHtml(st){
   if(!st)return'<p class="hint">Il bot non è disponibile.</p>';
   var state=st.running?'<span class="ok">Attivo come <b>@'+esc(st.username||"")+'</b></span>':(st.enabled&&st.hasToken?'<span class="cres err">Non collegato'+(st.lastErr?': '+esc(st.lastErr):'')+'</span>':'Spento');
-  var h='<p style="margin:6px 0 10px">Stato: '+state+'</p>'
+  setTimeout(botPickFill);
+  var h='<div class="row botpick" id="botpick"></div><p style="margin:6px 0 10px">Stato: '+state+'</p>'
    +'<div class="row"><input type="password" id="bottok" autocomplete="off" spellcheck="false" placeholder="'+(st.hasToken?"Token salvato "+esc(st.tokenHint)+": lascialo vuoto per non cambiarlo":"Token del bot, tipo 123456789:AAH… (da @BotFather)")+'" aria-label="Token del bot Telegram"><button id="bottokshow" aria-pressed="false">Mostra</button><button class="p" id="botsave">Salva e collega</button>'+(st.hasToken?'<button id="botdel">Rimuovi token</button>':'')+'</div>'
    +(st.hasToken?'<p class="hint" style="margin:6px 0 0">Token salvato: <code>'+esc(st.tokenHint)+'</code></p>':'')
    +'<div class="row" style="margin-top:10px"><label class="row chk"><input type="checkbox" id="boton"'+(st.enabled?" checked":"")+'>Bot attivo</label>'
    +'<label class="row" style="gap:6px">Iscrizioni dal bot <select id="botjoin"><option value="approve"'+(st.join==="approve"?" selected":"")+'>Con conferma dell&#39;organizzatore</option><option value="auto"'+(st.join==="auto"?" selected":"")+'>Automatiche</option><option value="off"'+(st.join==="off"?" selected":"")+'>Chiuse</option></select></label></div>'
+   +'<label class="botwel">Messaggio di benvenuto di questo bot (si vede con /start)<textarea id="botwel" rows="2" maxlength="800" placeholder="Es. Benvenuto alla LAN! Wi-Fi: Fragmarathon. Regolamento in sala.">'+esc(st.welcome||"")+'</textarea></label>'
    +'<div class="row" style="margin-top:8px"><span class="hint" style="margin:0">Avvisi a chi segue un torneo:</span><label class="row chk"><input type="checkbox" class="botn" data-n="stage"'+(st.notify.stage?" checked":"")+'>cambio di turno o fase</label><label class="row chk"><input type="checkbox" class="botn" data-n="final"'+(st.notify.final?" checked":"")+'>podio finale</label><label class="row chk"><input type="checkbox" class="botn" data-n="results"'+(st.notify.results?" checked":"")+'>ogni risultato</label></div>'
    +'<label class="row chk" style="margin-top:6px"><input type="checkbox" class="botn" data-n="player"'+(st.notify.player!==false?" checked":"")+'>avvisi personali ai giocatori collegati: tocca a te, i tuoi risultati, la tua posizione</label>'
    +botPeople(st)
@@ -939,6 +942,18 @@ function botPeople(st){
        +'<td>'+(p.follow==="tutti"?"tutti":p.follow?p.follow+" tornei":"–")+'</td><td><button data-bpdel="'+esc(p.id)+'">'+(ARMS["bp"+p.id]?"Conferma":"Rimuovi")+'</button></td></tr>'}).join("")+'</table>';
   }else h+='<p class="empty">Nessuno ha ancora scritto al bot.</p>';
   return h;
+}
+/* Ogni torneo sceglie il suo bot dall'elenco (ognuno con token, ruoli, iscritti e impostazioni propri). */
+function botPickFill(){
+  var el=$("botpick");if(!el||!DESK||!DESK.botsList)return;
+  DESK.botsList().then(function(L){
+    var x=$("botpick");if(!x)return;var cur=(L.filter(function(b){return b.active})[0]||L[0]||{}).id;
+    x.innerHTML='<label class="row" style="gap:8px">Bot di questo torneo <select id="botpicksel">'+L.map(function(b){return'<option value="'+esc(b.id)+'"'+(b.id===cur?" selected":"")+'>'+esc(b.label)+(b.username?" (@"+esc(b.username)+")":b.hasToken?"":" (senza token)")+'</option>'}).join("")+'</select></label><button id="botnew">Nuovo bot</button><button id="botmanage">Gestisci i bot</button>';
+  }).catch(function(){});
+}
+function botChoose(id){
+  if(!S.ev)S.ev={};S.ev.bot=id;save();
+  return DESK.botsUse(id).then(function(){botRefresh();botPush()});
 }
 function botRefresh(){var b=$("botbox");if(!b||!DESK||!DESK.botStatus)return;DESK.botStatus().then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st)}).catch(function(){})}
 function renderBotSettings(){
@@ -1065,6 +1080,8 @@ $("editbox").addEventListener("change",function(e){
   if(e.target.classList.contains("bpgames")){var rs=e.target.closest("tr").querySelector(".bprole");botCfg({setRole:{id:e.target.dataset.id,role:rs.value,games:[].slice.call(e.target.selectedOptions).map(function(o){return o.value})}});return}
   if(e.target.classList.contains("bpplayer")){botCfg({setPlayer:{id:e.target.dataset.id,player:e.target.value}});return}
   if(e.target.id==="botjoin"){botCfg({join:e.target.value});return}
+  if(e.target.id==="botpicksel"){botChoose(e.target.value);return}
+  if(e.target.id==="botwel"){botCfg({welcome:e.target.value});toast("Messaggio di benvenuto salvato.");return}
   if(e.target.classList.contains("botn")){var nn={};nn[e.target.dataset.n]=e.target.checked;botCfg({notify:nn});return}
   var f=e.target.files&&e.target.files[0];if(!f)return;
   if(e.target.id==="elf")readLogo(f);
@@ -1083,6 +1100,8 @@ $("editbox").onclick=function(e){
   if(b.id==="s_ok"){strSave();return}
   if(b.id==="s_open"){var lb=$("livebox");lb.hidden=false;renderLive();lb.scrollIntoView({block:"start"});return}
   if(b.id==="bottokshow"){var ti=$("bottok"),sh=ti.type==="password";ti.type=sh?"text":"password";b.textContent=sh?"Nascondi":"Mostra";b.setAttribute("aria-pressed",String(sh));return}
+  if(b.id==="botnew"){DESK.botsList().then(function(L){return DESK.botsAdd("Bot "+(L.length+1))}).then(function(id){return botChoose(id)}).then(function(){toast("Nuovo bot creato per questo torneo: incolla il suo token e premi Salva e collega.");var t=$("bottok");if(t)t.focus()});return}
+  if(b.id==="botmanage"){if(window.HOME)window.HOME.open("bots");return}
   if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
   if(b.id==="botdel"){botCfg({removeToken:true});return}
   if(b.id==="botcode"){botCfg({newCode:true});return}
@@ -1141,6 +1160,11 @@ $("setup").onclick=function(e){
   else if(b.id==="pause"){g.running=false;save();render()}
   else if(b.id==="logo")$("lf").click();
   else if(b.id==="nologo"){delete g.logo;save();render()}
+  else if(b.id==="gdraft"){g.draft=!g.draft;save();render();toast(g.draft?DEF[S.cur].l+" è in lavorazione: lo vedono solo amministratori e organizzatori.":DEF[S.cur].l+" ora è visibile a tutti.")}
+  else if(b.id==="gdel"){
+    if(!armed){armed=true;b.textContent="Conferma: elimina "+DEF[S.cur].l;b.classList.add("p");setTimeout(function(){armed=false;var el=$("gdel");if(el){el.textContent="Elimina "+(DEF[S.cur]||{}).l;el.classList.remove("p")}},4000)}
+    else{armed=false;delGame(S.cur)}
+  }
   else if(b.id==="reset"){
     if(!armed){
       armed=true;b.textContent="Conferma: azzera "+DEF[S.cur].l;b.classList.add("p");
@@ -1577,6 +1601,16 @@ function arm(key,btn,label){
   setTimeout(function(){delete ARMS[key];renderArch()},4500);return false;
 }
 function statusMap(){var o={};Object.keys(DEF).forEach(function(k){o[k]=result(S.games[k],k).status});return o}
+/* Eliminare un gioco: prima un backup automatico, poi via dal torneo. I giochi base si possono rimettere dal "+". */
+function delGame(k){
+  if(Object.keys(DEF).length<2){toast("Serve almeno un gioco nel torneo.");return}
+  var l=DEF[k].l;autoBackup("Prima di eliminare "+l);
+  if(BUILTIN.indexOf(k)>=0){S.off=(S.off||[]).filter(function(x){return x!==k});S.off.push(k)}
+  else S.custom=S.custom.filter(function(c){return c.k!==k});
+  delete S.games[k];if(S.names)delete S.names[k];
+  registerCustom();S.cur=Object.keys(DEF)[0];save();render();toast(l+" eliminato dal torneo (c'è un backup in Archivio).");
+}
+function restoreGame(k){S.off=(S.off||[]).filter(function(x){return x!==k});registerCustom();normGames();S.cur=k;$("addgame").hidden=true;save();render();toast(DEF[k].l+" è di nuovo nel torneo.")}
 function torneoJson(k){
   var g=S.games[k],c=JSON.parse(JSON.stringify(g));delete c.file;
   return JSON.stringify({app:"tornei-fragmarathon",kind:"torneo",v:1,title:g.name||DEF[k].l,savedAt:new Date().toISOString(),status:result(g,k).status,game:{k:k,l:DEF[k].l,m:DEF[k].m,t:DEF[k].t,plat:g.plat||""},data:c},null,1);
@@ -1587,7 +1621,7 @@ function autoBackup(label){
   try{var L=JSON.parse(localStorage.getItem(KEY+"-auto")||"[]");L.unshift({t:Date.now(),label:label,data:data});localStorage.setItem(KEY+"-auto",JSON.stringify(L.slice(0,3)));toast("Backup automatico salvato nel browser ("+label+").");renderArch()}catch(e){}
 }
 function afterSave(){
-  botPush();
+  botPush();if(window.__app&&window.__app.onSave)window.__app.onSave();
   saveAt=new Date();var se=$("savest");if(se)se.textContent="Salvato alle "+saveAt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
   if(WALL)return;
   var now=statusMap();
@@ -1747,7 +1781,7 @@ document.addEventListener("click",function(e){
 window.addEventListener("storage",function(e){if(e.key===WKEY&&!WALL)decorateProj()});
 
 var wS=null,wItems=[],wIdx=0,wT=0,wSig="",wWSig="",wHide=null,wLock=false;
-function wViews(){return wS.scope==="all"?Object.keys(DEF).concat(["results","hof"]):[wS.view&&(DEF[wS.view]||/^(roster|squadre|results|hof)$/.test(wS.view))?wS.view:S.cur]}
+function wViews(){return wS.scope==="all"?Object.keys(DEF).filter(function(k){return!(S.games[k]&&S.games[k].draft)}).concat(["results","hof"]):[wS.view&&(DEF[wS.view]||/^(roster|squadre|results|hof)$/.test(wS.view))?wS.view:S.cur]}
 function wCollect(){
   var out=[];
   wViews().forEach(function(v){S.cur=v;render();projKeys().forEach(function(el){out.push({view:v,key:el.dataset.wk,title:el.dataset.wt})})});
@@ -1944,6 +1978,20 @@ render=function(){applySkin();_render();fitProj();decorateProj()};
 renderOut=function(){_renderOut();fitProj();decorateProj()};
 window.addEventListener("resize",fitProj);
 document.addEventListener("fullscreenchange",fitProj);
+/* Ponte per la schermata dei tornei (js/home.js): legge lo stato e ne carica un altro. */
+window.__app={
+  S:function(){return S},
+  WALL:WALL,DESK:DESK,esc:esc,toast:toast,dl:dlBlob,fresh:fresh,
+  load:function(p){S=p;initS();registerCustom();normGames();if(!DEF[S.cur])S.cur="quake";hist=[];lastJ=null;applyUi();lastStat=statusMap();save();renderRoster();render();renderArch();botPush()},
+  touch:function(){save()},
+  ui0:UI0,
+  games:function(st){
+    var keep=S;S=st;initS();registerCustom();normGames();var out=[];
+    try{Object.keys(DEF).forEach(function(k){var g=S.games[k];if(!g)return;var r=result(g,k),on=g.players.length||g.phase!=="setup";if(on)out.push({k:k,l:DEF[k].l,name:g.name||"",st:r.status,n:g.players.length,top:(r.top||[]).filter(Boolean)[0]||""})})}
+    finally{S=keep;registerCustom()}
+    return out;
+  }
+};
 lastJ=JSON.stringify(S);
 if(WALL)wallInit();else{lastStat=statusMap();applyUi();renderRoster();render();botPush()}
 })();
