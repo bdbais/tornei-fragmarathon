@@ -173,3 +173,6 @@ body.wall.nocur{cursor:none}
 .aigrid button{width:100%}
 
 .impact{margin-top:14px;padding:12px 14px;border:2px solid #e5484d;border-left-width:6px;border-radius:8px;background:color-mix(in srgb,#e5484d 10%,transparent)}
+
+.gpos{font-size:.75rem;font-weight:700;color:var(--acc)}
+.hofcalc{margin:0}

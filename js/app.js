@@ -270,23 +270,7 @@ function gamePts(g){
   if(g.de){var E=deState(g).ev;Object.keys(E.M).forEach(function(id){var x=E.M[id];if(x.ready)mt(x)})}
   mt(g.third);return m;
 }
-function renderHof(){
-  var P={},T={};
-  function add(M,n,p,k,g){var e=M[n]||(M[n]={n:n,tot:0,by:{}});e.tot+=p;e.by[k]=(e.by[k]||0)+p}
-  Object.keys(DEF).forEach(function(k){
-    var g=S.games[k],team=g.team!==undefined?g.team:!!DEF[k].t,pts=gamePts(g);
-    Object.keys(pts).forEach(function(n){if(team){add(T,n,pts[n],k,g);((g.members||{})[n]||[]).forEach(function(m){add(P,m,pts[n],k,g)})}else add(P,n,pts[n],k,g)});
-  });
-  function top3(M){return Object.keys(M).map(function(k){return M[k]}).sort(function(a,b){return b.tot-a.tot||a.n.localeCompare(b.n)}).slice(0,3)}
-  function panel(title,list,isT){
-    var med=["1º","2º","3º"],h='<section class="panel"><h2>'+title+'</h2>';
-    if(!list.length)return h+'<p class="empty">Nessun punteggio inserito.</p></section>';
-    h+='<table class="res"><tr><th>Pos.</th><th>'+(isT?"Squadra":"Giocatore")+'</th><th>Punti totali</th><th>Punti per gioco</th></tr>';
-    list.forEach(function(e,i){h+='<tr><td>'+med[i]+'</td><td>'+(isT?tico(e.n,18):"")+esc(e.n)+'</td><td><b>'+e.tot+'</b></td><td><div class="gps">'+Object.keys(e.by).sort(function(a,b){return e.by[b]-e.by[a]}).map(function(k,j){var gl=DEF[k].l+(S.games[k].name?" ("+S.games[k].name+")":"");return'<span class="gp'+(j===0&&Object.keys(e.by).length>1?' top':'')+'" title="'+esc(gl)+': '+e.by[k]+' punti">'+ico(k,26)+'<b>'+e.by[k]+'</b><span class="sr"> punti in '+esc(gl)+'</span></span>'}).join("")+'</div></td></tr>'});
-    return h+'</table></section>';
-  }
-  $("hofbox").innerHTML='<p class="hint" style="margin:0 0 12px">Classifica dei punti totali segnati in tutti i giochi. Nei giochi a squadre i punti della squadra contano anche per ogni suo componente.</p>'+panel("Hall of Fame · Giocatori",top3(P),false)+panel("Hall of Fame · Squadre",top3(T),true);
-}
+function renderHof(){renderHof2()}
 async function exportCsv(){
   var rows=[["Gioco","Torneo","Posizione","Nome","Componenti"]];
   Object.keys(DEF).forEach(function(k){var g=S.games[k],r=result(g,k);r.top.forEach(function(n,i){if(n)rows.push([DEF[k].l,g.name||"",i+1,n,r.team?((g.members||{})[n]||[]).join(", "):""])})});
@@ -1657,6 +1641,89 @@ function wallInit(){
   wS=wState();if(!wS.view)wS.view=S.cur;
   wT=Date.now();wRebuild(false);setInterval(wPoll,1000);
 }
+
+/* ---- Hall of Fame: posizione finale di ogni torneo + punteggio, con formula dell'evento (S.ui.hof) ---- */
+var HOF_DEF="tabella(pos; 25; 18; 15; 12; 10; 8; 6; 4; 2; 1) + punti*0.1",HOF_VARS=["pos","punti","partecipanti","concluso"],hofOpen=false;
+var HOF_PRE=[["Posizioni + punteggio (consigliato)",HOF_DEF],["Solo posizioni, stile Formula 1","tabella(pos; 25; 18; 15; 12; 10; 8; 6; 4; 2; 1)"],["Solo podio: 3, 2, 1","tabella(pos; 3; 2; 1)"],["Posizioni pesate sui partecipanti","se(pos; (partecipanti - pos + 1) * 10; 0) + punti*0.1"],["Solo punteggio fatto (come prima)","punti"]];
+function hofFormula(){return(S.ui&&S.ui.hof)||HOF_DEF}
+/* Posizione finale di ogni partecipante in un torneo concluso (pari merito = stessa posizione). */
+function placements(g,k){
+  var P={},next=1;if(g.phase==="setup"||result(g,k).status!=="Concluso")return P;
+  function grp(list){list=(list||[]).filter(function(n,i,a){return n&&P[n]===undefined&&a.indexOf(n)===i});if(!list.length)return;list.forEach(function(n){P[n]=next});next+=list.length}
+  function seq(list){list.forEach(function(n){grp([n])})}
+  function byScore(arr){arr.sort(function(a,b){return b.s-a.s});for(var i=0;i<arr.length;){var j=i;while(j<arr.length&&arr[j].s===arr[i].s)j++;grp(arr.slice(i,j).map(function(x){return x.n}));i=j}}
+  if(g.ffa){
+    for(var ri=g.ffa.rounds.length-1;ri>=0;ri--){var arr=[];g.ffa.rounds[ri].groups.forEach(function(gr){gr.p.forEach(function(n){if(P[n]===undefined)arr.push({n:n,s:gr.s[n]==null?-1e9:gr.s[n]})})});byScore(arr)}
+  }else if(g.de){
+    var D=deState(g),E=D.ev;grp([E.top[0]]);grp([E.top[1]]);grp([E.top[2]]);
+    for(var li=D.st.LB.length-1;li>=0;li--)grp(D.st.LB[li].map(function(m){var x=E.M[m.id];return x&&x.ready?x.l:null}));
+  }else if(g.rounds){
+    var R=g.rounds,f=R[R.length-1][0],t=g.third;grp([f.w]);grp([loser(f)]);
+    if(t&&t.match&&t.w){grp([t.w]);grp([t.w===t.a?t.b:t.a])}else if(t&&t.auto)grp([t.auto]);
+    for(var r=R.length-2;r>=0;r--)grp(R[r].map(loser));
+    if(g.groups)seq(overall(g));else if(g.sw)seq(TF.swStandings(g.players,g.sw.rounds,rankFx(g)).map(function(x){return x.n}));
+  }else if(g.sw)seq(TF.swStandings(g.players,g.sw.rounds,rankFx(g)).map(function(x){return x.n}));
+  else if(g.groups)seq(overall(g));
+  grp(g.players);
+  return P;
+}
+function fmtN(x){return(Math.round(x*100)/100).toLocaleString("it-IT")}
+function hofSimple(src){var m=/^tabella\(pos;\s*([\d.;\s]+)\)(?:\s*\+\s*punti\s*\*\s*([\d.]+))?$/.exec(String(src).trim());return m?{tab:m[1].split(";").map(function(x){return x.trim()}).filter(Boolean).join(", "),w:m[2]||"0"}:null}
+function hofEditor(){
+  var src=hofFormula(),sm=hofSimple(src)||{tab:"25, 18, 15, 12, 10, 8, 6, 4, 2, 1",w:"0.1"},t=calcTest(src,HOF_VARS,{pos:1,punti:120,partecipanti:16,concluso:1});
+  return'<details class="calc hofcalc"'+(hofOpen?" open":"")+'><summary>Come si calcola la Hall of Fame</summary>'
+   +'<p class="hint">Per ogni torneo si calcola un punteggio da posizione finale e punti fatti, e si sommano tutti i tornei. La posizione conta solo quando il torneo è concluso: fino ad allora vale 0.</p>'
+   +'<div class="row"><label class="row" style="gap:6px">Modello <select id="hofpre"><option value="">Scegli…</option>'+HOF_PRE.map(function(p,i){return'<option value="'+i+'">'+p[0]+'</option>'}).join("")+'</select></label></div>'
+   +'<div class="row" style="margin-top:10px;align-items:flex-end"><label class="cfx" style="flex:3 1 260px">Punti per posizione (1º, 2º, 3º, …) <input type="text" id="hofpos" value="'+esc(sm.tab)+'"></label><label class="cfx" style="flex:1 1 140px">Peso del punteggio <input type="number" id="hofw" min="0" step="0.01" value="'+esc(sm.w)+'"></label><button id="hofapply">Applica i pesi</button></div>'
+   +'<label class="cfx">Formula (per chi vuole di più) <input type="text" id="hoff" spellcheck="false" value="'+esc(src)+'"></label>'
+   +'<p class="cres '+(t.ok?'ok':'err')+'" id="hoff-r">'+(t.ok?'Esempio: 1º posto con 120 punti fatti = '+fmtN(t.v)+' punti Hall of Fame':esc(t.msg))+'</p>'
+   +'<p class="hint">Variabili: pos (posizione finale), punti (punti fatti nel torneo, secondo la sua formula «Punti per la Hall of Fame»), partecipanti, concluso (1 o 0). Funzioni e operatori come nelle altre formule (F1).</p></details>';
+}
+function hofSet(src){try{TF.fxCompile(src,HOF_VARS)}catch(e){toast("Formula non salvata: "+e.message);return}S.ui.hof=src.trim();save();render();toast("Hall of Fame ricalcolata.")}
+function renderHof2(){
+  var fx=fxSafe(hofFormula(),HOF_VARS)||TF.fxCompile(HOF_DEF,HOF_VARS),P={},T={};
+  function add(M,n,k,o){var e=M[n]||(M[n]={n:n,tot:0,by:{}});e.tot+=o.v;e.by[k]=o}
+  Object.keys(DEF).forEach(function(k){
+    var g=S.games[k];if(!g||g.phase==="setup")return;
+    var team=isTeam(g,k),pts=gamePts(g),pl=placements(g,k),done=result(g,k).status==="Concluso",np=g.players.length;
+    Object.keys(pts).concat(Object.keys(pl)).filter(function(n,i,a){return a.indexOf(n)===i}).forEach(function(n){
+      var V={pos:pl[n]||0,punti:pts[n]||0,partecipanti:np,concluso:done?1:0},o={v:fx.run(V),pos:V.pos,pts:V.punti};
+      if(team){add(T,n,k,o);((g.members||{})[n]||[]).forEach(function(m){add(P,m,k,o)})}else add(P,n,k,o);
+    });
+  });
+  function top(M){return Object.keys(M).map(function(k){return M[k]}).sort(function(a,b){return b.tot-a.tot||a.n.localeCompare(b.n)}).slice(0,10)}
+  function panel(title,list,isT){
+    var h='<section class="panel"><h2>'+title+'</h2>';
+    if(!list.length)return h+'<p class="empty">Nessun punteggio inserito.</p></section>';
+    h+='<table class="res"><tr><th>Pos.</th><th>'+(isT?"Squadra":"Giocatore")+'</th><th>Totale</th><th>Per gioco: posizione e punti</th></tr>';
+    var prev=null,pos=0;
+    list.forEach(function(e,i){
+      if(e.tot!==prev){pos=i+1;prev=e.tot}
+      var ks=Object.keys(e.by).sort(function(a,b){return e.by[b].v-e.by[a].v});
+      h+='<tr><td>'+pos+'º</td><td>'+(isT?tico(e.n,18):"")+esc(e.n)+'</td><td><b>'+fmtN(e.tot)+'</b></td><td><div class="gps">'+ks.map(function(k,j){var o=e.by[k],gl=DEF[k].l+(S.games[k].name?" ("+S.games[k].name+")":"");
+        return'<span class="gp'+(j===0&&ks.length>1?' top':'')+'" title="'+esc(gl)+': '+(o.pos?o.pos+'º posto, ':'')+fmtN(o.pts)+' punti fatti, '+fmtN(o.v)+' punti Hall of Fame">'+ico(k,26)+(o.pos?'<span class="gpos">'+o.pos+'º</span>':'')+'<b>'+fmtN(o.v)+'</b><span class="sr"> in '+esc(gl)+'</span></span>'}).join("")+'</div></td></tr>';
+    });
+    return h+'</table></section>';
+  }
+  $("hofbox").innerHTML=hofEditor()+'<p class="hint" style="margin:12px 0">Classifica di tutti i giochi dell&#39;evento. Accanto all&#39;icona di ogni gioco: posizione finale e punti Hall of Fame. Nei giochi a squadre i punti della squadra contano anche per ogni componente.</p>'+panel("Hall of Fame · Giocatori",top(P),false)+panel("Hall of Fame · Squadre",top(T),true);
+}
+$("hofbox").addEventListener("change",function(e){
+  var id=e.target.id;
+  if(id==="hofpre"&&e.target.value!==""){hofSet(HOF_PRE[+e.target.value][1]);return}
+  if(id==="hoff")hofSet(e.target.value);
+});
+$("hofbox").addEventListener("input",function(e){
+  if(e.target.id!=="hoff")return;var t=calcTest(e.target.value,HOF_VARS,{pos:1,punti:120,partecipanti:16,concluso:1}),o=$("hoff-r");
+  if(o){o.className="cres "+(t.ok?"ok":"err");o.textContent=t.ok?"Esempio: 1º posto con 120 punti fatti = "+fmtN(t.v)+" punti Hall of Fame (premi Invio o esci dal campo per salvare)":t.msg}
+});
+$("hofbox").addEventListener("keydown",function(e){if(e.key==="Enter"&&(e.target.id==="hoff"||e.target.id==="hofpos"||e.target.id==="hofw")){e.preventDefault();if(e.target.id==="hoff")e.target.blur();else $("hofapply").click()}});
+$("hofbox").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||b.id!=="hofapply")return;
+  var vals=$("hofpos").value.split(/[,;\s]+/).map(function(x){return x.replace(",",".")}).filter(function(x){return/^\d+(\.\d+)?$/.test(x)}),w=parseFloat(String($("hofw").value).replace(",","."))||0;
+  if(!vals.length){toast("Scrivi almeno i punti del 1º posto, separati da virgole.");return}
+  hofSet("tabella(pos; "+vals.join("; ")+")"+(w>0?" + punti*"+w:""));
+});
+$("hofbox").addEventListener("toggle",function(e){if(e.target.classList&&e.target.classList.contains("hofcalc"))hofOpen=e.target.open},true);
 
 var _render=render,_renderOut=renderOut;
 render=function(){applySkin();_render();fitProj();decorateProj()};

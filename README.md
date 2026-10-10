@@ -25,7 +25,7 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 - **Archivio**: ogni torneo si salva in `Documenti\Tornei Fragmarathon\tornei` e si riprende dall'elenco. Il file si aggiorna da solo a ogni modifica.
 - **Backup automatici** in `Documenti\Tornei Fragmarathon\backup` all'avvio del torneo, a ogni cambio di turno o girone e alla fine.
 - **Guida contestuale**: pulsante `?` in ogni finestra, oppure `F1`.
-- **Hall of Fame** con i punti per ogni gioco, per giocatori e squadre.
+- **Hall of Fame** dell'evento: punti per la posizione finale di ogni torneo più i punti fatti con il peso che scegli (o una formula), con posizione e punti per ogni gioco.
 - **Temi**: automatico per gioco (Quake, Team Fortress 2, Wreckfest, Counter-Strike 2, FIFA), Fragmarathon, e temi ispirati alle piattaforme di tornei (stile Challonge, start.gg, ESL, Liquipedia, Battlefy). Il proiettore segue il tema.
 - **Calcolo dei punti con formule** per ogni torneo: campi a scelta nel free for all (es. posizione e uccisioni) con modelli pronti, punti in classifica e punti per la Hall of Fame nei formati a partite. Linguaggio di formule sicuro, senza `eval`, testato in `tests/`.
 - **Logo con l'AI** per l'evento o per ogni torneo: Stable Diffusion locale (AUTOMATIC1111/Forge), server compatibili OpenAI (LocalAI), Pollinations o Hugging Face con chiave gratuita.

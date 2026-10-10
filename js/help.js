@@ -73,9 +73,13 @@ window.HELP = {
       "<li><b>Esporta risultati (CSV)</b> crea un file da aprire con Excel.</li></ul>" },
 
     hof: { t: "Hall of Fame", h:
-      "<p>La classifica dei punti segnati in tutti i giochi dell'evento.</p>" +
-      "<ul><li>Per ogni giocatore e squadra vedi le icone dei giochi a cui ha partecipato con i punti fatti in ognuno; il gioco migliore ha il bordo arancio.</li>" +
-      "<li>Nei giochi a squadre i punti della squadra contano anche per ogni suo componente.</li></ul>" },
+      "<p>La classifica di tutto l'evento. Per ogni torneo ogni partecipante prende dei punti Hall of Fame che dipendono dalla <b>posizione finale</b> e dai <b>punti fatti</b>; poi si sommano tutti i tornei.</p>" +
+      "<h4>Come si calcola</h4><p>Apri <b>Come si calcola la Hall of Fame</b> in cima alla scheda:</p><ul>" +
+      "<li><b>Punti per posizione</b>: quanto vale il 1º, il 2º, il 3º posto e così via (per esempio 25, 18, 15, 12, 10…). Le posizioni non elencate valgono 0.</li>" +
+      "<li><b>Peso del punteggio</b>: quanto conta ogni punto fatto (0,1 = un punto Hall of Fame ogni 10 fatti; 0 = contano solo le posizioni).</li>" +
+      "<li>Premi <b>Applica i pesi</b>: la classifica si ricalcola subito. Ci sono anche dei modelli pronti e una formula libera con le variabili pos, punti, partecipanti, concluso.</li></ul>" +
+      "<p>La posizione conta solo quando il torneo è concluso; a pari merito (stesso turno di eliminazione o stesso punteggio) si prende la stessa posizione. I punti fatti di un torneo seguono la sua formula «Punti per la Hall of Fame».</p>" +
+      "<p>Accanto all'icona di ogni gioco vedi la posizione e i punti Hall of Fame presi; il gioco migliore ha il bordo colorato. Nei giochi a squadre i punti della squadra contano anche per ogni componente.</p>" },
 
     formule: { t: "Calcolo dei punti (formule)", h:
       "<p>Ogni torneo ha il suo riquadro <b>Calcolo dei punti</b> nella scheda del gioco. Le formule si scrivono come in un foglio di calcolo e si vede subito il risultato su un esempio; se c'è un errore viene spiegato in rosso e la formula non viene salvata.</p>" +
