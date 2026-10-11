@@ -952,6 +952,65 @@ var armDel=null;
 function logoRow(){return'<img class="elogo" src="'+esc(S.ui.logo||applyUi.def.em)+'" alt="Logo attuale"><button id="elogo">Carica logo…</button>'+(S.ui.logo?'<button id="elogodef">Torna al logo Fragmarathon</button>':'')+'<input type="file" id="elf" accept="image/*" hidden>'}
 function cssRow(){return'<button id="ecssimp">Importa file .css…</button><button id="ecssexp">Scarica il modello</button>'+(S.ui.css?'<button id="ecssdel">Rimuovi il CSS</button>':'')+'<input type="file" id="ecf" accept=".css,text/css" hidden>'}
 function editPart(id,html){var x=$(id);if(x)x.innerHTML=html}
+/* ======================================================================
+   Stile da un sito (solo app per Windows): main.js apre il sito in una finestra nascosta e isolata (css:probe)
+   e restituisce colori e caratteri già controllati; qui diventano le variabili del tema e un CSS correggibile.
+   ====================================================================== */
+function cssWebRow(){
+  if(!DESK||!DESK.cssProbe)return'<p class="hint">Prendere lo stile da un sito si può solo nell&#39;app installata per Windows.</p>';
+  return'<div class="row" style="margin-top:8px"><input type="text" inputmode="url" id="ecssurl" placeholder="https://www.esempio.it" aria-label="Indirizzo del sito da cui prendere lo stile" spellcheck="false" autocomplete="off" style="flex:1 1 260px"><button id="ecssweb">Prendi lo stile dal sito</button></div>'
+   +'<p class="hint">Apro il sito in una finestra nascosta e separata, ne leggo colori e caratteri e li trasformo in un CSS per questo programma: lo vedi subito qui sotto, puoi correggerlo, e Annulla cancellazione rimette il CSS di prima.</p>';
+}
+/* colore qualsiasi (anche oklch, lab, color()) -> [r,g,b] sRGB, passando da un pixel di canvas; null se trasparente o non valido */
+function cRgb(c){
+  if(!c)return null;
+  try{var cv=document.createElement("canvas");cv.width=cv.height=1;var x=cv.getContext("2d",{willReadFrequently:true});
+    x.fillStyle="#010203";x.fillStyle=String(c);if(x.fillStyle==="#010203"&&!/^#010203$/i.test(String(c).trim()))return null;
+    x.clearRect(0,0,1,1);x.fillRect(0,0,1,1);var d=x.getImageData(0,0,1,1).data;return d[3]<40?null:[d[0],d[1],d[2]]}catch(e){return null}
+}
+function cHex(c){return"#"+c.map(function(v){return("0"+Math.round(Math.max(0,Math.min(255,v))).toString(16)).slice(-2)}).join("")}
+function cMix(a,b,t){return[0,1,2].map(function(i){return a[i]+(b[i]-a[i])*t})}
+function cLum(c){var f=function(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(c[0])+.7152*f(c[1])+.0722*f(c[2])}
+function cCon(a,b){var x=cLum(a),y=cLum(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+function cSat(c){var mx=Math.max(c[0],c[1],c[2])/255,mn=Math.min(c[0],c[1],c[2])/255,l=(mx+mn)/2;return mx===mn?0:(mx-mn)/(1-Math.abs(2*l-1))}
+function famCss(f){return String(f||"").split(",").map(function(x){x=x.trim().replace(/^["']|["']$/g,"").replace(/["'\\;{}<>]/g,"").trim();return/^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/i.test(x)?x:x?'"'+x+'"':""}).filter(Boolean).slice(0,5).join(",")}
+function cssFromSite(r){
+  var W=[255,255,255],B=[17,17,17];
+  var bg=cRgb(r.bg)||cRgb(r.page)||W,ink=cRgb(r.ink)||(cLum(bg)>.4?B:[240,240,240]);
+  if(cCon(ink,bg)<4)ink=cLum(bg)>.4?B:[242,242,242];
+  var dark=cLum(bg)<.35,cands=[];
+  /* accento: variabili del sito con nomi da colore principale, poi pulsanti e link, poi i colori saturi più usati */
+  Object.keys(r.vars||{}).forEach(function(k){if(/primary|accent|brand|highlight|theme|main|cta/i.test(k)){var c=cRgb(r.vars[k]);if(c)cands.push(c)}});
+  if(r.button)cands.push(cRgb(r.button.bg));if(r.link)cands.push(cRgb(r.link));(r.freq||[]).forEach(function(f){cands.push(cRgb(f[0]))});
+  cands=cands.filter(Boolean);
+  var acc=cands.filter(function(c){return cSat(c)>.35&&cCon(c,bg)>=2}).shift()||cands.filter(function(c){return cSat(c)>.25}).shift()||[255,90,31];
+  var panel,pg=bg;
+  if(!dark&&cLum(bg)>.85){panel=bg;pg=cMix(bg,ink,.05)}else panel=cMix(bg,ink,dark?.07:.04);
+  var hb=r.header&&cRgb(r.header.bg),b1=hb&&cCon(hb,pg)>1.15?hb:(dark?cMix(pg,[0,0,0],.35):cMix(acc,[0,0,0],.7));
+  var b2=cMix(b1,cLum(b1)<.3?W:B,.08),wacc=cLum(acc)<.12?cMix(acc,W,.35):acc,accink=cCon(B,acc)>=cCon(W,acc)?"#111111":"#ffffff";
+  var hf=r.heading&&famCss(r.heading.font),bf=famCss(r.font),host="";try{host=new URL(r.url).hostname}catch(e){}
+  var css="/* Stile preso da "+(host||"un sito").replace(/\*\//g,"")+(r.title?" ("+String(r.title).replace(/\*\/|[\r\n]/g," ")+")":"")+": colori e caratteri del sito, adattati a questo programma. */\n";
+  (r.fonts||[]).forEach(function(f){
+    if(!f||!/^data:font\/(woff2|woff|ttf);base64,[A-Za-z0-9+\/=]+$/.test(f.data))return;
+    css+='@font-face{font-family:"'+String(f.family).replace(/["\\;{}<>]/g,"")+'";src:url('+f.data+') format("'+({woff2:"woff2",woff:"woff",truetype:"truetype"}[f.fmt]||"truetype")+'");font-weight:'+(/^\d{3}$/.test(f.weight)?f.weight:"400")+';font-display:swap}\n';
+  });
+  css+=":root:not(#x){\n  --bg:"+cHex(pg)+";\n  --panel:"+cHex(panel)+";\n  --ink:"+cHex(ink)+";\n  --mut:"+cHex(cMix(ink,pg,.38))+";\n  --line:"+cHex(cMix(ink,pg,.82))+";\n  --edge:"+cHex(cMix(ink,pg,.62))+";\n  --acc:"+cHex(acc)+";\n  --accink:"+accink+";\n  --win:var(--acc);\n  --gold:var(--acc);\n  --wacc:"+cHex(wacc)+";\n  --b1:"+cHex(b1)+";\n  --b2:"+cHex(b2)+";\n  --glow:rgba("+acc.map(Math.round).join(",")+",.35);\n}\n";
+  css+=".brand{background:radial-gradient(circle at 110px 50%,var(--glow),transparent 150px),repeating-linear-gradient(135deg,var(--b1) 0,var(--b1) 15px,var(--b2) 17px,var(--b2) 31px,var(--b1) 33px)}\n";
+  if(bf)css+="body{font-family:"+bf+",Inter,\"Segoe UI\",Arial,sans-serif}\n";
+  if(hf)css+="h1,h2,h3,.brand h1,.tab{font-family:"+hf+",\"Segoe UI\",Arial,sans-serif}\n";
+  return css;
+}
+function cssWeb(){
+  var u=String(($("ecssurl")||{}).value||"").trim();if(!u){toast("Scrivi l'indirizzo del sito.");return}
+  if(!DESK||!DESK.cssProbe){toast("Prendere lo stile da un sito si può solo nell'app installata per Windows.");return}
+  var b=$("ecssweb");if(b){if(b.disabled)return;b.disabled=true}toast("Leggo lo stile del sito…");
+  DESK.cssProbe(u).then(function(r){
+    if(b)b.disabled=false;if(!r||r.err){toast((r&&r.err)||"Non riesco a leggere lo stile del sito.");return}
+    var css=cssFromSite(r);if(css.length>290000){toast("Lo stile del sito è troppo grande per il CSS personalizzato.");return}
+    delSnap("CSS personalizzato di prima");S.ui.css=css;applyUi();save();renderCssRow();
+    toast((r.fonts||[]).length?"Stile del sito applicato: colori e caratteri. Puoi correggerlo qui sotto.":"Stile del sito applicato: colori. Puoi correggerlo qui sotto.");
+  }).catch(function(){if(b)b.disabled=false;toast("Non riesco a leggere lo stile del sito.")});
+}
 function renderLogoRow(){editPart("elogorow",logoRow())}
 function renderCssRow(){var t=$("ecss");if(t)t.value=S.ui.css||"";editPart("ecssrow",cssRow())}
 function renderAiBox(){editPart("aibox",aiBody())}
@@ -965,7 +1024,7 @@ function renderEdit(keep){
   h+='</div><h3 style="margin-top:20px">Logo dell&#39;evento</h3><div class="row" id="elogorow">'+logoRow()+'</div>'
    +'<p class="hint">PNG, JPG, WEBP o SVG, meglio con sfondo trasparente. Viene ridotto a 512 pixel e salvato con i dati dell&#39;evento: compare nell&#39;intestazione, nelle immagini PNG e nei PDF.</p>'
    +renderAi()
-   +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row" id="ecssrow">'+cssRow()+'</div>'
+   +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row" id="ecssrow">'+cssRow()+'</div>'+cssWebRow()
    +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
    +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings()+renderDiscordSettings()+renderStreamSettings();
   $("editform").innerHTML=h;
@@ -1121,7 +1180,7 @@ function botResults(g,k){
 function botVM(){
   var H=hofCompute(),ML={};MODES.forEach(function(m){ML[m[0]]=m[1]});
   function row(e){return{n:e.n,tot:Math.round(e.tot*100)/100,pos:e.pos,by:Object.keys(e.by).map(function(k){var o=e.by[k];return{l:DEF[k].l,pos:o.pos,v:Math.round(o.v*100)/100}})}}
-  return{sala:window.SALA?SALA.vm():null,title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,lang:(S.ev&&S.ev.lang)||"it",draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",discord:(S.ev&&S.ev.discord)||"",when:evWhen(),place:(S.ev&&S.ev.place)||"",mode:(S.ev&&S.ev.mode)||"lan",addr:(S.ev&&S.ev.addr)||"",maps:(S.ev&&(S.ev.maps||(S.ev.addr&&S.ev.mode!=="online"?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(S.ev.addr):"")))||""},roster:S.roster.slice(),
+  return{sala:window.SALA?SALA.vm():null,title:S.ui.title||UI0.title,sub:S.ui.sub||UI0.sub,lang:(S.ev&&S.ev.lang)||"it",draft:!!(S.ev&&S.ev.draft),links:{wa:(S.ev&&S.ev.wa)||"",tg:(S.ev&&S.ev.tg)||"",discord:(S.ev&&S.ev.discord)||"",ts:(S.ev&&S.ev.ts)||"",tspass:(S.ev&&S.ev.tspass)||"",when:evWhen(),place:(S.ev&&S.ev.place)||"",mode:(S.ev&&S.ev.mode)||"lan",addr:(S.ev&&S.ev.addr)||"",maps:(S.ev&&(S.ev.maps||(S.ev.addr&&S.ev.mode!=="online"?"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(S.ev.addr):"")))||""},roster:S.roster.slice(),
     tournaments:Object.keys(DEF).map(function(k){var g=S.games[k],r=result(g,k),np=botNext(g,k);return{k:k,l:DEF[k].l,discord:!!(S.ev&&(S.ev.discord||(S.ev.dguild&&S.ev.dchan))),draft:!!g.draft,name:g.name||"",mode:ML[g.mode]||g.mode,team:isTeam(g,k),players:g.players.slice(),members:g.members||{},status:r.status,open:g.phase==="setup",done:r.status==="Concluso",top:r.top.filter(Boolean),pl:placements(g,k),lines:botLines(g,k),nextP:np,next:np.map(function(x){return x.t}),results:botResults(g,k)}}),
     hof:{players:H.P.slice(0,50).map(row),teams:H.T.slice(0,50).map(row)}};
 }
@@ -1437,6 +1496,7 @@ $("editbox").onclick=function(e){
   if(b.dataset.aiuse!==undefined){aiUse(+b.dataset.aiuse);return}
   if(b.id==="elogodef"){delete S.ui.logo;applyUi();save();renderLogoRow();toast("Ripristinato il logo Fragmarathon.");return}
   if(b.id==="ecssimp"){$("ecf").click();return}
+  if(b.id==="ecssweb"){cssWeb();return}
   if(b.id==="ecssexp"){dlBlob(new Blob([CSSTPL],{type:"text/css"}),"tornei-fragmarathon-modello.css");toast("Modello CSS scaricato.");return}
   if(b.id==="ecssdel"){S.ui.css="";applyUi();save();renderCssRow();toast("CSS personalizzato rimosso.");return}
   if(b.id==="esave"){
@@ -1737,7 +1797,7 @@ function diffState(a,b){
   q("Titolo",au.title||UI0.title,bu.title||UI0.title,1);q("Sottotitolo",au.sub,bu.sub,1);
   q("Data",ae.date,be.date,1);q("Ora",ae.time,be.time,1);q("Luogo",ae.place,be.place,1);q("Indirizzo",ae.addr,be.addr,1);q("Link Google Maps",ae.maps,be.maps,1);
   q("Lingua del torneo",langName(ae.lang||"it"),langName(be.lang||"it"),1);q("Tipo di evento",EVM[ae.mode||"lan"]||ae.mode,EVM[be.mode||"lan"]||be.mode);
-  q("Gruppo WhatsApp",ae.wa,be.wa,1);q("Gruppo o canale Telegram",ae.tg,be.tg,1);q("Server Discord (invito)",ae.discord,be.discord,1);
+  q("Gruppo WhatsApp",ae.wa,be.wa,1);q("Gruppo o canale Telegram",ae.tg,be.tg,1);q("Server Discord (invito)",ae.discord,be.discord,1);q("Server TeamSpeak",ae.ts,be.ts,1);q("Password di TeamSpeak",ae.tspass?"••••":"",be.tspass?"••••":"",0);
   q("Account Discord dei giocatori",Object.keys(a.disc||{}).length,Object.keys(b.disc||{}).length);q("Canali Discord per partita",yn(ae.dchan),yn(be.dchan));
   q("In lavorazione, visibile solo agli admin",yn(ae.draft),yn(be.draft));q("Bot del torneo",bot(ae.bot),bot(be.bot),1);
   var ar=a.roster||[],br=b.roster||[],pa=br.filter(function(x){return ar.indexOf(x)<0}),pr=ar.filter(function(x){return br.indexOf(x)<0});

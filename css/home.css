@@ -392,3 +392,11 @@ html.set-on body{overflow:hidden}
 .sl-menu{position:fixed;z-index:1000;min-width:180px;padding:6px;display:grid;gap:2px;background:var(--panel);border:1px solid var(--edge);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .sl-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);padding:8px 12px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer}
 .sl-menu button:hover,.sl-menu button:focus-visible{background:var(--acc);color:var(--accink);outline:none}
+
+/* TeamSpeak e messaggio da condividere sulle schede dei tornei */
+.ev-link.ts{border-color:#2580c3}
+.ev-share{margin-top:10px;display:grid;gap:8px}
+.ev-share textarea{width:100%;box-sizing:border-box;min-height:120px;padding:8px;border:2px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:13px/1.45 inherit;resize:vertical}
+.ev-share .row{display:flex;flex-wrap:wrap;gap:8px}
+.ev-share a.btn{display:inline-flex;align-items:center;padding:8px 14px;border:2px solid var(--line);border-radius:8px;color:var(--ink);text-decoration:none;font-weight:700}
+.ev-share a.btn:hover,.ev-share a.btn:focus-visible{border-color:var(--ev,var(--acc))}

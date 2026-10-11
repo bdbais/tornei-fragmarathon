@@ -10,7 +10,7 @@
   if (!A || A.WALL) return;
   var LANGS = (window.I18NCORE && window.I18NCORE.LANGS) || [["it", "Italiano"]];
   var D = A.DESK, esc = A.esc, IDXK = "tornei-evidx", EVK = "tornei-ev:", PREFK = "tornei-home";
-  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, lastDel = null, delT = null, vmCache = {}, curVM = null, curVMId = null, othT = null, qq = {};
+  var root = null, list = [], bots = null, armed = {}, editing = null, creating = false, saveT = null, q = "", dupAsk = null, shareAsk = null, lastDel = null, delT = null, vmCache = {}, curVM = null, curVMId = null, othT = null, qq = {};
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
@@ -84,7 +84,7 @@
     return thumb(S.ui && S.ui.logo).then(function (lg) {
       var acc = getComputedStyle(document.documentElement).getPropertyValue("--acc").trim(), ev = S.ev || {};
       return {
-        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", discord: ev.discord || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", lang: ev.lang || "it", place: ev.place || "",
+        title: (S.ui && S.ui.title) || A.ui0.title, sub: (S.ui && S.ui.sub) || "", date: ev.date || "", time: ev.time || "", wa: ev.wa || "", tg: ev.tg || "", discord: ev.discord || "", ts: ev.ts || "", tspass: ev.tspass || "", mode: ev.mode || "lan", addr: ev.addr || "", maps: ev.maps || "", lang: ev.lang || "it", place: ev.place || "",
         color: ev.color || "", accent: acc, logo: lg, games: A.games(JSON.parse(JSON.stringify(S))),
         players: (S.roster || []).length, bot: ev.bot || "", pinned: !!ev.pinned, draft: !!ev.draft, created: ev.created || Date.now(), updated: Date.now()
       };
@@ -191,7 +191,7 @@
         if (!keep) { st.roster = []; st.teams = []; }
       } else st = { cur: "quake", roster: [], games: {}, ui: {} };
       st.ui = st.ui || {}; st.ui.title = f.title; st.ui.sub = f.sub;
-      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), discord: linkOk(f.discord, "discord"), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), lang: f.lang || (window.I18N ? I18N.ui() : "it"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
+      st.ev = { id: newId(), created: Date.now(), date: f.date, time: f.time || "", wa: linkOk(f.wa, "wa"), tg: linkOk(f.tg, "tg"), discord: linkOk(f.discord, "discord"), ts: tsOk(f.ts), tspass: String(f.tspass || "").trim().slice(0, 60), mode: f.mode || "lan", addr: f.addr || "", maps: linkOk(f.maps, "maps"), lang: f.lang || (window.I18N ? I18N.ui() : "it"), place: f.place, color: f.color, draft: !!f.draft, bot: f.bot || (src && src.ev && src.ev.bot) || "" };
       A.load(st); useBot(st); creating = false; laterOthers();
       return flush().then(function () { close(); A.toast("Torneo creato: " + f.title + ". Aggiungi giochi e giocatori."); });
     }).catch(function (e) { A.toast("Non riesco a creare il torneo: " + ((e && e.message) || e)); });
@@ -199,7 +199,7 @@
   function editEv(id, f) {
     function apply(st) {
       st.ui = st.ui || {}; st.ev = st.ev || {};
-      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.discord = linkOk(f.discord, "discord"); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); st.ev.lang = f.lang || "it"; }
+      if (f.title !== undefined) { st.ui.title = f.title; st.ui.sub = f.sub; st.ev.date = f.date; st.ev.time = f.time || ""; st.ev.place = f.place; st.ev.color = f.color; st.ev.draft = !!f.draft; st.ev.wa = linkOk(f.wa, "wa"); st.ev.tg = linkOk(f.tg, "tg"); st.ev.discord = linkOk(f.discord, "discord"); st.ev.ts = tsOk(f.ts); st.ev.tspass = String(f.tspass || "").trim().slice(0, 60); st.ev.mode = f.mode || "lan"; st.ev.addr = f.addr || ""; st.ev.maps = linkOk(f.maps, "maps"); st.ev.lang = f.lang || "it"; }
       if (f.bot !== undefined) st.ev.bot = f.bot;
       if (f.pinned !== undefined) st.ev.pinned = f.pinned;
     }
@@ -212,7 +212,7 @@
       return store.read(id).then(function (t) {
         var j = JSON.parse(t), st = j.state || j, m = j.meta || {};
         apply(st);
-        m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.discord = st.ev.discord || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
+        m.title = st.ui.title || m.title; m.sub = st.ui.sub || ""; m.date = st.ev.date || ""; m.time = st.ev.time || ""; m.wa = st.ev.wa || ""; m.tg = st.ev.tg || ""; m.discord = st.ev.discord || ""; m.ts = st.ev.ts || ""; m.tspass = st.ev.tspass || ""; m.mode = st.ev.mode || "lan"; m.addr = st.ev.addr || ""; m.maps = st.ev.maps || ""; m.lang = st.ev.lang || "it"; m.place = st.ev.place || ""; m.color = st.ev.color || "";
         m.bot = st.ev.bot || ""; m.pinned = !!st.ev.pinned; m.draft = !!st.ev.draft;
         return store.write(id, wrap(st, m));
       });
@@ -343,6 +343,44 @@
     else ok = (h === "t.me" || h === "telegram.me") && /^\/[\w+\/-]+$/.test(p);
     return ok ? x.href : "";
   }
+  /* TeamSpeak: link di invito https (tmspk.gg o teamspeak.com) oppure indirizzo host[:porta], anche incollato come ts3server:// */
+  function tsOk(u) {
+    u = String(u || "").trim(); if (!u) return "";
+    if (/^https?:\/\//i.test(u)) { var x; try { x = new URL(u.replace(/^http:/i, "https:")); } catch (e) { return ""; } var h = x.hostname.toLowerCase().replace(/^www\./, ""); return (h === "tmspk.gg" || h === "teamspeak.com") && !x.username && !x.password ? x.href : ""; }
+    var m = /^(?:ts3server:\/\/)?([a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?|\[[0-9a-f:]+\])(?::(\d{1,5}))?(?:[\/?].*)?$/i.exec(u), pq = /[?&]port=(\d{1,5})/i.exec(u);
+    if (!m) return ""; var port = m[2] || (pq && pq[1]) || ""; if (port && (+port < 1 || +port > 65535)) return "";
+    return m[1].toLowerCase() + (port && port !== "9987" ? ":" + port : "");
+  }
+  /* link che apre TeamSpeak: l'invito https così com'è, oppure ts3server:// con porta e password */
+  function tsHref(ts, pass) {
+    if (/^https:/i.test(ts)) return ts;
+    var m = /^(.*?)(?::(\d+))?$/.exec(ts), q = [];
+    if (m[2]) q.push("port=" + m[2]); if (pass) q.push("password=" + encodeURIComponent(pass));
+    return "ts3server://" + m[1] + (q.length ? "?" + q.join("&") : "");
+  }
+  /* testo da condividere su WhatsApp o Telegram: tutto quello che serve per partecipare, nella lingua del torneo */
+  function shareText(m) {
+    var L = function (s) { return window.I18N ? I18N.tr(s, m.lang || "it") : s; }, a = [], bu = bots ? (bots.filter(function (x) { return x.id === (m.bot || bots[0].id); })[0] || {}).username : "";
+    a.push("🎮 " + (m.title || A.ui0.title)); if (m.sub) a.push(m.sub);
+    if (fmtDate(m.date)) a.push("📅 " + fmtDate(m.date) + (m.time ? ", " + L("ore") + " " + m.time : ""));
+    if (m.place) a.push("📌 " + m.place);
+    if (m.mode === "online") a.push("🌐 " + L("Online") + (m.addr ? ": " + m.addr : ""));
+    else { if (m.addr) a.push("📍 " + m.addr); var mp = mapsUrl(m); if (mp) a.push("🗺 " + mp); }
+    if (bu) a.push("🤖 " + L("Bot Telegram (iscrizioni e avvisi)") + ": https://t.me/" + bu);
+    var tg = linkOk(m.tg, "tg"), wa = linkOk(m.wa, "wa"), dc = linkOk(m.discord, "discord"), ts = tsOk(m.ts);
+    if (tg) a.push("📣 " + L("Canale Telegram") + ": " + tg);
+    if (wa) a.push("💬 " + L("Gruppo WhatsApp") + ": " + wa);
+    if (dc) a.push("🎧 Discord: " + dc);
+    if (ts) a.push("🎙 TeamSpeak: " + ts + (m.tspass ? " (" + L("password") + ": " + m.tspass + ")" : ""));
+    return a.join("\n");
+  }
+  function shareHtml(m) {
+    var t = shareText(m), first = (shareText(m).match(/https:\/\/\S+/) || ["https://tornei.bais.info"])[0];
+    return '<div class="ev-share"><textarea readonly rows="7" aria-label="Messaggio da condividere" data-noi18n>' + esc(t) + '</textarea><div class="row">' +
+      '<a class="btn" href="https://wa.me/?text=' + esc(encodeURIComponent(t)) + '" target="_blank" rel="noopener">WhatsApp</a>' +
+      '<a class="btn" href="https://t.me/share/url?url=' + esc(encodeURIComponent(first)) + '&amp;text=' + esc(encodeURIComponent(t)) + '" target="_blank" rel="noopener">Telegram</a>' +
+      '<button data-a="sharecopy">Copia</button><button data-a="shareclose">Chiudi</button></div></div>';
+  }
   /* link della mappa: quello incollato, oppure una ricerca di Google Maps con l'indirizzo */
   function mapsUrl(m) { return linkOk(m.maps, "maps") || (m.addr && m.mode !== "online" ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(m.addr) : ""); }
   function linksHtml(m) {
@@ -357,6 +395,8 @@
     else if (mp) a.push('<a class="ev-link loc" href="' + esc(mp) + '" target="_blank" rel="noopener" title="Apri in Google Maps">' + (m.mode === "ibrido" ? "In presenza e online: " : "") + (m.addr ? '<span data-noi18n>' + esc(m.addr) + '</span>' : "Mappa") + '</a>');
     if (wa) a.push('<a class="ev-link wa" href="' + esc(wa) + '" target="_blank" rel="noopener">Gruppo WhatsApp</a>');
     if (dc) a.push('<a class="ev-link dc" href="' + esc(dc) + '" target="_blank" rel="noopener">Server Discord</a>');
+    var ts = tsOk(m.ts);
+    if (ts) a.push('<a class="ev-link ts" href="' + esc(tsHref(ts, m.tspass)) + '" title="' + esc(ts) + '">TeamSpeak</a>');
     return a.length ? '<p class="ev-links">' + a.join("") + '</p>' : "";
   }
   function whenHtml(m) {
@@ -387,6 +427,8 @@
       '<label class="wide">Gruppo WhatsApp (link di invito)<input type="text" inputmode="url" name="wa" value="' + esc(m.wa || "") + '" placeholder="https://chat.whatsapp.com/…"></label>' +
       '<label class="wide">Canale o gruppo Telegram (facoltativo)<input type="text" inputmode="url" name="tg" value="' + esc(m.tg || "") + '" placeholder="https://t.me/…"></label>' +
       '<label class="wide">Server Discord (link di invito, facoltativo)<input type="text" inputmode="url" name="discord" value="' + esc(m.discord || "") + '" placeholder="https://discord.gg/…"><small>In Discord: tasto destro sul server, Invita persone, imposta che non scada e copia il link. I canali per partita si attivano in Impostazioni, Discord.</small></label>' +
+      '<label class="wide">Server TeamSpeak (facoltativo)<input type="text" name="ts" value="' + esc(m.ts || "") + '" placeholder="ts.esempio.it:9987 oppure https://tmspk.gg/…" spellcheck="false" autocomplete="off"><small>Indirizzo del server (con la porta se non è 9987) o link di invito di TeamSpeak.</small></label>' +
+      '<label class="wide">Password di TeamSpeak (facoltativa)<input type="text" name="tspass" value="' + esc(m.tspass || "") + '" maxlength="60" spellcheck="false" autocomplete="off"><small>La vedono i partecipanti nelle informazioni del torneo e con /teamspeak nel bot.</small></label>' +
       '<label class="wide chk"><span><input type="checkbox" name="draft"' + (m.draft ? " checked" : "") + '> In lavorazione</span><small>Nel bot lo vedono solo amministratori e organizzatori; nessun avviso ai partecipanti finché non lo togli.</small></label>' +
       (id ? "" : '<label class="wide">Parti da<select name="from"><option value="vuoto">Un torneo vuoto</option>' +
         /* il titolo non si traduce: si traducono solo le parti fisse (un <option> non può contenere uno <span data-noi18n>) */
@@ -398,7 +440,7 @@
     var acts = '<div class="ev-act">' +
       (hero ? '<button class="p ev-go" data-a="open">' + (isCur ? "Continua" : "Apri") + '</button>' : '<button class="p" data-a="open">' + (isCur ? "Continua" : "Apri") + '</button>') +
       '<button data-a="edit">Modifica</button>' + (dupAsk === id ? '<button data-a="dup0">Duplica senza risultati</button><button data-a="dup1">Duplica con i risultati</button>' : '<button data-a="dup" title="Copia di questo torneo, con o senza risultati">Duplica</button>') +
-      '<button data-a="export">Esporta</button><button data-a="trash">Elimina</button></div>';
+      '<button data-a="share" aria-expanded="' + (shareAsk === id ? "true" : "false") + '">Condividi</button><button data-a="export">Esporta</button><button data-a="trash">Elimina</button></div>' + (shareAsk === id ? shareHtml(m) : "");
     var pin = '<button class="ev-pin" data-a="pin" aria-pressed="' + (m.pinned ? "true" : "false") + '" title="' + (m.pinned ? "Togli dai preferiti" : "Tieni in cima") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>';
     var body = editing === id ? editForm(m, id) :
       (hero && isCur ? '<p class="ev-kicker">Aperto adesso</p>' : "") +
@@ -532,6 +574,9 @@
       if (a === "pin") { var e0 = list.filter(function (e) { return e.id === id; })[0]; return editEv(id, { pinned: !(e0 && e0.meta && e0.meta.pinned) }); }
       if (a === "undodel") return undoDel();
       if (a === "dup") { dupAsk = id; return paint(); }
+      if (a === "share") { shareAsk = shareAsk === id ? null : id; return paint(); }
+      if (a === "shareclose") { shareAsk = null; return paint(); }
+      if (a === "sharecopy") { var ta = b.closest(".ev").querySelector(".ev-share textarea"); if (ta && navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function () { A.toast("Messaggio copiato: incollalo dove vuoi."); }, function () { ta.select(); A.toast("Seleziona il testo e copialo con Ctrl+C."); }); return; }
       if (a === "dup0" || a === "dup1") { dupAsk = null; var e1 = list.filter(function (e) { return e.id === id; })[0], m1 = (e1 && e1.meta) || {};
         /* la copia tiene lingua, modalità, indirizzo, ora e link; i canali Discord no (create riparte da un ev nuovo) */
         return create(Object.assign({}, m1, { title: (m1.title || "Torneo") + " (copia)", sub: m1.sub || "", date: a === "dup1" ? m1.date || "" : "", place: m1.place || "", color: m1.color || "", bot: m1.bot || "", draft: m1.draft, from: (a === "dup1" ? "copia:" : "tutto:") + id })); }
