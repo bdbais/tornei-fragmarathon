@@ -37,11 +37,12 @@
     return rows.map(function (r) { return r.map(function (x) { return x.trim().replace(/^'(?=[=+\-@\t\r])/, "").trim(); }); }).filter(function (r) { return r.some(Boolean); });
   }
   /* una cella che comincia con = + - @ (o tab, a capo) Excel la calcola come formula: un nome arrivato dal bot
-     come =HYPERLINK(...) diventerebbe un link attivo. L'apostrofo davanti la fa leggere come testo; i numeri restano numeri. */
+     come =HYPERLINK(...) diventerebbe un link attivo. L'apostrofo davanti la fa leggere come testo; i numeri restano numeri.
+     La cella protetta va anche tra virgolette, come raccomanda OWASP contro la CSV injection. */
   function csvCell(x) {
-    var s = String(x == null ? "" : x);
-    if (typeof x !== "number" && /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+(?:[.,]\d+)?$/.test(s)) s = "'" + s;
-    return /[";\n\r,\t]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    var s = String(x == null ? "" : x), g = typeof x !== "number" && /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+(?:[.,]\d+)?$/.test(s);
+    if (g) s = "'" + s;
+    return g || /[";\n\r,\t]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
   function toCsv(rows) {
     /* punto e virgola: è il separatore che Excel in italiano apre direttamente; il BOM fa riconoscere l'UTF-8 */

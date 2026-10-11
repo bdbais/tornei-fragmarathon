@@ -48,8 +48,9 @@
   };
 
   function newId() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-  /* solo questi nomi di file si possono aprire, scrivere ed eliminare (main.js evFile) */
-  function okId(id) { return /^[a-z0-9-]{4,40}$/.test(String(id)); }
+  /* solo questi nomi di file si possono aprire, scrivere ed eliminare: stessa regola di main.js evFile
+     (anche i tornei recuperati a mano dal cestino o di versioni vecchie) */
+  function okId(id) { return /^[A-Za-z0-9_-]{4,80}$/.test(String(id)); }
   function okState(st) { return !!st && !!st.games && typeof st.games === "object" && !Array.isArray(st.games); }
   /* una copia del torneo non deve salvare sopra i file in Archivio dell'originale */
   function unbind(st) { Object.keys(st.games || {}).forEach(function (k) { var g = st.games[k]; if (g && typeof g === "object") delete g.file; }); return st; }
@@ -92,6 +93,9 @@
   function wrap(S, meta) { return JSON.stringify({ app: "tornei-fragmarathon", kind: "evento", v: 1, meta: meta, state: S }); }
   /* strict: l'errore passa a chi chiama, che non deve sostituire il torneo aperto (le modifiche non salvate andrebbero perse) */
   function flush(strict) {
+    /* mentre app.js lavora per un attimo su un altro torneo (immagini del bot) cur() è quello:
+       si aspetta che torni il torneo aperto, altrimenti si salverebbe il torneo sbagliato e si perderebbe il salvataggio di questo */
+    if (A.swapping && A.swapping()) return new Promise(function (res) { setTimeout(res, 300); }).then(function () { return flush(strict); });
     ensureEv();
     var S = cur();
     return metaOf(S).then(function (m) { return store.write(S.ev.id, wrap(S, m)); })
@@ -124,15 +128,18 @@
       })).then(function () { Object.keys(vmCache).forEach(function (k) { if (!keep[k]) delete vmCache[k]; }); sendAll(); });
     });
   }
-  /* modifica di un torneo che non è quello aperto: fn(stato) restituisce true se ha cambiato qualcosa */
+  /* modifica di un torneo che non è quello aperto: fn(stato) restituisce true se ha cambiato qualcosa.
+     Non fallisce mai: true se ha salvato, false se il file non si legge o non si scrive, undefined se non c'era niente da cambiare */
   function editOther(id, fn) {
     return serial(id, function () {
       return store.read(id).then(function (t) {
         var j = JSON.parse(t), st = j.state || j;
         if (!fn(st)) return;
-        return store.write(id, wrap(st, j.meta || {})).then(function () { laterOthers(); });
+        return store.write(id, wrap(st, j.meta || {})).then(function () { laterOthers(); return true; }, function (e) {
+          A.toast("Modifica non salvata: " + ((e && e.message) || e)); return false;
+        });
       });
-    }).catch(function () {});
+    }).catch(function () { return false; });
   }
   function laterOthers() { clearTimeout(othT); othT = setTimeout(refreshOthers, 300); }
   /* iscrizione dal bot a un torneo che non è quello aperto: si scrive nel suo file */
@@ -560,6 +567,8 @@
       if (t.classList.contains("bt-col") && bid) return D.botsEdit(bid, { color: t.value }).then(function (L) { bots = L; paint(); });
     });
     root.addEventListener("keydown", function (ev) {
+      /* tastiere IME (giapponese, cinese…): Invio ed Esc in composizione appartengono all'IME */
+      if (ev.isComposing || ev.keyCode === 229) return;
       if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) { ev.preventDefault(); ev.stopPropagation(); undoDel(); return; }
       if (ev.key === "Escape") { if (editing || creating) { editing = null; creating = false; paint(); } else close(); ev.stopPropagation(); }
       if (ev.key === "Enter" && ev.target.classList && ev.target.classList.contains("bt-name")) ev.target.blur();

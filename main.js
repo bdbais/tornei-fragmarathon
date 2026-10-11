@@ -184,13 +184,23 @@ ipcMain.handle("ai:image", async (_e, cfg, prompt, seed, size) => {
   try { return { data: await AI.generate(cfg || {}, prompt, seed, Math.min(1024, Math.max(256, size || 512))) }; }
   catch (e) { return { error: String((e && e.name === "TimeoutError") ? "Il servizio non ha risposto in tempo" : (e && e.message) || e).slice(0, 300) }; }
 });
+/* "Cerca sul PC": il servizio di immagini risponde a quell'indirizzo? (dalla pagina il CORS lo impedirebbe) */
+ipcMain.handle("ai:probe", async (_e, base, prov) => {
+  try {
+    const u = String(base || "").trim().replace(/\/+$/, ""); if (!/^https?:\/\/[^\s]+$/i.test(u)) return false;
+    const r = await fetch(u + (prov === "a1111" ? "/sdapi/v1/options" : "/models"), { signal: AbortSignal.timeout(2500) });
+    if (r.body) r.body.cancel().catch(() => {});
+    return r.ok;
+  } catch { return false; }
+});
 /* Elenco dei tornei (uno per file in "eventi"): la pagina lavora su una copia e la salva qui.
    Eliminare un torneo lo sposta in "cestino", da cui si può recuperare a mano. */
 /* anche maiuscole e trattini bassi: un file ripreso a mano dal cestino ("<data>_<id>.json") si apre; punti e separatori restano vietati */
 const evFile = (id) => { if (!/^[A-Za-z0-9_-]{4,80}$/.test(String(id || ""))) throw new Error("Torneo non valido"); return path.join(DIRS.eventi, id + ".json"); };
 ipcMain.handle("ev:list", () => {
   ensureDirs();
-  return listJson(DIRS.eventi).map((f) => {
+  /* solo i file che evFile sa aprire (un nome con spazi o punti, tipo "copia (2).json", darebbe errore) */
+  return listJson(DIRS.eventi).filter((f) => /^[A-Za-z0-9_-]{4,80}\.json$/i.test(f.file)).map((f) => {
     try { const j = JSON.parse(fs.readFileSync(path.join(DIRS.eventi, f.file), "utf8")); return { id: f.file.replace(/\.json$/i, ""), mtime: f.mtime, size: f.size, meta: j.meta || {} }; }
     catch { return { id: f.file.replace(/\.json$/i, ""), mtime: f.mtime, size: f.size, broken: true, meta: {} }; }
   });
@@ -260,9 +270,11 @@ function makeBot(entry) {
     onJoin: (req) => toPage({ type: "join", name: req.name, k: req.k, discord: req.discord || "" }),
     onDiscord: (r) => toPage({ type: "discord", name: r.name, account: r.account, evs: r.evs }),
     onPng: (r) => { pngOwner[r.id] = entry.id; toPage({ type: "png", id: r.id, k: r.k }); },
+    /* la pagina mostra il bot selezionato: gli altri la aggiornano solo quando cambia il nome (@username) nell'elenco dei bot */
     onChange: () => {
-      toPage({ type: "status", bot: entry.id });
-      const u = b.status().username; if (u) { const L = botsLoad(), x = L.list.find((y) => y.id === entry.id); if (x && x.username !== u) { x.username = u; botsSave(L); } }
+      let named = false;
+      const u = b.status().username; if (u) { const L = botsLoad(), x = L.list.find((y) => y.id === entry.id); if (x && x.username !== u) { x.username = u; botsSave(L); named = true; } }
+      if (entry.id === selId || named) toPage({ type: "status", bot: entry.id });
     },
     /* rete di Chromium: rispetta proxy e certificati di sistema (il fetch di Node no) */
     fetch: (url, o) => require("electron").net.fetch(url, o)
@@ -523,6 +535,27 @@ ipcMain.handle("discord:sync", (_e, d) => DC().sync(d));
 ipcMain.handle("discord:lookup", (_e, g, a) => DC().lookup(String(g || ""), Array.isArray(a) ? a.slice(0, 500).map(String) : []));
 ipcMain.handle("discord:clear", (_e, id) => DC().clear(String(id || "")));
 ipcMain.handle("discord:invite", (_e, g) => DC().invite(String(g || "")));
+/* Torneo eliminato e programma chiuso prima dei 60 secondi per annullare: la pagina non ha tolto i suoi canali Discord.
+   All'avvio si tolgono, solo per i tornei che sono nel cestino (eliminati da qui, non quelli rovinati) e non più in "eventi",
+   nemmeno ripresi a mano con la data davanti al nome. Il nome del file dei canali è quello di discord.js (solo a-z 0-9 -). */
+function dcSweepTrash() {
+  const dd = path.join(app.getPath("userData"), "discord-tornei"), key = (id) => String(id).replace(/[^a-z0-9-]/gi, "");
+  if (!fs.existsSync(dd) || !fs.existsSync(DIRS.cestino) || !fs.existsSync(DIRS.eventi)) return;
+  const live = () => fs.readdirSync(DIRS.eventi).filter((f) => /\.json$/i.test(f)).map((f) => key(f.replace(/\.json$/i, "")));
+  const gone = new Set(fs.readdirSync(DIRS.cestino).map((f) => /^\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d_([A-Za-z0-9_-]{4,80})\.json$/.exec(f)).filter((m) => m && !/^rovinato_/.test(m[1])).map((m) => key(m[1])));
+  const todo = fs.readdirSync(dd).filter((f) => /^[a-z0-9-]+\.json$/i.test(f)).map((f) => f.replace(/\.json$/i, "")).filter((k) => gone.has(k)).filter((k) => {
+    try { const st = JSON.parse(fs.readFileSync(path.join(dd, k + ".json"), "utf8")); return Object.keys(st.ch || {}).length || Object.keys(st.cats || {}).length; } catch { return false; }
+  });
+  if (!todo.length || !DC().status().hasToken) return;
+  (async () => {
+    for (const k of todo) {
+      /* ricontrollato ogni volta: nel frattempo la pagina può averlo ripristinato da un backup */
+      if (live().some((x) => x === k || x.endsWith(k))) continue;
+      const r = await DC().clear(k);
+      logErr("discord", "canali del torneo eliminato " + k + (r && r.err ? " non tolti: " + r.err : " tolti (" + (r || 0) + ")"));
+    }
+  })().catch((e) => logErr("discord pulizia", e));
+}
 /* ripristino dei bot da un backup: quelli sostituiti vanno in bot-rimossi; il riepilogo dice cosa mancava
    (valore predefinito) e cosa cambia rispetto alla configurazione di prima */
 ipcMain.handle("bots:import", (_e, p) => {
@@ -652,6 +685,7 @@ function start() {
   });
   } catch (e) { logErr("diretta", e); }
   try { botsStartAll(); } catch (e) { logErr("bot", e); }
+  setTimeout(() => { try { dcSweepTrash(); } catch (e) { logErr("discord pulizia", e); } }, 10000);
 }
 app.whenReady().then(() => {
   if (LOCKED) return start();

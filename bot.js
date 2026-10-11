@@ -158,6 +158,9 @@ module.exports = function createBot(opts) {
       c.admins = []; c.adminUsers = [];
       /* il vecchio codice di 6 cifre si indovinava per tentativi: si sostituisce */
       if (!/^[A-Z2-9]{10}$/.test(String(c.code || ""))) c.code = newCode();
+      /* collegamenti fatti prima che esistesse la conferma (c.verified): valgono come confermati, così aggiornare il programma
+         durante un torneo non toglie /server e /discord a chi era già collegato. Da qui in poi /io da solo resta non confermato */
+      Object.values(c.chats || {}).forEach((ch) => { if (ch && ch.player && !("verified" in ch)) ch.verified = true; });
       return c;
     }
     catch { return defaults(); }
@@ -476,7 +479,7 @@ module.exports = function createBot(opts) {
   }
   function hofCsv() {
     /* un testo che inizia con = + - @ Excel lo eseguirebbe come formula: gli si mette davanti un apice (i numeri restano numeri) */
-    const h = vm.hof, q = (v) => { let s = String(v); if (typeof v === "string" && /^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }, rows = [["Classifica", "Posizione", "Nome", "Totale", "Dettaglio per gioco"]];
+    const h = vm.hof, q = (v) => { let s = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+(?:[.,]\d+)?$/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; }, rows = [["Classifica", "Posizione", "Nome", "Totale", "Dettaglio per gioco"]];
     [["Giocatori", h.players], ["Squadre", h.teams]].forEach(([lab, L]) => L.forEach((e, i) => rows.push([lab, e.pos || i + 1, e.n, e.tot, e.by.map((b) => b.l + (b.pos ? " " + b.pos + "º" : "") + " " + b.v).join(" | ")])));
     return "﻿" + rows.map((r) => r.map(q).join(";")).join("\r\n");
   }
@@ -600,7 +603,10 @@ module.exports = function createBot(opts) {
     if (!name) { waits[chatId] = { ts: Date.now(), type: "join", k: t.k }; return send(chatId, "Scrivi il nome con cui vuoi giocare a " + tTitle(t) + " (massimo 32 caratteri)."); }
     name = String(name).replace(/\s+/g, " ").trim();
     if (!/^[^<>\u0000-\u001f]{1,32}$/.test(name)) return send(chatId, "Nome non valido: usa da 1 a 32 caratteri, senza < >.");
-    const pool = t.team ? (vm.roster || []) : t.players, taken = pool.some((p) => norm(p) === norm(name));
+    const pool = t.team ? (vm.roster || []) : t.players, same = (p) => norm(p) === norm(name);
+    /* nome già noto scritto con accenti o maiuscole diversi: si usa la grafia dell'elenco, per la richiesta e il collegamento */
+    name = pool.find(same) || (vm.roster || []).find(same) || name;
+    const taken = pool.some(same);
     if (taken && !t.team) return send(chatId, "«" + UE(name) + "» è già iscritto a " + tTitle(t) + ".");
     if (cfg.pending.some((p) => p.k === t.k && norm(p.name) === norm(name))) return send(chatId, "C'è già una richiesta per «" + UE(name) + "»: aspetta la conferma dell'organizzatore.");
     /* iscrizioni automatiche: da una chat al massimo 3 nomi per torneo (sé e qualche amico), poi decide l'organizzatore */
@@ -625,7 +631,10 @@ module.exports = function createBot(opts) {
     if (!c.verified) return send(chatId, "Per collegare l'account Discord a <b>" + UE(c.player) + "</b> serve un'iscrizione confermata: chiedi all'organizzatore di confermare il collegamento.");
     if (!dc) { waits[chatId] = { ts: Date.now(), type: "dc" }; return send(chatId, "Account Discord non valido: scrivi il nome utente (es. fede_73)."); }
     const evs = [...new Set(((vm && vm.tournaments) || []).map((t) => t.ev).filter(Boolean))];
-    opts.onDiscord && opts.onDiscord({ name: c.player, account: dc, evs });
+    /* la pagina salva l'account solo per un nome tra i partecipanti: le si passa la grafia dell'elenco, e se il nome non c'è non si promettono i canali */
+    const rn = vm ? (vm.roster || []).find((n) => norm(n) === norm(c.player)) : c.player;
+    opts.onDiscord && opts.onDiscord({ name: rn || c.player, account: dc, evs });
+    if (!rn) return send(chatId, "🎧 <b>" + UE(c.player) + "</b> non è ancora tra i partecipanti: l'account Discord <b>" + UE(dc) + "</b> non è stato salvato. Quando l'organizzatore ti avrà aggiunto, scrivi di nuovo /discord <i>account</i>.");
     return send(chatId, "🎧 Account Discord di <b>" + UE(c.player) + "</b>: <b>" + UE(dc) + "</b>. Entrerai nei canali delle tue partite.");
   }
   function decide(id, ok, byChat) {

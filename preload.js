@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld("desk", {
   openFolder: (which) => ipcRenderer.invoke("folder:open", which),
   openWall: () => ipcRenderer.invoke("wall:open"),
   aiImage: (cfg, prompt, seed, size) => ipcRenderer.invoke("ai:image", cfg, prompt, seed, size),
+  aiProbe: (base, prov) => ipcRenderer.invoke("ai:probe", base, prov),
   botState: (vm) => ipcRenderer.invoke("bot:state", vm),
   botStatus: () => ipcRenderer.invoke("bot:status"),
   botConfig: (c) => ipcRenderer.invoke("bot:config", c),

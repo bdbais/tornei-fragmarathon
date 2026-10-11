@@ -34,7 +34,7 @@
   var orig = new WeakMap(), last = new WeakMap(), aOrig = new WeakMap();
   var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 }, ATTRS = ["placeholder", "title", "aria-label", "alt"];
   /* testi scritti da chi usa il programma: titolo, nomi di tornei, giocatori e squadre */
-  var USER = ".brand h1,.brand .tag,.ev-t,.ev-sub,.ev-games b,button.rnm,.bt-name,.fn,.tn,.pname,.wn";
+  var USER = ".brand h1,.brand .tag,.ev-sub,.ev-games b,button.rnm,.bt-name,.fn,.tn,.pname,.wn";
   function skipEl(el) {
     for (var e = el; e && e.nodeType === 1; e = e.parentElement) {
       if (SKIP[e.tagName] || e.isContentEditable || e.hasAttribute("data-noi18n")) return true;

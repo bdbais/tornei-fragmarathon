@@ -206,6 +206,30 @@ test("«Elimina i canali»: se Discord non cancella lo dice e non dimentica; asp
   end();
 });
 
+test("server Discord cambiato: con confirmMove si chiede conferma prima di togliere i canali dal server di prima", async () => {
+  const { F, d, end } = await setup(), G2 = "88888888888888888";
+  await d.sync(vm("ready"));
+  const old = Object.keys(F.ch);
+  let r = await d.sync(Object.assign(vm("ready"), { guild: G2, confirmMove: false }));
+  assert.strictEqual(r.needConfirm, true, JSON.stringify(r));
+  assert.strictEqual(r.channels, 1);
+  assert.deepStrictEqual(Object.keys(F.ch), old, "nessun canale tolto senza conferma");
+  assert.strictEqual(d.channels("tprova1").guild, G, "resta il server di prima");
+  r = await d.sync(Object.assign(vm("ready"), { guild: G2, confirmMove: true }));
+  assert.ok(!r.needConfirm && !r.err, JSON.stringify(r));
+  assert.strictEqual(d.channels("tprova1").guild, G2);
+  assert.ok(old.every((id) => !F.ch[id]), "canali e categoria del server di prima tolti");
+  assert.strictEqual(r.created, 1);
+  end();
+  /* pagina che non conosce confirmMove: come prima, si sposta subito */
+  const s2 = await setup();
+  await s2.d.sync(vm("ready"));
+  r = await s2.d.sync(Object.assign(vm("ready"), { guild: G2 }));
+  assert.ok(!r.needConfirm && r.created === 1, JSON.stringify(r));
+  assert.strictEqual(s2.d.channels("tprova1").guild, G2);
+  s2.end();
+});
+
 test("nomi dei canali", () => {
   assert.strictEqual(createDiscord.slug("Àda vs Bò — Finale!"), "ada-vs-bo-finale");
   assert.strictEqual(createDiscord.slug("???"), "partita");

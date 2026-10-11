@@ -18,7 +18,7 @@ function registerCustom(){
   S.custom.forEach(function(c){if(!c||!c.k)return;DEF[c.k]={l:c.l,m:(["elim","double","swiss","rr"].indexOf(c.m)>=0?c.m:"ffa"),t:c.t}});
   Object.keys(S.names).forEach(function(k){if(DEF[k]&&S.names[k])DEF[k].l=S.names[k]});
 }
-function normGames(){Object.keys(DEF).forEach(function(k){if(!S.games[k])S.games[k]=fresh(k);var gg=S.games[k];if(gg.mode==="gironi"||gg.mode==="solo"){gg.mode="ffa";if(gg.phase!=="setup"){gg.phase="setup";gg.running=false;gg.dirty=false;gg.groups=null;gg.rounds=null;gg.third=null}}if(gg.running===undefined)gg.running=gg.phase!=="setup";
+function normGames(){Object.keys(DEF).forEach(function(k){if(!S.games[k]||typeof S.games[k]!=="object")S.games[k]=fresh(k);var gg=S.games[k];if(!Array.isArray(gg.players))gg.players=[];if(gg.mode==="gironi"||gg.mode==="solo"){gg.mode="ffa";if(gg.phase!=="setup"){gg.phase="setup";gg.running=false;gg.dirty=false;gg.groups=null;gg.rounds=null;gg.third=null}}if(gg.running===undefined)gg.running=gg.phase!=="setup";
   /* dati da file (Riprendi, backup): numeri come numeri e nomi dei campi FFA validi, così non finiscono come markup nella pagina */
   if(gg.sw&&typeof gg.sw==="object"){if(gg.sw.nr!=null)gg.sw.nr=+gg.sw.nr||0;if(gg.sw.top!=null)gg.sw.top=+gg.sw.top||0}
   if(gg.calc&&Array.isArray(gg.calc.fields))gg.calc.fields=gg.calc.fields.map(function(f){return{k:calcKey(f&&f.k),l:String((f&&f.l)||"")}})})}
@@ -400,7 +400,7 @@ $("rosterBox").onclick=function(e){
   if(b.dataset.print){printDoc(b.dataset.print,b.parentNode.querySelector(".pmsg"));return}
   if(b.id==="radd"){
     /* celle copiate da Excel o Google Sheets: colonne separate da tabulazioni */
-    if(/\t/.test($("rta").value)&&window.SHEETS){importRows(SHEETS.parseCsv($("rta").value));$("rta").value="";return}
+    if(/\t/.test($("rta").value)&&window.SHEETS){importRows(SHEETS.parseCsv($("rta").value,"\t"));$("rta").value="";return}
     $("rta").value.split(/[\n,;]+/).map(function(x){return x.trim()}).filter(Boolean).forEach(function(n){
       if(!S.roster.some(function(p){return p.toLowerCase()===n.toLowerCase()}))S.roster.push(n)});
     $("rta").value="";save();renderRoster();render();
@@ -487,7 +487,8 @@ function sheetFromLink(link){
   var u=window.SHEETS&&SHEETS.gsheetCsvUrl(link);
   if(!u){toast("Incolla il link di un foglio Google Sheets (docs.google.com/spreadsheets/…).");return}
   if(DESK&&DESK.sheetFetch){DESK.sheetFetch(u).then(function(r){if(r&&r.text)importRows(SHEETS.parseCsv(r.text));else toast("Non riesco a leggere il foglio: "+((r&&r.error)||"errore")+".")});return}
-  fetch(u).then(function(r){return r.text()}).then(function(t){if(/^\s*</.test(t))throw 0;importRows(SHEETS.parseCsv(t))}).catch(function(){toast("Dal browser Google non permette di leggere il foglio: scaricalo (File, Scarica, .xlsx o .csv) e usa Scegli un file.")});
+  /* una pagina HTML al posto del CSV è quella di accesso di Google: il foglio non è condiviso con chi ha il link */
+  fetch(u).then(function(r){if(!r.ok)throw 0;return r.text()}).then(function(t){if(/^\s*</.test(t))throw 0;importRows(SHEETS.parseCsv(t))}).catch(function(){toast("Non riesco a leggere il foglio: controlla che sia condiviso con «Chiunque abbia il link», oppure scaricalo (File, Scarica, .xlsx o .csv) e usa Scegli un file.")});
 }
 function exportRoster(xlsx){
   if(!S.roster.length){toast("L'elenco dei partecipanti è vuoto.");return}
@@ -636,11 +637,15 @@ function startT(g){
 /* ---- immagine PNG del tabellone ---- */
 function loadImg(src){return new Promise(function(r){var i=new Image();i.onload=function(){r(i)};i.onerror=function(){r(null)};i.src=src})}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+/* nomi e titoli scritti dall'utente: nelle immagini restano come sono, non si traducono nella lingua del torneo */
+function K(s){return window.I18N&&I18N.keep?I18N.keep(s):s}
+function uiTitle(){return S.ui.title?K(S.ui.title):UI0.title}
+function uiSub(){return S.ui.sub?K(S.ui.sub):UI0.sub}
 function fit(c,t,w){t=String(t);if(c.measureText(t).width<=w)return t;while(t.length>1&&c.measureText(t+"…").width>w)t=t.slice(0,-1);return t+"…"}
-function wrap(c,t,w,max){
-  var lines=[],cur="";
-  String(t).split(" ").forEach(function(wd){var tt=cur?cur+" "+wd:wd;if(c.measureText(tt).width>w&&cur){lines.push(cur);cur=wd}else cur=tt});
-  if(cur)lines.push(cur);
+function wrap(c,t,w,max,u){
+  var q=u?K:String,lines=[],cur="";
+  String(t).split(" ").forEach(function(wd){var tt=cur?cur+" "+wd:wd;if(c.measureText(q(tt)).width>w&&cur){lines.push(cur);cur=wd}else cur=tt});
+  if(cur)lines.push(cur);lines=lines.map(q);
   if(lines.length>max){lines=lines.slice(0,max);lines[max-1]=fit(c,lines[max-1]+"…",w)}
   return lines;
 }
@@ -653,7 +658,7 @@ function drawM(c,m,x,y,w,h,BODY){
     if(!n){c.fillStyle="#999";c.font="italic 15px "+BODY;c.fillText(i===1&&m.a&&!m.b?"Passa il turno":"Da definire",x+10,ry+h/4)}
     else{
       c.fillStyle=m.w&&!win?"#888":"#111";c.font=(win?"bold ":"")+"16px "+BODY;
-      c.fillText(fit(c,n,w-62),x+10,ry+h/4);
+      c.fillText(fit(c,K(n),w-62),x+10,ry+h/4);
       var sc=m[p[1]];if(sc!=null){c.textAlign="right";c.fillText(String(sc),x+w-10,ry+h/4);c.textAlign="left"}
     }
   });
@@ -681,9 +686,9 @@ async function makePng(k){
   var gw=0;
   if(gi){var bs=100;gw=bs;c.fillStyle="#fff";rr(c,W-M-bs,25,bs,bs,10);c.fill();var q=Math.min((bs-16)/gi.width,(bs-16)/gi.height),iw=gi.width*q,ih=gi.height*q;c.drawImage(gi,W-M-bs+(bs-iw)/2,25+(bs-ih)/2,iw,ih)}
   var tw=W-lx-M-(gi?gw+40:0);
-  c.fillStyle="#fff";c.font="36px "+FONT;c.fillText(fit(c,g.name||d.l,tw),lx,72);
+  c.fillStyle="#fff";c.font="36px "+FONT;c.fillText(fit(c,K(g.name||d.l),tw),lx,72);
   c.font="18px "+BODY;c.fillStyle="#C8C8C8";
-  c.fillText(fit(c,(g.name?d.l+" · ":"")+(g.plat&&PLATN[g.plat]?PLATN[g.plat]+" · ":"")+(S.ui.title||UI0.title)+" · "+new Date().toLocaleDateString(evLoc(),{day:"numeric",month:"long",year:"numeric"}),tw),lx,104);
+  c.fillText(fit(c,(g.name?K(d.l)+" · ":"")+(g.plat&&PLATN[g.plat]?PLATN[g.plat]+" · ":"")+uiTitle()+" · "+new Date().toLocaleDateString(evLoc(),{day:"numeric",month:"long",year:"numeric"}),tw),lx,104);
   var y=hHead+36;c.fillStyle="#111";c.font="22px "+FONT;c.fillText("Vincitori",M,y);
   var nPod=Math.min(6,Math.max(3,res.top.length)),cw=(W-2*M-20*(nPod-1))/nPod,cy=y+16,ch=150,lab=["1º","2º","3º"];
   var tIm={};if(team)for(var q=0;q<res.top.length;q++)if(res.top[q])tIm[res.top[q]]=await iconImg(res.top[q],"#111");
@@ -691,8 +696,8 @@ async function makePng(k){
     if(!n||i>=6)return;var pp=(res.tpos&&res.tpos[i])||i+1,x=M+i*(cw+20),first=pp===1;
     c.fillStyle=first?"#FF5A1F":"#F2F2F2";rr(c,x,cy,cw,ch,12);c.fill();c.lineWidth=3;c.strokeStyle="#111";rr(c,x,cy,cw,ch,12);c.stroke();
     c.fillStyle="#111";c.font="30px "+FONT;c.fillText(lab[pp-1]||(pp+"º"),x+18,cy+44);
-    c.font="26px "+FONT;c.fillText(fit(c,n,cw-36),x+18,cy+82);if(tIm[n])c.drawImage(tIm[n],x+cw-18-52,cy+14,52,52);
-    if(team){c.font="15px "+BODY;c.fillStyle=first?"#111":"#444";wrap(c,(mem[n]||[]).join(", "),cw-36,3).forEach(function(l,j){c.fillText(l,x+18,cy+106+j*19)})}
+    c.font="26px "+FONT;c.fillText(fit(c,K(n),cw-36),x+18,cy+82);if(tIm[n])c.drawImage(tIm[n],x+cw-18-52,cy+14,52,52);
+    if(team){c.font="15px "+BODY;c.fillStyle=first?"#111":"#444";wrap(c,(mem[n]||[]).join(", "),cw-36,3,true).forEach(function(l,j){c.fillText(l,x+18,cy+106+j*19)})}
   });
   var by=hHead+hPod;
   if(R){
@@ -720,8 +725,8 @@ async function makePng(k){
       st.forEach(function(r,i){
         var ry=ty+34*(i+1);if(i<3){c.fillStyle="rgba(255,90,31,.22)";c.fillRect(M,ry,tw2,34)}
         c.fillStyle="#111";c.font=(i<3?"bold ":"")+"16px "+BODY;
-        var ms=team&&mem[r.n]&&mem[r.n].length?" — "+mem[r.n].join(", "):"";
-        c.fillText(String(i+1),M+12,ry+17);c.fillText(fit(c,r.n+ms,tw2-250),M+80,ry+17);
+        var ms=team&&mem[r.n]&&mem[r.n].length?" — "+K(mem[r.n].join(", ")):"";
+        c.fillText(String(i+1),M+12,ry+17);c.fillText(fit(c,K(r.n)+ms,tw2-250),M+80,ry+17);
         c.textAlign="right";c.fillText(String(r.g),M+tw2-120,ry+17);c.fillText(String(r.pt),M+tw2-14,ry+17);c.textAlign="left";
         c.strokeStyle="#ddd";c.lineWidth=1;c.beginPath();c.moveTo(M,ry+34);c.lineTo(M+tw2,ry+34);c.stroke();
       });
@@ -740,14 +745,14 @@ async function makePng(k){
         gr.p.forEach(function(n,k){
           var ry=y0+54+k*32,pos=e.full?rk[n]:null,ad=e.full&&e.adv.indexOf(n)>=0;
           if(ad){c.fillStyle="rgba(255,90,31,.25)";c.fillRect(x+6,ry-20,cwd-12,28)}
-          c.fillStyle="#111";c.font=(ad?"bold ":"")+"17px "+BODY;c.fillText(fit(c,n,cwd-130),x+14,ry);
+          c.fillStyle="#111";c.font=(ad?"bold ":"")+"17px "+BODY;c.fillText(fit(c,K(n),cwd-130),x+14,ry);
           c.textAlign="right";c.fillText(gr.s[n]==null?"–":String(gr.s[n]),x+cwd-48,ry);c.fillText(ad?(fin?pos+"º":"✓"):"",x+cwd-14,ry);c.textAlign="left";
         });
       });
       yy+=Math.ceil(rd.groups.length/per)*(ch+14)+22;
     });
   }
-  c.fillStyle="#999";c.font="14px "+BODY;c.textAlign="center";c.fillText((S.ui.title||UI0.title)+" · "+(S.ui.sub||UI0.sub),W/2,H-24);c.textAlign="left";
+  c.fillStyle="#999";c.font="14px "+BODY;c.textAlign="center";c.fillText(uiTitle()+" · "+uiSub(),W/2,H-24);c.textAlign="left";
   return cv;
 }
 function dlBlob(blob,fn){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();a.remove()}
@@ -792,7 +797,7 @@ async function makePrint(kind){
   var FONT='"FragDisplay","Arial Black",Impact,sans-serif',BODY='Inter,"Segoe UI",Arial,sans-serif',PW=1240,PH=1754,M=70,LIM=PH-110;
   try{await document.fonts.load('24px "FragDisplay"')}catch(e){}
   var le=document.getElementById("logoFull"),logo=le?await loadImg(le.src):null;
-  var pages=[],c,y,pageTop=0,title=kind==="roster"?"Elenco partecipanti":"Elenco squadre",ui=S.ui.title||UI0.title;
+  var pages=[],c,y,pageTop=0,title=kind==="roster"?"Elenco partecipanti":"Elenco squadre",ui=uiTitle();
   var dateS=new Date().toLocaleDateString(evLoc(),{day:"numeric",month:"long",year:"numeric"});
   function newPage(){
     var cv=document.createElement("canvas");cv.width=PW;cv.height=PH;c=cv.getContext("2d");pages.push(cv);
@@ -807,7 +812,7 @@ async function makePrint(kind){
       y=hh+9+60;
     }else{c.fillStyle="#fff";c.font="32px "+FONT;c.fillText(title,M,55);y=hh+6+60}
     c.strokeStyle="#FF5A1F";c.lineWidth=3;c.beginPath();c.moveTo(M,PH-68);c.lineTo(PW-M,PH-68);c.stroke();
-    c.fillStyle="#999";c.font="20px "+BODY;c.fillText(ui+" · "+(S.ui.sub||UI0.sub),M,PH-36);
+    c.fillStyle="#999";c.font="20px "+BODY;c.fillText(ui+" · "+uiSub(),M,PH-36);
     c.textAlign="right";c.fillText("Pagina "+pages.length,PW-M,PH-36);c.textAlign="left";pageTop=y;
   }
   function sectionTitle(t,need){
@@ -828,9 +833,9 @@ async function makePrint(kind){
         if((i+j)%2===0){c.fillStyle="#F2F2F2";rr(c,x,yy,colW,rowH-8,8);c.fill()}
         c.strokeStyle="#111";c.lineWidth=3;c.strokeRect(x+14,yy+11,26,26);
         c.fillStyle="#999";c.font="22px "+BODY;c.fillText(String(i+j+1),x+54,yy+34);
-        c.fillStyle="#111";c.font="bold 28px "+BODY;c.fillText(fit(c,n,colW-270),x+104,yy+36);
+        c.fillStyle="#111";c.font="bold 28px "+BODY;c.fillText(fit(c,K(n),colW-270),x+104,yy+36);
         var tm=tn[n.toLowerCase()];
-        if(tm){c.font="20px "+BODY;c.fillStyle="#666";c.textAlign="right";c.fillText(fit(c,tm,150),x+colW-14,yy+34);c.textAlign="left"}
+        if(tm){c.font="20px "+BODY;c.fillStyle="#666";c.textAlign="right";c.fillText(fit(c,K(tm),150),x+colW-14,yy+34);c.textAlign="left"}
       }
       y=y0+half*rowH+20;i+=per;if(i<names.length)newPage();
     }
@@ -848,11 +853,11 @@ async function makePrint(kind){
       c.fillStyle="#F2F2F2";rr(c,x,yy,cw,h,14);c.fill();c.strokeStyle="#111";c.lineWidth=3;rr(c,x,yy,cw,h,14);c.stroke();
       c.fillStyle="#fff";rr(c,x+18,yy+18,68,68,12);c.fill();c.strokeStyle="#D4D4D4";c.lineWidth=2;rr(c,x+18,yy+18,68,68,12);c.stroke();
       if(ims[t.n])c.drawImage(ims[t.n],x+26,yy+26,52,52);
-      c.fillStyle="#111";c.font="34px "+FONT;c.fillText(fit(c,t.n,cw-130),x+104,yy+58);
+      c.fillStyle="#111";c.font="34px "+FONT;c.fillText(fit(c,K(t.n),cw-130),x+104,yy+58);
       var nm=t.tot||t.m.length;c.font="20px "+BODY;c.fillStyle="#666";c.fillText(nm+(nm===1?" giocatore":" giocatori")+(t.cont?" (segue)":""),x+104,yy+84);
       c.fillStyle="#FF5A1F";c.fillRect(x+18,yy+100,cw-36,4);
       if(!t.m.length){c.fillStyle="#999";c.font="italic 24px "+BODY;c.fillText("Nessun giocatore",x+22,yy+142)}
-      t.m.forEach(function(m,k){c.fillStyle="#111";c.fillRect(x+24,yy+126+k*40,12,12);c.font="26px "+BODY;c.fillText(fit(c,m,cw-90),x+50,yy+139+k*40)});
+      t.m.forEach(function(m,k){c.fillStyle="#111";c.fillRect(x+24,yy+126+k*40,12,12);c.font="26px "+BODY;c.fillText(fit(c,K(m),cw-90),x+50,yy+139+k*40)});
     }
     var i=0;
     while(i<list.length){
@@ -874,9 +879,9 @@ async function makePrint(kind){
       var g=S.games[k],team=g.team!==undefined?g.team:!!DEF[k].t;
       if(!team||!g.players.length)return;
       var l=g.players.map(function(n){return{n:n,m:((g.members||{})[n]||[]).slice()}});
-      if(fixed.length&&sig(l)===sig(fixed))usedBy.push(DEF[k].l);else sets.push(["Squadre · "+DEF[k].l,l]);
+      if(fixed.length&&sig(l)===sig(fixed))usedBy.push(DEF[k].l);else sets.push(["Squadre · "+K(DEF[k].l),l]);
     });
-    if(fixed.length)sets.unshift(["Squadre fisse",fixed,usedBy.length?"Abbinate in: "+usedBy.join(", "):"Valide per tutti i tornei"]);
+    if(fixed.length)sets.unshift(["Squadre fisse",fixed,usedBy.length?"Abbinate in: "+K(usedBy.join(", ")):"Valide per tutti i tornei"]);
     if(!sets.length){sectionTitle("Squadre");empty("Nessuna squadra creata.")}
     for(var s2=0;s2<sets.length;s2++)await drawTeams(sets[s2][1],sets[s2][0],sets[s2][2]);
   }
@@ -960,6 +965,8 @@ function aiTargetName(t){return t==="event"?(S.ui.title||UI0.title):DEF[t]?DEF[t
 function aiPrompt(c){var st=AISTYLE.filter(function(s){return s[0]===c.style})[0]||AISTYLE[0];return st[2]+", for a gaming tournament called \""+aiTargetName(c.target)+"\", centered icon, solid dark background, high contrast, no text"}
 function aiHost(c){try{return new URL(c.url||AI.DEF[c.prov].url).host}catch(e){return""}}
 function aiLocal(c){return/^(127\.0\.0\.1|localhost)(:|$)/.test(aiHost(c))}
+/* i servizi online che la versione web può contattare (connect-src della pagina) */
+function aiWebOk(c){return/(^|\.)(pollinations\.ai|huggingface\.co)(:\d+)?$/.test(aiHost(c))}
 /* Servizio AI sul PC (Stable Diffusion o LocalAI) non ancora installato: istruzioni guidate,
    ricerca automatica della porta e verifica. Si apre da solo se il servizio non risponde. */
 var aiInstOpen=false,aiInstMsg="";
@@ -979,6 +986,8 @@ function aiInstallHtml(c){
    +'<div class="row"><button type="button" class="p" id="aifind">Cerca sul PC</button><button type="button" id="aicheck">Verifica l&#39;indirizzo indicato</button><span class="hint" style="margin:0" id="aiinstmsg" role="status">'+esc(aiInstMsg)+'</span></div></details>';
 }
 function aiProbe(base,prov){
+  /* nell'app la prova la fa il processo principale: raggiunge anche i server in rete, che la pagina non può contattare */
+  if(DESK&&DESK.aiProbe)return Promise.resolve(DESK.aiProbe(base,prov)).then(function(r){return r===true||!!(r&&r.ok)}).catch(function(){return false});
   var u=base.replace(/\/+$/,"")+(prov==="a1111"?"/sdapi/v1/options":"/models"),ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},2500);
   return fetch(u,{signal:ctl.signal}).then(function(r){clearTimeout(t);return r.ok}).catch(function(){clearTimeout(t);return false});
 }
@@ -1011,7 +1020,7 @@ function aiBody(){
    +aiInstallHtml(c)
    +'<textarea id="aiprompt" class="aiprompt" spellcheck="false" aria-label="Descrizione del logo">'+esc(c.prompt||aiPrompt(c))+'</textarea>'
    +'<div class="row"><button class="p" id="aigo"'+(aiBusy?" disabled":"")+'>'+(aiBusy?"Genero…":"Genera 4 proposte")+'</button><button id="aireset">Descrizione automatica</button><span class="hint" style="margin:0" id="aimsg" role="status">'+esc(aiMsg)+'</span></div>'
-   +'<p class="hint">'+(aiLocal(c)?'Il servizio gira su questo PC: nulla esce dalla rete locale.':'La descrizione viene inviata a <b>'+esc(aiHost(c))+'</b> per creare le immagini; non vengono inviati nomi di partecipanti né altri dati.')+(d.key?' Serve una chiave personale gratuita: <a href="'+d.keyUrl+'" target="_blank" rel="noopener">'+d.keyUrl.replace(/^https:\/\//,"")+'</a>. Resta salvata solo su questo PC, non nei backup.':'')+(c.prov==="a1111"?' Avvia Stable Diffusion con l&#39;opzione <code>--api</code>.':'')+(!DESK&&(c.prov==="a1111"||c.prov==="openai")?' Dalla versione web i servizi locali possono essere bloccati dal browser: usa l&#39;app installata.':'')+'</p>';
+   +'<p class="hint">'+(aiLocal(c)?'Il servizio gira su questo PC: nulla esce dalla rete locale.':'La descrizione viene inviata a <b>'+esc(aiHost(c))+'</b> per creare le immagini; non vengono inviati nomi di partecipanti né altri dati.')+(d.key?' Serve una chiave personale gratuita: <a href="'+d.keyUrl+'" target="_blank" rel="noopener">'+d.keyUrl.replace(/^https:\/\//,"")+'</a>. Resta salvata solo su questo PC, non nei backup.':'')+(c.prov==="a1111"?' Avvia Stable Diffusion con l&#39;opzione <code>--api</code>.':'')+(!DESK&&(c.prov==="a1111"||c.prov==="openai")?(aiLocal(c)||aiWebOk(c)?' Dalla versione web i servizi locali possono essere bloccati dal browser: usa l&#39;app installata.':' La versione web raggiunge solo Pollinations, Hugging Face e i servizi su questo PC: per un server in rete o remoto usa l&#39;app installata.'):'')+'</p>';
   return h+'<div id="aires">'+aiGrid()+'</div>';
 }
 function aiReadForm(){var c=aiCfg();["target","style","prov"].forEach(function(k){var el=$("ai"+k);if(el)c[k]=el.value});["url","model","key"].forEach(function(k){var el=$("ai"+k);if(el)c[k]=el.value.trim()});var p=$("aiprompt");if(p)c.prompt=p.value;return c}
@@ -1122,7 +1131,7 @@ function evLoc(){var l=window.I18NCORE?I18NCORE.pick(S.ev&&S.ev.lang)||"it":"it"
 function evWhen(){var ev=S.ev||{},d=/^\d{4}-\d{2}-\d{2}$/.test(ev.date||"")?new Date(ev.date+"T12:00:00").toLocaleDateString(evLoc(),{day:"numeric",month:"long",year:"numeric"}):"";return (d+(ev.time?(d?", ore ":"Ore ")+ev.time:"")).trim()}
 async function watermark(cv){
   var W=cv.width,H=cv.height,band=Math.max(64,Math.round(W*0.075)),out=document.createElement("canvas");out.width=W;out.height=H+band;
-  var c=out.getContext("2d"),acc=getComputedStyle(document.documentElement).getPropertyValue("--acc").trim()||"#FF5A1F",title=S.ui.title||UI0.title,when=evWhen()||("Immagine del "+new Date().toLocaleString(evLoc(),{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"}));
+  var c=out.getContext("2d"),acc=getComputedStyle(document.documentElement).getPropertyValue("--acc").trim()||"#FF5A1F",title=uiTitle(),when=evWhen()||("Immagine del "+new Date().toLocaleString(evLoc(),{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"}));
   c.drawImage(cv,0,0);
   c.save();c.globalAlpha=0.07;c.fillStyle="#fff";c.strokeStyle="#000";c.lineWidth=2;c.font="700 "+Math.round(W/30)+'px "FragDisplay","Arial Black",Impact,sans-serif';
   c.translate(W/2,H/2);c.rotate(-0.42);var txt=(title+"  ·  "+(window.I18N?I18N.tr(when,I18N.ev()):when)).toUpperCase(),step=Math.round(W/9);
@@ -1218,8 +1227,10 @@ function botPeople(st){
     h+='<table class="res botppl"><tr><th>Telegram</th><th>Ruolo</th><th>Tornei</th><th>Giocatore collegato</th><th>Segue</th><th></th></tr>'+st.people.map(function(p){
       return'<tr><td>'+esc(p.name)+'</td><td><select class="bprole" data-id="'+esc(p.id)+'" aria-label="Ruolo di '+esc(p.name)+'">'+["","org","admin"].map(function(r){return'<option value="'+r+'"'+(p.role===r?" selected":"")+'>'+ROLE_L[r]+'</option>'}).join("")+'</select></td>'
        +'<td>'+(p.role==="org"?botGamesSel("bpgames",'data-id="'+esc(p.id)+'"',p.games):p.role==="admin"?'tutti':'–')+'</td>'
-       +'<td><input type="text" class="bpplayer" list="botnames" data-id="'+esc(p.id)+'" value="'+esc(p.player)+'" placeholder="nessuno" aria-label="Giocatore collegato a '+esc(p.name)+'"></td>'
+       +'<td><input type="text" class="bpplayer" list="botnames" data-id="'+esc(p.id)+'" value="'+esc(p.player)+'" placeholder="nessuno" aria-label="Giocatore collegato a '+esc(p.name)+'">'
+       +(!p.player?'':p.verified?' <span class="ok" title="Collegamento confermato">✓</span>':' <button data-bpok="'+esc(p.id)+'" data-pl="'+esc(p.player)+'" title="Solo dichiarato con /io: confermalo se è davvero questo giocatore">Conferma</button>')+'</td>'
        +'<td>'+(p.follow==="tutti"?"tutti":p.follow?p.follow+" tornei":"–")+'</td><td><button data-bpdel="'+esc(p.id)+'">'+(ARMS["bp"+p.id]?"Conferma":"Rimuovi")+'</button></td></tr>'}).join("")+'</table>';
+    h+='<p class="hint" style="margin:4px 0 0">Il giocatore che la persona dichiara con /io basta per gli avvisi. Sceglierlo o confermarlo qui conferma il collegamento (✓): solo allora può cambiare il suo account Discord con /discord e vedere la password del server con /server. Anche un&#39;iscrizione accettata lo conferma.</p>';
   }else h+='<p class="empty">Nessuno ha ancora scritto al bot.</p>';
   return h;
 }
@@ -1227,8 +1238,11 @@ function botPeople(st){
 function botPickFill(){
   var el=$("botpick");if(!el||!DESK||!DESK.botsList)return;
   DESK.botsList().then(function(L){
-    var x=$("botpick");if(!x)return;var cur=(L.filter(function(b){return b.active})[0]||L[0]||{}).id;
-    x.innerHTML='<label class="row" style="gap:8px">Bot di questo torneo <select id="botpicksel">'+L.map(function(b){return'<option value="'+esc(b.id)+'"'+(b.id===cur?" selected":"")+'>'+esc(b.label)+(b.username?" (@"+esc(b.username)+")":b.hasToken?"":" (senza token)")+'</option>'}).join("")+'</select></label><button id="botnew">Nuovo bot</button><button id="botmanage">Gestisci i bot</button>';
+    var x=$("botpick");if(!x)return;
+    /* l'elenco mostra il bot del torneo aperto; le impostazioni sotto sono quelle del bot scelto in Gestisci i bot (Impostazioni) */
+    var want=S.ev&&S.ev.bot,cur=(L.filter(function(b){return b.id===want})[0]||L[0]||{}).id,act=L.filter(function(b){return b.active})[0];
+    x.innerHTML='<label class="row" style="gap:8px">Bot di questo torneo <select id="botpicksel">'+L.map(function(b){return'<option value="'+esc(b.id)+'"'+(b.id===cur?" selected":"")+'>'+esc(b.label)+(b.username?" (@"+esc(b.username)+")":b.hasToken?"":" (senza token)")+'</option>'}).join("")+'</select></label><button id="botnew">Nuovo bot</button><button id="botmanage">Gestisci i bot</button>'
+     +(act&&act.id!==cur?'<p class="hint" style="margin:4px 0 0;flex-basis:100%">Stai vedendo le impostazioni di <b data-noi18n>'+esc(act.label)+'</b>, non del bot di questo torneo.</p>':'');
   }).catch(function(){});
 }
 function botChoose(id){
@@ -1240,7 +1254,9 @@ function renderBotSettings(){
   return'<h3 style="margin-top:20px">Bot Telegram</h3><p class="hint">I partecipanti chiedono al bot tornei, classifiche, partite e Hall of Fame, seguono un torneo per ricevere gli avvisi e si iscrivono. Il bot funziona mentre questo programma è aperto e connesso a internet. Come crearlo: guida (F1), «Bot Telegram».</p>'
    +(DESK&&DESK.botStatus?'<div id="botbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">Disponibile solo nell&#39;app installata per Windows.</p>');
 }
-function botCfg(c){if(!DESK||!DESK.botConfig)return;DESK.botConfig(c).then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st);if(st&&st.running)botPush()}).catch(function(){})}
+function botCfg(c){if(!DESK||!DESK.botConfig)return Promise.resolve();return DESK.botConfig(c).then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st);if(st&&st.running)botPush();return st}).catch(function(){})}
+/* chiudendo le Impostazioni torna attivo il bot del torneo aperto (Gestisci i bot può aver mostrato quelle di un altro) */
+function botBack(){if(DESK&&DESK.botsUse)DESK.botsUse((S.ev&&S.ev.bot)||"").catch(function(){})}
 
 
 /* ======================================================================
@@ -1373,10 +1389,10 @@ $("editbox").addEventListener("change",function(e){
   }
   e.target.value="";
 });
-$("editbtn").onclick=function(){var eb=$("editbox");eb.hidden=!eb.hidden;if(!eb.hidden){armDel=null;renderEdit();eb.scrollIntoView({block:"center"})}};
+$("editbtn").onclick=function(){var eb=$("editbox");eb.hidden=!eb.hidden;if(!eb.hidden){armDel=null;renderEdit();eb.scrollIntoView({block:"center"})}else botBack()};
 $("editbox").onclick=function(e){
   var b=e.target.closest("button");if(!b)return;
-  if(b.id==="ecancel"){$("editbox").hidden=true;return}
+  if(b.id==="ecancel"){$("editbox").hidden=true;botBack();return}
   if(b.id==="elogo"){$("elf").click();return}
   if(b.id==="aigo"){if(!aiBusy)aiRun();return}
   if(b.id==="aifind"||b.id==="aicheck"){aiFind(b.id==="aicheck");return}
@@ -1390,12 +1406,13 @@ $("editbox").onclick=function(e){
   if(b.dataset.unblock){botCfg({unblock:b.dataset.unblock});toast("Sbloccato.");return}
   if(b.id==="botnew"){DESK.botsList().then(function(L){return DESK.botsAdd("Bot "+(L.length+1))}).then(function(id){return botChoose(id)}).then(function(){toast("Nuovo bot creato per questo torneo: incolla il suo token e premi Salva e collega.");var t=$("bottok");if(t)t.focus()});return}
   if(b.id==="botmanage"){if(window.HOME)window.HOME.open("bots");return}
-  if(b.id==="botsave"){var tk=$("bottok").value.trim();botCfg(tk?{token:tk,enabled:true}:{enabled:true});$("bottok").value="";return}
+  if(b.id==="botsave"){if(b.disabled)return;var tk=$("bottok").value.trim();b.disabled=true;botCfg(tk?{token:tk,enabled:true}:{enabled:true}).then(function(){b.disabled=false});$("bottok").value="";return}
   if(b.id==="botdel"){botCfg({removeToken:true});return}
   if(b.id==="botcode"){botCfg({newCode:true});return}
   if(b.id==="bradd"){var u=$("bru").value.trim();if(!/^@?[A-Za-z0-9_]{4,32}$/.test(u.replace(/^https?:\/\/t\.me\//i,""))){toast("Scrivi lo username Telegram, per esempio @LazarusCRY.");return}var gs=[].slice.call($("brg").selectedOptions).map(function(o){return o.value});botCfg({userRole:{u:u,role:$("brr").value,games:gs}});toast("Ruolo assegnato a "+u+".");return}
   if(b.dataset.bru){botCfg({removeUserRole:b.dataset.bru});return}
   if(b.dataset.bpdel){if(!arm("bp"+b.dataset.bpdel,b,"Conferma"))return;botCfg({removeChat:b.dataset.bpdel});return}
+  if(b.dataset.bpok){b.disabled=true;botCfg({setPlayer:{id:b.dataset.bpok,player:b.dataset.pl||""}}).then(function(st){if(st)toast("Collegamento confermato.");else b.disabled=false});return}
   if(b.dataset.botok||b.dataset.botno){DESK.botDecide(b.dataset.botok||b.dataset.botno,!!b.dataset.botok).then(botRefresh);return}
   if(b.id==="aireset"){var c0=aiReadForm();delete c0.prompt;aiSaveCfg(c0);renderAiBox();return}
   if(b.dataset.aiuse!==undefined){aiUse(+b.dataset.aiuse);return}
@@ -1406,7 +1423,7 @@ $("editbox").onclick=function(e){
   if(b.id==="esave"){
     S.ui.title=$("etitle").value.trim();S.ui.sub=$("esub").value.trim();if($("ecss"))S.ui.css=$("ecss").value.slice(0,300000);
     document.querySelectorAll(".egn").forEach(function(i){var k=i.dataset.k,v=i.value.trim();if(v&&v!==ORIGL[k])S.names[k]=v;else delete S.names[k]});
-    registerCustom();applyUi();save();$("editbox").hidden=true;render();
+    registerCustom();applyUi();save();$("editbox").hidden=true;botBack();render();
   }else if(b.classList.contains("egdel")){
     var k=b.dataset.k;
     if(armDel!==k){armDel=k;b.textContent="Conferma elimina";b.classList.add("p");return}
@@ -1758,7 +1775,7 @@ function restoreDecoded(o){
     return window.HOME.importAll(o.events).then(function(r){
       return botsRestored(o).then(function(br){
         if(!$("editbox").hidden)renderEdit();var t=restoreReport(o,r.rep.concat(br));
-        bmsg("Ripristinati "+r.n+" tornei"+(o.bots?" e "+o.bots.list.length+" bot":"")+". Quelli sostituiti sono nel cestino. Sotto trovi cosa è cambiato.");
+        bmsg("Ripristinati "+r.n+" tornei"+(o.bots?" e "+o.bots.list.length+" bot":"")+(DESK?". Quelli sostituiti sono nel cestino. Sotto trovi cosa è cambiato.":". Sotto trovi cosa è cambiato."));
         toast(t.nd||t.nf?"Backup ripristinato: il riepilogo è sotto il pulsante Ripristina.":"Backup ripristinato.");
       });
     });
@@ -2532,24 +2549,29 @@ function discordVM(){
   return{ev:ev.id,guild:ev.dguild,voice:!!ev.dvoice,title:S.ui.title||UI0.title,accounts:Object.keys(acc),games:games,
     t:{only:evT("Questo canale lo vedono solo i giocatori della partita e gli organizzatori."),server:evT("Server"),pass:evT("password"),players:evT("Giocatori")}};
 }
-var dcT=null,dcErr="",dcLast=null;
+var dcT=null,dcErr="",dcLast=null,dcChk=0;
 /* id del torneo aperto se i suoi canali Discord sono attivi; si ricontrolla anche quando parte il timer
    (nel frattempo può essere stato aperto un altro torneo, o tolti i canali) */
 function dcOn(){var ev=S.ev||{};return ev.id&&ev.dguild&&ev.dchan&&!ev.draft?ev.id:null}
 function dcRun(){var vm;try{vm=discordVM()}catch(e){if(DESK.logError)DESK.logError("discord",String(e&&e.stack||e));return}
+  /* "Aggiorna i canali adesso": discord.js controlla anche i canali pronti e rifà quelli cancellati a mano su Discord */
+  if(dcChk){vm.now=true;dcChk=0}
   DESK.discordSync(vm).then(function(r){if(r&&r.err){if(r.err!==dcErr)toast(r.err);dcErr=r.err}else dcErr="";if((S.ev&&S.ev.id)!==vm.ev)return;dcLast=r||{};dcStat()}).catch(function(){})}
-function discordPush(now){
-  if(!DESK||!DESK.discordSync||WALL)return;if(later(function(){discordPush(now)}))return;
-  clearTimeout(dcT);dcT=null;var id=dcOn();if(!id)return;
+function discordPush(now,chk){
+  if(!DESK||!DESK.discordSync||WALL)return;if(chk)dcChk=1;if(later(function(){discordPush(now)}))return;
+  clearTimeout(dcT);dcT=null;var id=dcOn();if(!id){dcChk=0;return}
   dcT=setTimeout(function(){dcT=null;if(later(function(){discordPush(1)}))return;if(dcOn()!==id)return;dcRun()},now?50:2500);
 }
 /* prima di cambiare torneo: la modifica in attesa del torneo che si chiude parte subito invece di perdersi */
 function discordFlush(){if(!dcT||!DESK||!DESK.discordSync||WALL||SWAP)return;clearTimeout(dcT);dcT=null;if(dcOn())dcRun()}
 function dcStat(){
   var el=$("dcstat");if(!el||!dcLast)return;var r=dcLast,h="";
-  if(r.err)h='<span class="cres err">'+esc(r.err)+'</span>';
+  /* errore su singole partite (r.errors): la sincronizzazione è finita, i conteggi restano e l'errore va sotto */
+  var part=r.err&&r.errors&&r.errors.length&&!r.skipped;
+  if(r.err&&!part)h='<span class="cres err">'+esc(r.err)+'</span>';
   else if(!r.skipped)h='<span>Canali delle partite</span>: <b>'+(r.channels||0)+'</b>'+(r.created?' <span>(nuovi</span> <b>'+r.created+'</b>)':'')+
-    (r.missing&&r.missing.length?'<br><span>Account non trovati nel server Discord</span>: <b data-noi18n>'+esc(r.missing.join(", "))+'</b>':'');
+    (r.missing&&r.missing.length?'<br><span>Account non trovati nel server Discord</span>: <b data-noi18n>'+esc(r.missing.join(", "))+'</b>':'')+
+    (part?'<br><span class="cres err">'+esc(r.err)+'</span>':'');
   el.innerHTML=h;
 }
 function renderDiscordSettings(){
@@ -2592,10 +2614,12 @@ $("editbox").addEventListener("click",function(e){
       if(!S.ev||S.ev.id!==evId){if(evId&&window.HOME&&window.HOME.editOther){window.HOME.editOther(evId,function(st){st.ev=st.ev||{};st.ev.discord=r.url;return true});toast("Invito al server Discord creato.")}
         else toast("Invito creato, ma nel frattempo è stato aperto un altro torneo: torna al torneo e crealo di nuovo.");return}
       S.ev.discord=r.url;var i=$("dcinv");if(i)i.value=r.url;save();toast("Invito al server Discord creato.")}).catch(function(){b.disabled=false})}
-  else if(b.id==="dcsync"){if(!S.ev.dguild){toast("Scegli prima il server Discord del torneo.");return}if(!S.ev.dchan){S.ev.dchan=true;var c=$("dcchan");if(c)c.checked=true;save()}discordPush(1);toast("Aggiorno i canali Discord…")}
+  else if(b.id==="dcsync"){if(!S.ev.dguild){toast("Scegli prima il server Discord del torneo.");return}if(!S.ev.dchan){S.ev.dchan=true;var c=$("dcchan");if(c)c.checked=true;save()}discordPush(1,1);toast("Aggiorno i canali Discord…")}
   else if(b.id==="dcclear"){
     if(!dcArm){dcArm=true;b.textContent="Conferma: elimina i canali";b.classList.add("p");setTimeout(function(){dcArm=false;if(b.isConnected){b.textContent="Elimina i canali di questo torneo";b.classList.remove("p")}},5000);return}
     dcArm=false;S.ev.dchan=false;save();var c2=$("dcchan");if(c2)c2.checked=false;
+    /* una sincronizzazione ancora in attesa ricreerebbe i canali appena eliminati */
+    clearTimeout(dcT);dcT=null;dcChk=0;
     DESK.discordClear(S.ev.id).then(function(n){if(n&&n.err){toast(n.err);return}toast("Canali Discord eliminati: "+(n||0)+".");dcLast={channels:0};dcStat();b.textContent="Elimina i canali di questo torneo";b.classList.remove("p")})}
 });
 $("editbox").addEventListener("change",function(e){
@@ -2635,12 +2659,14 @@ $("rosterBox").addEventListener("change",function(e){
 });
 function botDiscord(m){
   var nm=String(m.name||"").trim(),acc=dcOk(m.account);if(!nm||!acc)return;
-  var evs=(m.evs||[]).filter(Boolean),here=S.ev&&S.ev.id&&(!evs.length||evs.indexOf(S.ev.id)>=0),n=0,ex=here&&sameName(S.roster,nm);
-  if(ex){S.disc=S.disc||{};S.disc[ex]=acc;save();n++;if($("rdcbox")&&!$("rdcbox").hidden)renderDcRoster()}
+  /* il bot può solo riempire un account vuoto: cambiarne uno già scritto lo decide l'organizzatore */
+  var evs=(m.evs||[]).filter(Boolean),here=S.ev&&S.ev.id&&(!evs.length||evs.indexOf(S.ev.id)>=0),n=0,diff=0,ex=here&&sameName(S.roster,nm);
+  if(ex){S.disc=S.disc||{};if(S.disc[ex]&&S.disc[ex]!==acc)diff++;else{S.disc[ex]=acc;save();n++;if($("rdcbox")&&!$("rdcbox").hidden)renderDcRoster()}}
   /* negli altri tornei si salva in modo asincrono: il messaggio aspetta tutti i salvataggi e dice se è servito a qualcosa */
   var oth=window.HOME&&window.HOME.editOther?evs.filter(function(id){return!(S.ev&&S.ev.id===id)}):[];
-  Promise.all(oth.map(function(id){return window.HOME.editOther(id,function(st){var x=sameName(st.roster,nm);if(!x)return false;st.disc=st.disc||{};st.disc[x]=acc;ex=ex||x;n++;return true})})).then(function(){
-    if(n)toast("Account Discord di "+(ex||nm)+" dal bot Telegram: "+acc+".");
+  Promise.all(oth.map(function(id){return window.HOME.editOther(id,function(st){var x=sameName(st.roster,nm);if(!x)return false;ex=ex||x;if(st.disc&&st.disc[x]&&st.disc[x]!==acc){diff++;return false}st.disc=st.disc||{};st.disc[x]=acc;n++;return true})})).then(function(){
+    if(diff)toast("Il bot chiede di cambiare l'account Discord di "+(ex||nm)+" in "+acc+": cambialo a mano in Partecipanti, Account Discord se è corretto.");
+    else if(n)toast("Account Discord di "+(ex||nm)+" dal bot Telegram: "+acc+".");
     else toast("Account Discord dal bot Telegram: "+nm+" non è tra i partecipanti.")});
 }
 
@@ -2743,7 +2769,8 @@ $("setup").addEventListener("change",function(e){
 window.__app={
   S:function(){return S},
   WALL:WALL,DESK:DESK,esc:esc,toast:toast,dl:dlBlob,fresh:fresh,
-  load:function(p){discordFlush();dcLast=null;S=p;aiRes=[];aiMsg="";if(lastDel&&lastDel.ev&&lastDel.ev!==(S.ev&&S.ev.id)){lastDel=null;clearTimeout(delT)}initS();registerCustom();normGames();fixCur();hist=[];lastJ=null;applyUi();lastStat=statusMap();save();renderRoster();render();renderArch();botPush()},
+  /* lo stesso torneo ricaricato (informazioni modificate) o {keepHist:true}: Ctrl+Z conserva la cronologia */
+  load:function(p,o){var same=p===S||!!(o&&o.keepHist);discordFlush();if(!same){dcLast=null;aiRes=[];aiMsg=""}S=p;if(lastDel&&lastDel.ev&&lastDel.ev!==(S.ev&&S.ev.id)){lastDel=null;clearTimeout(delT)}initS();registerCustom();normGames();fixCur();if(!same){hist=[];lastJ=null}applyUi();lastStat=statusMap();save();renderRoster();render();renderArch();botPush()},
   touch:function(){save()},
   DEF:function(){return DEF},makePdf:makePdf,delSnap:function(l){delSnap(l)},evWhen:function(){return evWhen()},
   botLink:function(){return window.__botUser?"https://t.me/"+window.__botUser:""},
@@ -2755,7 +2782,9 @@ window.__app={
     return withSync(st,function(){var out=[];Object.keys(DEF).forEach(function(k){var g=S.games[k];if(!g)return;var r=result(g,k),on=g.players.length||g.phase!=="setup";if(on)out.push({k:k,l:DEF[k].l,name:g.name||"",st:r.status,n:g.players.length,top:(r.top||[]).filter(Boolean)[0]||""})});return out});
   },
   /* vero mentre la pagina lavora su un altro torneo (S non è quello aperto): niente salvataggi del file dell'evento */
-  swapping:function(){return SWAP>0}
+  swapping:function(){return SWAP>0},
+  /* proiettore: ridisegna i pannelli (sala.js lo chiama appena caricato, così la Sala compare subito) */
+  wallRebuild:function(){if(WALL&&$("wall"))wRebuild(false)}
 };
 lastJ=JSON.stringify(S);
 if(WALL)wallInit();else{lastStat=statusMap();applyUi();renderRoster();render();botPush();if(S.cur==="sala"&&!window.SALA)document.addEventListener("DOMContentLoaded",function(){if(S.cur==="sala")render()})}

@@ -170,8 +170,14 @@ module.exports = function createDiscord(opts) {
     const st = evLoad(d.ev), guild = d.guild, stat = { created: 0, updated: 0, closed: 0, removed: 0, missing: [], errors: [] };
     /* «Elimina i canali» chiesto nel frattempo (gen cambiato): ci si ferma e si lascia fare a lui */
     const g0 = gen[d.ev] || 0, stop = () => (gen[d.ev] || 0) !== g0, cx = { full: new Set(), seen: new Set() };
-    /* server Discord cambiato: via i canali dal vecchio (quelli dove il bot non ha più accesso si lasciano perdere) */
-    if (st.guild && st.guild !== guild) await removeAll(d.ev, st, true);
+    /* server Discord cambiato: via i canali dal vecchio (quelli dove il bot non ha più accesso si lasciano perdere).
+       Una pagina che manda confirmMove (false finché l'utente non ha confermato) riceve needConfirm invece della cancellazione:
+       copre anche il ripristino di un backup e il passaggio dalla voce vuota a un altro server. Senza confirmMove, come prima */
+    if (st.guild && st.guild !== guild) {
+      const n = Object.keys(st.ch || {}).length;
+      if (n && "confirmMove" in d && !d.confirmMove) return Object.assign(stat, { needConfirm: true, channels: n, oldGuild: st.guild });
+      await removeAll(d.ev, st, true);
+    }
     st.guild = guild; st.cats = st.cats || {}; st.ch = st.ch || {};
     const ids = await lookup(guild, d.accounts), T = d.t || {};
     Object.keys(ids).forEach((a) => { if (!ids[a]) stat.missing.push(a); });

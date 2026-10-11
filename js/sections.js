@@ -125,6 +125,8 @@
     if (eb && eb.hidden) { var bt = document.getElementById("editbtn"); if (bt) bt.click(); }
     setTimeout(then, 250);
   }
+  /* le impostazioni stanno sopra la pagina: andando a una scheda o a una sezione si chiudono */
+  function closeSettings() { var e = document.getElementById("editbox"); if (e && !e.hidden) e.hidden = true; }
   /* le impostazioni si ridisegnano quando si aprono: si ritrova il titolo per testo */
   function findSet(t) { return Array.prototype.filter.call(document.querySelectorAll("#editform > .sect > h3, #editbox > .setpane > h2"), function (x) { return norm(headText(x)).indexOf(norm(t).slice(0, 8)) === 0; })[0] || null; }
   function reveal(el) {
@@ -142,13 +144,13 @@
     document.querySelectorAll("#tabs0 .tab, #tabs .tab").forEach(function (b) {
       var t = (b.textContent || b.getAttribute("aria-label") || "").trim(); if (!t || b.id === "undodel") return;
       if (b.id === "plus") t = T("Aggiungi un gioco");
-      add({ t: t, g: b.dataset.k && !/^(roster|squadre|results|hof|sala)$/.test(b.dataset.k) ? "Gioco" : "Scheda", run: function () { b.click(); } });
+      add({ t: t, g: b.dataset.k && !/^(roster|squadre|results|hof|sala)$/.test(b.dataset.k) ? "Gioco" : "Scheda", run: function () { closeSettings(); b.click(); } });
     });
     document.querySelectorAll("main .panel h2, #editform > .sect > h3").forEach(function (h) {
       var t = headText(h); if (!t) return;
       var inSet = !!h.closest("#editbox");
       if (!inSet && !visible(h)) return;
-      add({ t: t, g: inSet ? "Impostazioni" : "Sezione", run: function () { if (inSet) openSettings(function () { reveal(findSet(t) || h); }); else reveal(h); } });
+      add({ t: t, g: inSet ? "Impostazioni" : "Sezione", run: function () { if (inSet) openSettings(function () { reveal(findSet(t) || h); }); else { closeSettings(); reveal(h); } } });
     });
     /* i titoli nella pagina sono già tradotti: si confrontano con le etichette tradotte nella stessa lingua */
     SETTINGS.forEach(function (t) {

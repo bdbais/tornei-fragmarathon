@@ -138,7 +138,7 @@
       if (it.type === "fila") {
         /* le postazioni le disegna sotto, una per una; qui solo la lettera della fila */
         ctx.fillStyle = C.mut; ctx.font = "700 " + Math.max(10, sc * 0.55) + "px Inter,'Segoe UI',Arial,sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
-        ctx.fillText(it.name || "A", -sz.w / 2 * sc - sc * 0.2, 0);
+        ctx.fillText(K(it.name || "A"), -sz.w / 2 * sc - sc * 0.2, 0);
         if (sel) { ctx.strokeStyle = C.acc; ctx.lineWidth = 3; ctx.setLineDash([6, 4]); ctx.strokeRect(-sz.w / 2 * sc - 4, -sz.h / 2 * sc - 4, sz.w * sc + 8, sz.h * sc + 8); ctx.setLineDash([]); }
       } else {
         var w = sz.w * sc, h = sz.h * sc;
