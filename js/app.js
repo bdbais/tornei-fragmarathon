@@ -679,7 +679,11 @@ async function makePng(k){
   if(solo)g.groups.forEach(function(x){hSolo+=50+(x.players.length+1)*34+10});
   var hF=0;
   if(g.ffa){var per0=Math.max(1,Math.floor((W-2*M+20)/320));g.ffa.rounds.forEach(function(rd){var mx0=Math.max.apply(null,rd.groups.map(function(x){return x.p.length}));hF+=30+Math.ceil(rd.groups.length/per0)*(52+mx0*32+14+14)+22})}
-  var H=hHead+hPod+hBr+hTh+hSolo+hF+60;
+  /* opzione del torneo (Impostazioni, Bot Telegram): nei tornei a squadre l'immagine elenca i giocatori di ogni squadra */
+  var TL=team&&S.ev&&S.ev.pngTeams?g.players.slice():[],tcw=300,tcg=20,tper=Math.max(1,Math.floor((W-2*M+tcg)/(tcw+tcg))),tRows=[],hT=0;
+  for(var ti=0;ti<TL.length;ti+=tper){var rowH=0;TL.slice(ti,ti+tper).forEach(function(t){rowH=Math.max(rowH,48+Math.max(1,(mem[t]||[]).length)*24+12)});tRows.push(rowH);hT+=rowH+14}
+  if(TL.length)hT+=50;
+  var H=hHead+hPod+hBr+hTh+hSolo+hF+hT+60;
   var cv=document.createElement("canvas");cv.width=W*SC;cv.height=H*SC;
   var c=cv.getContext("2d");c.scale(SC,SC);c.fillStyle="#fff";c.fillRect(0,0,W,H);
   c.fillStyle="#111";c.fillRect(0,0,W,hHead);c.fillStyle="#FF5A1F";c.fillRect(0,hHead-6,W,6);
@@ -752,6 +756,17 @@ async function makePng(k){
         });
       });
       yy+=Math.ceil(rd.groups.length/per)*(ch+14)+22;
+    });
+  }
+  if(TL.length){
+    var ty0=hHead+hPod+hBr+hTh+hSolo+hF+20;c.textBaseline="alphabetic";c.fillStyle="#111";c.font="22px "+FONT;c.fillText("Squadre",M,ty0+10);ty0+=30;
+    TL.forEach(function(t,i){
+      var col=i%tper,row=Math.floor(i/tper),x=M+col*(tcw+tcg),y0=ty0;for(var r0=0;r0<row;r0++)y0+=tRows[r0]+14;
+      var ms=mem[t]||[];c.fillStyle="#F2F2F2";rr(c,x,y0,tcw,tRows[row],10);c.fill();c.strokeStyle="#111";c.lineWidth=2;rr(c,x,y0,tcw,tRows[row],10);c.stroke();
+      c.fillStyle="#111";c.font="bold 18px "+BODY;c.fillText(fit(c,K(t),tcw-28),x+14,y0+30);
+      c.font="16px "+BODY;c.fillStyle=ms.length?"#333":"#999";
+      if(!ms.length)c.fillText("Nessun giocatore in squadra",x+14,y0+58);
+      ms.forEach(function(n,j){c.fillText(fit(c,K(n),tcw-28),x+14,y0+58+j*24)});
     });
   }
   c.fillStyle="#999";c.font="14px "+BODY;c.textAlign="center";c.fillText(uiTitle()+" · "+uiSub(),W/2,H-24);c.textAlign="left";
@@ -1254,7 +1269,8 @@ function botChoose(id){
 function botRefresh(){var b=$("botbox");if(!b||!DESK||!DESK.botStatus)return;DESK.botStatus().then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st)}).catch(function(){})}
 function renderBotSettings(){
   return'<h3 style="margin-top:20px">Bot Telegram</h3><p class="hint">I partecipanti chiedono al bot tornei, classifiche, partite e Hall of Fame, seguono un torneo per ricevere gli avvisi e si iscrivono. Il bot funziona mentre questo programma è aperto e connesso a internet. Come crearlo: guida (F1), «Bot Telegram».</p>'
-   +(DESK&&DESK.botStatus?'<div id="botbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">Disponibile solo nell&#39;app installata per Windows.</p>');
+   +(DESK&&DESK.botStatus?'<div id="botbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">Disponibile solo nell&#39;app installata per Windows.</p>')
+   +'<label class="row chk" style="margin-top:8px"><input type="checkbox" id="pngteams"'+(S.ev&&S.ev.pngTeams?' checked':'')+'>Nelle immagini dei tornei a squadre elenca i giocatori di ogni squadra</label>';
 }
 function botCfg(c){if(!DESK||!DESK.botConfig)return Promise.resolve();return DESK.botConfig(c).then(function(st){var x=$("botbox");if(x)x.innerHTML=botHtml(st);if(st&&st.running)botPush();return st}).catch(function(){})}
 /* chiudendo le Impostazioni torna attivo il bot del torneo aperto (Gestisci i bot può aver mostrato quelle di un altro) */
@@ -1366,6 +1382,7 @@ $("editbox").addEventListener("paste",function(e){
   if(!m)toast("Il testo incollato non sembra un token completo: deve essere tipo 123456789:AAH… (circa 46 caratteri).");
 });
 $("editbox").addEventListener("change",function(e){
+  if(e.target.id==="pngteams"){S.ev=S.ev||{};S.ev.pngTeams=e.target.checked;save();return}
   if(/^ai(target|style|prov|url|model|key)$/.test(e.target.id)){
     var c=aiReadForm(),autoP=!c.prompt||c.prompt===aiPrompt(aiCfg());
     /* una chiave per servizio: quella di un servizio non va mai mandata a un altro */
@@ -2791,6 +2808,7 @@ window.__app={
   swapping:function(){return SWAP>0},
   /* proiettore: ridisegna i pannelli (sala.js lo chiama appena caricato, così la Sala compare subito) */
   botRefresh:function(){botRefresh()},
+  png:function(k){return makePng(k)},
   wallRebuild:function(){if(WALL&&$("wall"))wRebuild(false)}
 };
 lastJ=JSON.stringify(S);
