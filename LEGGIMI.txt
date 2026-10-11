@@ -1,4 +1,4 @@
-TORNEI FRAGMARATHON 3.7.0
+TORNEI FRAGMARATHON 3.10.0
 Creato da fragmarathon.net e Lazarus.
 Contributi: Tony Manga e Hirish.
 

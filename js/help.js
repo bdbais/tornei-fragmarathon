@@ -279,7 +279,7 @@ window.HELP = {
 
     info: { t: "Informazioni", h:
       "<p><b>Tornei Fragmarathon</b>, versione {VERSION}.</p>" +
-      "<p>Creato da <a href='https://fragmarathon.net' target='_blank' rel='noopener'>fragmarathon.net</a> e Lazarus.</p>" +
+      "<p>Creato da <a href='https://fragmarathon.net' target='_blank' rel='noopener'>fragmarathon.net</a> e Lazarus.</p><p>Contributi: Tony Manga e Hirish.</p>" +
       "<p>Cartella dei dati: <b>{DIR}</b></p>" +
       "<h4>Aggiornamenti</h4><p>La versione installata controlla da sola gli aggiornamenti all'avvio e ogni 6 ore, li scarica in background e li installa alla chiusura. Quando un aggiornamento è pronto compare un avviso in alto.</p>" +
       "<p><button id='updchk'>Controlla aggiornamenti</button></p>" +

@@ -230,7 +230,15 @@
   "Archivio delle configurazioni dei server e cartellini nuovi",
   "Per ogni gioco un archivio delle configurazioni dei server: carichi i file (server.cfg, .ini…), li modifichi, li scarichi uno per uno o tutti in un .zip, e tieni un elenco di impostazioni nome e valore, con quelle tipiche già pronte per Quake Live, Team Fortress 2, Counter-Strike 2 e Wreckfest.",
   "Le impostazioni si possono ricavare direttamente da un file di configurazione; le password restano nascoste e nulla va ai giocatori. Azzera e Duplica conservano l'archivio.",
-  "Cartellini delle postazioni rifatti: titolo e logo del torneo, data, numero della postazione grande, giocatore, IP e QR del Wi-Fi, con i colori e il carattere del tema scelto. Anche le altre pagine del kit hanno il logo."
+  "Cartellini delle postazioni rifatti: titolo e logo del torneo, data, numero della postazione grande, giocatore, IP e QR del Wi-Fi, con i colori e il carattere del tema scelto. Anche le altre pagine del kit hanno il logo.",
+  "Revisione completa, squadre cambiate a torneo iniziato, TeamSpeak, sala più comoda",
+  "Revisione completa del codice: corretti oltre 170 problemi trovati e verificati (diretta, bot Telegram, Discord, tornei, backup, sala, musica, versione web).",
+  "A torneo iniziato puoi aggiungere o togliere squadre e giocatori e cambiare i componenti delle squadre: START riprende senza rifare il sorteggio. Chi non ha ancora giocato esce e libera il posto, chi ha già giocato si ritira e perde a tavolino le partite che gli restano. Per un sorteggio nuovo c'è «Rifai il sorteggio». Le regole sono nella guida.",
+  "Sala: tavoli da 1 e 2 postazioni, doppio clic su un punto vuoto per creare un altro oggetto uguale, menu col tasto destro (ruota, clona, elimina) e Ctrl+D per clonare.",
+  "TeamSpeak nelle informazioni del torneo e nel bot (/teamspeak, /info); pulsante Condividi per mandare tutte le informazioni del torneo su WhatsApp o Telegram.",
+  "CSS personalizzato: «Prendi lo stile dal sito» legge colori e caratteri di un sito e li adatta al programma.",
+  "Bot: opzione per elencare i giocatori di ogni squadra nell'immagine del tabellone; chi si collega con /io va confermato dall'organizzatore per vedere la password del server e cambiare l'account Discord.",
+  "Contributi: Tony Manga e Hirish."
  ],
  "tr": {
   "en": [
@@ -463,7 +471,15 @@
    "Server configuration archive and new seat cards",
    "For each game, an archive of server configurations: upload files (server.cfg, .ini…), edit them, download them one by one or all in a .zip, and keep a list of name/value settings, with typical ones ready for Quake Live, Team Fortress 2, Counter-Strike 2 and Wreckfest.",
    "Settings can be extracted straight from a configuration file; passwords stay hidden and nothing goes to players. Reset and Duplicate keep the archive.",
-   "Seat cards redone: tournament title and logo, date, large seat number, player, IP and Wi-Fi QR, in the colours and font of the chosen theme. The other kit pages have the logo too."
+   "Seat cards redone: tournament title and logo, date, large seat number, player, IP and Wi-Fi QR, in the colours and font of the chosen theme. The other kit pages have the logo too.",
+   "Full review, teams changed after the start, TeamSpeak, easier room map",
+   "Full code review: more than 170 problems found, verified and fixed (live stream, Telegram bot, Discord, tournaments, backups, room map, music, web version).",
+   "After a tournament has started you can add or remove teams and players and change team members: START resumes without a new draw. Whoever has not played yet leaves and frees the spot; whoever has already played withdraws and forfeits the remaining matches. For a new draw there is «Redraw». The rules are in the guide.",
+   "Room map: tables with 1 and 2 seats, double-click an empty spot to create another identical object, right-click menu (rotate, clone, delete) and Ctrl+D to clone.",
+   "TeamSpeak in the tournament info and in the bot (/teamspeak, /info); Share button to send all the tournament info on WhatsApp or Telegram.",
+   "Custom CSS: «Take the style from a website» reads a site's colours and fonts and adapts them to the app.",
+   "Bot: option to list every team's players in the bracket image; people who link with /io must be confirmed by the organiser to see the server password and change their Discord account.",
+   "Contributions: Tony Manga and Hirish."
   ],
   "es": [
    "Añadir jugador",
@@ -695,7 +711,15 @@
    "Archivo de configuraciones de los servidores y tarjetas nuevas",
    "Para cada juego, un archivo de configuraciones de los servidores: subes los archivos (server.cfg, .ini…), los editas, los descargas uno a uno o todos en un .zip, y llevas una lista de ajustes nombre y valor, con los típicos ya listos para Quake Live, Team Fortress 2, Counter-Strike 2 y Wreckfest.",
    "Los ajustes se pueden obtener directamente de un archivo de configuración; las contraseñas quedan ocultas y nada llega a los jugadores. Reiniciar y Duplicar conservan el archivo.",
-   "Tarjetas de los puestos rehechas: título y logo del torneo, fecha, número del puesto en grande, jugador, IP y QR del Wi-Fi, con los colores y la tipografía del tema elegido. Las demás páginas del kit también llevan el logo."
+   "Tarjetas de los puestos rehechas: título y logo del torneo, fecha, número del puesto en grande, jugador, IP y QR del Wi-Fi, con los colores y la tipografía del tema elegido. Las demás páginas del kit también llevan el logo.",
+   "Revisión completa, equipos cambiados con el torneo empezado, TeamSpeak, sala más cómoda",
+   "Revisión completa del código: corregidos más de 170 problemas encontrados y verificados (directo, bot de Telegram, Discord, torneos, copias de seguridad, sala, música, versión web).",
+   "Con el torneo empezado puedes añadir o quitar equipos y jugadores y cambiar los miembros de los equipos: START continúa sin repetir el sorteo. Quien aún no ha jugado sale y libera su plaza; quien ya ha jugado se retira y pierde por incomparecencia las partidas que le quedan. Para un sorteo nuevo está «Repetir el sorteo». Las reglas están en la guía.",
+   "Sala: mesas de 1 y 2 puestos, doble clic en un punto vacío para crear otro objeto igual, menú con el botón derecho (girar, clonar, eliminar) y Ctrl+D para clonar.",
+   "TeamSpeak en la información del torneo y en el bot (/teamspeak, /info); botón Compartir para enviar toda la información del torneo por WhatsApp o Telegram.",
+   "CSS personalizado: «Tomar el estilo de un sitio» lee los colores y las fuentes de un sitio y los adapta al programa.",
+   "Bot: opción para mostrar los jugadores de cada equipo en la imagen del cuadro; quien se vincula con /io debe ser confirmado por el organizador para ver la contraseña del servidor y cambiar su cuenta de Discord.",
+   "Contribuciones: Tony Manga y Hirish."
   ],
   "fr": [
    "Ajouter un joueur",
@@ -927,7 +951,15 @@
    "Archive des configurations des serveurs et nouveaux chevalets",
    "Pour chaque jeu, une archive des configurations des serveurs : tu charges les fichiers (server.cfg, .ini…), tu les modifies, tu les télécharges un par un ou tous dans un .zip, et tu gardes une liste de réglages nom et valeur, avec les réglages typiques prêts pour Quake Live, Team Fortress 2, Counter-Strike 2 et Wreckfest.",
    "Les réglages peuvent être extraits directement d'un fichier de configuration ; les mots de passe restent masqués et rien n'est envoyé aux joueurs. Réinitialiser et Dupliquer conservent l'archive.",
-   "Chevalets des postes refaits : titre et logo du tournoi, date, grand numéro du poste, joueur, IP et QR du Wi-Fi, aux couleurs et avec la police du thème choisi. Les autres pages du kit ont aussi le logo."
+   "Chevalets des postes refaits : titre et logo du tournoi, date, grand numéro du poste, joueur, IP et QR du Wi-Fi, aux couleurs et avec la police du thème choisi. Les autres pages du kit ont aussi le logo.",
+   "Revue complète, équipes modifiées après le début, TeamSpeak, salle plus pratique",
+   "Revue complète du code : plus de 170 problèmes trouvés, vérifiés et corrigés (direct, bot Telegram, Discord, tournois, sauvegardes, salle, musique, version web).",
+   "Une fois le tournoi commencé, tu peux ajouter ou retirer des équipes et des joueurs et changer les membres des équipes : START reprend sans refaire le tirage. Qui n'a pas encore joué sort et libère sa place ; qui a déjà joué se retire et perd par forfait les matchs qui lui restent. Pour un nouveau tirage, il y a « Refaire le tirage ». Les règles sont dans le guide.",
+   "Salle : tables de 1 et 2 postes, double-clic sur un point vide pour créer un autre objet identique, menu du clic droit (pivoter, cloner, supprimer) et Ctrl+D pour cloner.",
+   "TeamSpeak dans les infos du tournoi et dans le bot (/teamspeak, /info) ; bouton Partager pour envoyer toutes les infos du tournoi sur WhatsApp ou Telegram.",
+   "CSS personnalisé : « Prendre le style d'un site » lit les couleurs et les polices d'un site et les adapte au programme.",
+   "Bot : option pour lister les joueurs de chaque équipe dans l'image du tableau ; qui se lie avec /io doit être confirmé par l'organisateur pour voir le mot de passe du serveur et changer son compte Discord.",
+   "Contributions : Tony Manga et Hirish."
   ],
   "de": [
    "Spieler hinzufügen",
@@ -1159,7 +1191,15 @@
    "Archiv der Serverkonfigurationen und neue Platzkarten",
    "Für jedes Spiel ein Archiv der Serverkonfigurationen: Dateien hochladen (server.cfg, .ini…), bearbeiten, einzeln oder alle als .zip herunterladen und eine Liste von Einstellungen mit Name und Wert führen, mit typischen Einstellungen für Quake Live, Team Fortress 2, Counter-Strike 2 und Wreckfest.",
    "Einstellungen lassen sich direkt aus einer Konfigurationsdatei übernehmen; Passwörter bleiben verborgen und nichts geht an die Spieler. Zurücksetzen und Duplizieren behalten das Archiv.",
-   "Platzkarten neu gestaltet: Turniertitel und Logo, Datum, große Platznummer, Spieler, IP und WLAN-QR, in den Farben und der Schrift des gewählten Themas. Auch die anderen Kit-Seiten zeigen das Logo."
+   "Platzkarten neu gestaltet: Turniertitel und Logo, Datum, große Platznummer, Spieler, IP und WLAN-QR, in den Farben und der Schrift des gewählten Themas. Auch die anderen Kit-Seiten zeigen das Logo.",
+   "Vollständige Prüfung, Teams nach dem Start ändern, TeamSpeak, bequemerer Saalplan",
+   "Vollständige Code-Prüfung: über 170 gefundene und geprüfte Probleme behoben (Livestream, Telegram-Bot, Discord, Turniere, Backups, Saalplan, Musik, Web-Version).",
+   "Nach dem Turnierstart kannst du Teams und Spieler hinzufügen oder entfernen und Teammitglieder ändern: START macht ohne neue Auslosung weiter. Wer noch nicht gespielt hat, scheidet aus und gibt den Platz frei; wer schon gespielt hat, zieht sich zurück und verliert die restlichen Spiele kampflos. Für eine neue Auslosung gibt es „Neu auslosen“. Die Regeln stehen in der Hilfe.",
+   "Saalplan: Tische mit 1 und 2 Plätzen, Doppelklick auf eine freie Stelle erstellt ein gleiches Objekt, Rechtsklick-Menü (drehen, klonen, löschen) und Strg+D zum Klonen.",
+   "TeamSpeak in den Turnierinfos und im Bot (/teamspeak, /info); Schaltfläche Teilen, um alle Turnierinfos per WhatsApp oder Telegram zu senden.",
+   "Eigenes CSS: „Stil von einer Website übernehmen“ liest Farben und Schriften einer Website und passt sie an das Programm an.",
+   "Bot: Option, im Turnierbaum-Bild die Spieler jedes Teams aufzulisten; wer sich mit /io verknüpft, muss vom Organisator bestätigt werden, um das Server-Passwort zu sehen und sein Discord-Konto zu ändern.",
+   "Beiträge: Tony Manga und Hirish."
   ],
   "ro": [
    "Adaugă jucător",
@@ -1391,7 +1431,15 @@
    "Arhiva configurațiilor serverelor și cartonașe noi",
    "Pentru fiecare joc, o arhivă a configurațiilor serverelor: încarci fișierele (server.cfg, .ini…), le editezi, le descarci pe rând sau pe toate într-un .zip și ții o listă de setări nume și valoare, cu cele tipice gata pentru Quake Live, Team Fortress 2, Counter-Strike 2 și Wreckfest.",
    "Setările se pot extrage direct dintr-un fișier de configurare; parolele rămân ascunse și nimic nu ajunge la jucători. Resetează și Duplică păstrează arhiva.",
-   "Cartonașele posturilor refăcute: titlul și logoul turneului, data, numărul mare al postului, jucătorul, IP-ul și QR-ul Wi-Fi, în culorile și fontul temei alese. Și celelalte pagini ale kitului au logoul."
+   "Cartonașele posturilor refăcute: titlul și logoul turneului, data, numărul mare al postului, jucătorul, IP-ul și QR-ul Wi-Fi, în culorile și fontul temei alese. Și celelalte pagini ale kitului au logoul.",
+   "Revizuire completă, echipe schimbate după start, TeamSpeak, sală mai comodă",
+   "Revizuire completă a codului: corectate peste 170 de probleme găsite și verificate (transmisiune live, bot Telegram, Discord, turnee, backupuri, sală, muzică, versiunea web).",
+   "După începerea turneului poți adăuga sau scoate echipe și jucători și poți schimba membrii echipelor: START continuă fără o nouă tragere la sorți. Cine nu a jucat încă iese și eliberează locul; cine a jucat deja se retrage și pierde la masa verde meciurile rămase. Pentru o tragere nouă există «Refă tragerea la sorți». Regulile sunt în ghid.",
+   "Sală: mese cu 1 și 2 posturi, dublu clic pe un punct liber pentru a crea un alt obiect identic, meniu cu clic dreapta (rotește, clonează, șterge) și Ctrl+D pentru clonare.",
+   "TeamSpeak în informațiile turneului și în bot (/teamspeak, /info); butonul Distribuie pentru a trimite toate informațiile turneului pe WhatsApp sau Telegram.",
+   "CSS personalizat: «Preia stilul de pe un site» citește culorile și fonturile unui site și le adaptează programului.",
+   "Bot: opțiune pentru a lista jucătorii fiecărei echipe în imaginea tabloului; cine se conectează cu /io trebuie confirmat de organizator ca să vadă parola serverului și să-și schimbe contul Discord.",
+   "Contribuții: Tony Manga și Hirish."
   ],
   "ru": [
    "Добавить игрока",
@@ -1623,7 +1671,15 @@
    "Архив настроек серверов и новые таблички",
    "Для каждой игры — архив настроек серверов: загружайте файлы (server.cfg, .ini…), редактируйте их, скачивайте по одному или все в .zip и ведите список настроек «имя — значение» с готовыми типичными настройками для Quake Live, Team Fortress 2, Counter-Strike 2 и Wreckfest.",
    "Настройки можно извлечь прямо из файла конфигурации; пароли скрыты, и игрокам ничего не отправляется. «Сбросить» и «Дублировать» сохраняют архив.",
-   "Таблички мест переделаны: название и логотип турнира, дата, крупный номер места, игрок, IP и QR-код Wi-Fi — в цветах и шрифте выбранной темы. На остальных страницах набора тоже есть логотип."
+   "Таблички мест переделаны: название и логотип турнира, дата, крупный номер места, игрок, IP и QR-код Wi-Fi — в цветах и шрифте выбранной темы. На остальных страницах набора тоже есть логотип.",
+   "Полная проверка, команды меняются после старта, TeamSpeak, удобная карта зала",
+   "Полная проверка кода: исправлено более 170 найденных и подтверждённых проблем (трансляция, бот Telegram, Discord, турниры, резервные копии, зал, музыка, веб-версия).",
+   "После начала турнира можно добавлять и убирать команды и игроков и менять состав команд: START продолжает без новой жеребьёвки. Кто ещё не играл, выбывает и освобождает место; кто уже играл, снимается и получает технические поражения в оставшихся матчах. Для новой жеребьёвки есть «Новая жеребьёвка». Правила описаны в справке.",
+   "Зал: столы на 1 и 2 места, двойной щелчок по пустому месту создаёт такой же объект, меню по правой кнопке (повернуть, клонировать, удалить) и Ctrl+D для клонирования.",
+   "TeamSpeak в информации о турнире и в боте (/teamspeak, /info); кнопка «Поделиться», чтобы отправить всю информацию о турнире в WhatsApp или Telegram.",
+   "Свой CSS: «Взять стиль с сайта» считывает цвета и шрифты сайта и адаптирует их к программе.",
+   "Бот: можно перечислить игроков каждой команды на изображении сетки; тех, кто привязался через /io, должен подтвердить организатор, чтобы они видели пароль сервера и могли сменить аккаунт Discord.",
+   "Вклад: Tony Manga и Hirish."
   ],
   "zh": [
    "添加选手",
@@ -1855,7 +1911,15 @@
    "服务器配置存档和新的座位牌",
    "每个游戏都有服务器配置存档：上传文件（server.cfg、.ini…）、编辑、逐个下载或打包为 .zip 下载，并维护一份“名称—值”设置列表，Quake Live、Team Fortress 2、Counter-Strike 2 和 Wreckfest 已有常用设置。",
    "可以直接从配置文件中提取设置；密码保持隐藏，不会发给玩家。“重置”和“复制”会保留存档。",
-   "座位牌重新设计：锦标赛标题和标志、日期、大号座位编号、玩家、IP 和 Wi-Fi 二维码，采用所选主题的颜色和字体。工具包的其他页面也带有标志。"
+   "座位牌重新设计：锦标赛标题和标志、日期、大号座位编号、玩家、IP 和 Wi-Fi 二维码，采用所选主题的颜色和字体。工具包的其他页面也带有标志。",
+   "全面审查、开赛后调整队伍、TeamSpeak、更好用的场地图",
+   "全面审查代码：修复了 170 多个已发现并核实的问题（直播、Telegram 机器人、Discord、锦标赛、备份、场地图、音乐、网页版）。",
+   "锦标赛开始后，你可以添加或移除队伍和玩家，也可以更改队伍成员：START 会继续进行，不会重新抽签。尚未比赛的会退出并空出位置；已经比赛过的会退赛，剩余比赛判负。如需重新抽签，请使用“重新抽签”。规则见帮助。",
+   "场地图：1 人和 2 人座位的桌子，双击空白处可创建相同的对象，右键菜单（旋转、复制、删除），以及 Ctrl+D 复制。",
+   "锦标赛信息和机器人中显示 TeamSpeak（/teamspeak、/info）；“分享”按钮可将所有锦标赛信息发送到 WhatsApp 或 Telegram。",
+   "自定义 CSS：“从网站获取样式”会读取网站的颜色和字体并适配到本程序。",
+   "机器人：可在对阵图图片中列出每支队伍的玩家；通过 /io 关联的人需由组织者确认后，才能看到服务器密码并更改 Discord 账号。",
+   "贡献：Tony Manga 和 Hirish。"
   ],
   "ja": [
    "プレイヤーを追加",
@@ -2087,7 +2151,15 @@
    "サーバー設定の保管庫と新しい席札",
    "ゲームごとにサーバー設定の保管庫：ファイル（server.cfg、.ini…）を読み込んで編集し、1つずつまたはまとめて .zip でダウンロードでき、名前と値の設定一覧も管理できます。Quake Live、Team Fortress 2、Counter-Strike 2、Wreckfest にはよく使う設定を用意しました。",
    "設定は設定ファイルから直接取り出せます。パスワードは隠され、プレイヤーには何も送られません。「リセット」と「複製」でも保管庫は残ります。",
-   "席札を作り直しました：トーナメントのタイトルとロゴ、日付、大きな席番号、プレイヤー、IP、Wi-Fi の QR を、選んだテーマの色とフォントで。キットの他のページにもロゴが入ります。"
+   "席札を作り直しました：トーナメントのタイトルとロゴ、日付、大きな席番号、プレイヤー、IP、Wi-Fi の QR を、選んだテーマの色とフォントで。キットの他のページにもロゴが入ります。",
+   "全面レビュー、開始後のチーム変更、TeamSpeak、使いやすくなった会場マップ",
+   "コードの全面レビュー：見つかり確認された 170 件以上の問題を修正しました（配信、Telegram ボット、Discord、トーナメント、バックアップ、会場マップ、音楽、Web 版）。",
+   "トーナメント開始後も、チームやプレイヤーの追加・削除、チームメンバーの変更ができます。START は組み合わせを作り直さずに再開します。まだ試合をしていない人は抜けて枠を空け、すでに試合をした人は棄権となり残りの試合は不戦敗になります。新しく組み合わせるには「組み合わせをやり直す」を使います。ルールはガイドにあります。",
+   "会場マップ：1 席と 2 席のテーブル、空いている場所をダブルクリックすると同じオブジェクトを作成、右クリックメニュー（回転、複製、削除）、Ctrl+D で複製。",
+   "トーナメント情報とボットに TeamSpeak（/teamspeak、/info）。「共有」ボタンでトーナメント情報をまとめて WhatsApp や Telegram に送れます。",
+   "カスタム CSS：「サイトからスタイルを取得」でサイトの色とフォントを読み取り、このアプリに合わせます。",
+   "ボット：対戦表の画像に各チームのプレイヤーを並べるオプション。/io で連携した人は、主催者の確認後にサーバーのパスワードを見たり Discord アカウントを変更したりできます。",
+   "協力：Tony Manga、Hirish。"
   ],
   "vec": [
    "Zonta zogador",
@@ -2319,7 +2391,15 @@
    "Archivio dee configurasion dei server e cartełini novi",
    "Par ogni zogo un archivio dee configurasion dei server: te carghi i file (server.cfg, .ini…), te li modifichi, te li scarichi uno a ła volta o tuti in un .zip, e te tien un elenco de inpostassion nome e vaƚor, co quełe tipiche za pronte par Quake Live, Team Fortress 2, Counter-Strike 2 e Wreckfest.",
    "Łe inpostassion se pol ricavarłe direto da un file de configurasion; łe password łe resta sconte e gnente va ai zugadori. Azzera e Duplica i tien l'archivio.",
-   "Cartełini dee postasion refati: titolo e logo del torneo, data, nùmaro grando dea postasion, zugador, IP e QR del Wi-Fi, coi cołori e el caratere del tema sielto. Anca łe altre pagine del kit łe ga el logo."
+   "Cartełini dee postasion refati: titolo e logo del torneo, data, nùmaro grando dea postasion, zugador, IP e QR del Wi-Fi, coi cołori e el caratere del tema sielto. Anca łe altre pagine del kit łe ga el logo.",
+   "Revision conpleta, squadre canbiae a torneo scominsià, TeamSpeak, sala pì comoda",
+   "Revision conpleta del codice: sistemai pì de 170 problemi trovai e verificai (direta, bot Telegram, Discord, tornei, backup, sala, musica, version web).",
+   "A torneo scominsià te pol zontar o cavar squadre e zugadori e canbiar i conponenti dee squadre: START el ripartisse sensa refar el sorteggio. Chi che no ga ancora zogà el va fora e el libera el posto, chi che ga za zogà el se ritira e el perde a tavolin łe partìe che ghe resta. Par un sorteggio novo ghe ze «Refà el sorteggio». Łe regołe łe ze nea guida.",
+   "Sala: tavołi da 1 e 2 postasion, dopio clic su un ponto vodo par crear n'altro ogeto conpagno, menu col boton destro (gira, clona, scancela) e Ctrl+D par clonar.",
+   "TeamSpeak nee informassion del torneo e nel bot (/teamspeak, /info); boton Condividi par mandar tute łe informassion del torneo su WhatsApp o Telegram.",
+   "CSS personałizà: «Ciapa el stile dal sito» el leze cołori e carateri de un sito e el li adata al programa.",
+   "Bot: opsion par elencar i zugadori de ogni squadra nea imagine del tabelon; chi che se coega co /io el ga da esser confermà dal'organizador par vedar la password del server e canbiar l'account Discord.",
+   "Contributi: Tony Manga e Hirish."
   ]
  }
 }

@@ -4,6 +4,15 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.10.0", d: "2026-10-11", t: "Revisione completa, squadre cambiate a torneo iniziato, TeamSpeak, sala più comoda", items: [
+      "Revisione completa del codice: corretti oltre 170 problemi trovati e verificati (diretta, bot Telegram, Discord, tornei, backup, sala, musica, versione web).",
+      "A torneo iniziato puoi aggiungere o togliere squadre e giocatori e cambiare i componenti delle squadre: START riprende senza rifare il sorteggio. Chi non ha ancora giocato esce e libera il posto, chi ha già giocato si ritira e perde a tavolino le partite che gli restano. Per un sorteggio nuovo c'è «Rifai il sorteggio». Le regole sono nella guida.",
+      "Sala: tavoli da 1 e 2 postazioni, doppio clic su un punto vuoto per creare un altro oggetto uguale, menu col tasto destro (ruota, clona, elimina) e Ctrl+D per clonare.",
+      "TeamSpeak nelle informazioni del torneo e nel bot (/teamspeak, /info); pulsante Condividi per mandare tutte le informazioni del torneo su WhatsApp o Telegram.",
+      "CSS personalizzato: «Prendi lo stile dal sito» legge colori e caratteri di un sito e li adatta al programma.",
+      "Bot: opzione per elencare i giocatori di ogni squadra nell'immagine del tabellone; chi si collega con /io va confermato dall'organizzatore per vedere la password del server e cambiare l'account Discord.",
+      "Contributi: Tony Manga e Hirish."
+    ] },
     { v: "3.9.0", d: "2026-10-10", t: "Archivio delle configurazioni dei server e cartellini nuovi", items: [
       "Per ogni gioco un archivio delle configurazioni dei server: carichi i file (server.cfg, .ini…), li modifichi, li scarichi uno per uno o tutti in un .zip, e tieni un elenco di impostazioni nome e valore, con quelle tipiche già pronte per Quake Live, Team Fortress 2, Counter-Strike 2 e Wreckfest.",
       "Le impostazioni si possono ricavare direttamente da un file di configurazione; le password restano nascoste e nulla va ai giocatori. Azzera e Duplica conservano l'archivio.",

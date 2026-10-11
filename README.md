@@ -2,7 +2,7 @@
 
 Gestore di tornei per LAN party, nato per il Fragmarathon. Dal sorteggio al podio, con uno schermo dedicato al proiettore che si legge da più di 5 metri.
 
-Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
+Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus. Contributi: Tony Manga e Hirish.
 
 - **Windows**: scarica l'installer dall'[ultima release](https://github.com/bdbais/tornei-fragmarathon/releases/latest). Si installa con un doppio clic, crea le cartelle da solo e si aggiorna da solo.
 - **Web (PWA)**: [tornei.bais.info/app](https://tornei.bais.info/app/). Si installa dal browser e funziona offline.
