@@ -160,7 +160,11 @@
 
   /* ---------- azioni ---------- */
   function template(g, keep) {
-    var t = { name: g.name || "", mode: g.mode, ng: g.ng || 2, players: keep ? (g.players || []).slice() : [], members: keep ? (g.members || {}) : {}, phase: "setup", groups: null, rounds: null };
+    /* senza risultati: solo chi era ancora in gara (chi si è ritirato non passa nel torneo nuovo) */
+    var wd = Array.isArray(g.wd) ? g.wd : [], pl = keep ? (g.players || []).filter(function (n) { return wd.indexOf(n) < 0; }) : [], mb = {};
+    if (keep && wd.length) pl.forEach(function (n) { if (g.members && g.members[n]) mb[n] = g.members[n]; });
+    else if (keep) mb = g.members || {};
+    var t = { name: g.name || "", mode: g.mode, ng: g.ng || 2, players: pl, members: mb, phase: "setup", groups: null, rounds: null };
     ["team", "plat", "logo", "calc", "nq", "tsize", "ffaGs", "ffaAdv", "swR", "swTop", "deReset", "hidden", "cam", "draft", "cfg"].forEach(function (k) { if (g[k] !== undefined) t[k] = g[k]; });
     return t;
   }

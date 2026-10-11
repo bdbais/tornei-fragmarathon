@@ -57,8 +57,12 @@
     return { P: P, k: k, WB: WB, LB: LB, GF: GF, wbFinal: wbFinal, lbFinal: lbFinal };
   }
 
-  /* undefined = da definire, null = posto vuoto (bye), stringa = nome. */
-  function deEval(st, seeds, res, reset) {
+  /* undefined = da definire, null = posto vuoto (bye), stringa = nome.
+     out (facoltativo): funzione vera per chi ha lasciato il torneo. In una partita pronta senza un risultato
+     salvato valido vince a tavolino l'altro (e.ff, senza punteggio). out può restituire l'ordine di ritiro (1, 2, ...):
+     se sono ritirati entrambi passa chi si è ritirato dopo (era ancora in gara quando l'altro è uscito, quindi il
+     tavolino già vinto resta suo); con out vero/falso passa a. */
+  function deEval(st, seeds, res, reset, out) {
     res = res || {};
     var M = {};
     /* il tabellone perdenti dipende dal vincenti dello stesso livello: valutiamo per livelli */
@@ -87,13 +91,15 @@
           e.sa = sw ? r.sb : r.sa; e.sb = sw ? r.sa : r.sb;
           if (r.w === a || r.w === b) { e.w = r.w; e.l = r.w === a ? b : a; }
         }
+        deFf(e, out);
       }
       M[m.id] = e;
       return e;
     }
     all.forEach(function (x) { ev(x.m); });
     var gf = ev(st.GF), gf2 = null;
-    if (reset !== false && gf.ready && gf.w !== undefined && gf.w === gf.b) {
+    /* finale vinta a tavolino: niente bella */
+    if (reset !== false && gf.ready && gf.w !== undefined && gf.w === gf.b && !gf.ff) {
       gf2 = { id: "GF2", a: gf.a, b: gf.b, w: undefined, l: undefined, sa: null, sb: null, ready: true, bye: false };
       var r2 = res.GF2;
       if (r2 && ((r2.a === gf.a && r2.b === gf.b) || (r2.a === gf.b && r2.b === gf.a))) {
@@ -101,6 +107,7 @@
         gf2.sa = s2 ? r2.sb : r2.sa; gf2.sb = s2 ? r2.sa : r2.sb;
         if (r2.w === gf.a || r2.w === gf.b) { gf2.w = r2.w; gf2.l = r2.w === gf.a ? gf.b : gf.a; }
       }
+      deFf(gf2, out);
       M.GF2 = gf2;
     }
     var champ, second, third = null, fin = gf2 || gf;
@@ -111,6 +118,65 @@
       done: champ !== undefined,
       top: champ !== undefined ? [champ, second, third] : []
     };
+  }
+
+  /* tavolino della doppia eliminazione: solo se non c'è già un vincitore (un risultato inserito vale di più).
+     Un punteggio parziale già scritto resta visibile, così si può completare e prende il posto del tavolino. */
+  function deFf(e, out) {
+    if (e.w !== undefined || !out) return;
+    var oa = out(e.a), ob = out(e.b);
+    if (!oa && !ob) return;
+    e.w = ffSide(oa, ob) ? e.b : e.a; e.l = e.w === e.a ? e.b : e.a; e.ff = true;
+  }
+  /* vero se il tavolino va al lato b: a è fuori e b no, oppure sono fuori entrambi e b si è ritirato dopo
+     (oa e ob sono l'ordine di ritiro, 0 = in gara; con valori vero/falso tra due ritirati vince a) */
+  function ffSide(oa, ob) { return !!oa && (!ob || +ob > +oa); }
+  /* partita del primo turno (W0-i) che contiene il seme s: {i, k} oppure null */
+  function deSeedMatch(st, s) {
+    var W = st.WB[0];
+    for (var i = 0; i < W.length; i++) { if (W[i].a.s === s) return { i: i, k: "a" }; if (W[i].b.s === s) return { i: i, k: "b" }; }
+    return null;
+  }
+  /* vero se ogni risultato salvato che vale con seeds vale ancora con next (stessa coppia nella stessa partita) */
+  function deSeedSafe(st, seeds, next, res, reset, out) {
+    res = res || {};
+    var A = deEval(st, seeds, res, reset, out).M, B = deEval(st, next, res, reset, out).M;
+    function on(M, id) { var m = M[id], r = res[id]; return !!(m && m.ready && r && ((r.a === m.a && r.b === m.b) || (r.a === m.b && r.b === m.a))); }
+    return Object.keys(res).every(function (id) { return !on(A, id) || on(B, id); });
+  }
+
+  /* ---------------- Eliminazione diretta ----------------
+     R = [[{a,b,sa,sb,w}]] turno per turno; il vincitore passa nella partita i>>1 del turno dopo.
+     m.ff = 1: vittoria a tavolino contro chi ha lasciato il torneo (m.w vincitore, senza punteggio). */
+  function elSetWinner(R, r, i, name) {
+    var m = R[r][i]; m.w = name; delete m.ff;
+    if (r + 1 < R.length) { var nm = R[r + 1][i >> 1], k = i % 2 ? "b" : "a"; if (nm[k] !== name) { nm[k] = name; elClearFrom(R, r + 1, i >> 1); } }
+  }
+  function elUnsetWinner(R, r, i) {
+    var m = R[r][i]; delete m.ff;
+    if (m.w) { m.w = null; if (r + 1 < R.length) { var nm = R[r + 1][i >> 1]; nm[i % 2 ? "b" : "a"] = null; elClearFrom(R, r + 1, i >> 1); } }
+  }
+  function elClearFrom(R, r, i) { R[r][i].sa = R[r][i].sb = null; elUnsetWinner(R, r, i); }
+  /* tavolini: ogni partita con due nomi, senza vincitore e con un lato fuori la vince l'altro (se sono fuori
+     entrambi, chi si è ritirato dopo: vedi ffSide). Turni in ordine: le conseguenze nei turni dopo si risolvono nello stesso passaggio. Restituisce quante. */
+  function elForfeits(R, out) {
+    var n = 0;
+    if (!R || !out) return 0;
+    for (var r = 0; r < R.length; r++) for (var i = 0; i < R[r].length; i++) {
+      var m = R[r][i];
+      if (!m.a || !m.b || m.w || !(out(m.a) || out(m.b))) continue;
+      var w = ffSide(out(m.a), out(m.b)) ? m.b : m.a;
+      m.sa = m.sb = null; elSetWinner(R, r, i, w); m.ff = 1; n++;
+    }
+    return n;
+  }
+  /* finale per il 3º posto: stessa regola */
+  function thirdForfeit(t, out) {
+    if (!t || !t.match || !t.a || !t.b || t.w || !out) return false;
+    var oa = out(t.a), ob = out(t.b);
+    if (!oa && !ob) return false;
+    t.w = ffSide(oa, ob) ? t.b : t.a; t.sa = t.sb = null; t.ff = 1;
+    return true;
   }
 
   /* ---------------- Sistema svizzero ----------------
@@ -150,11 +216,14 @@
     return P;
   }
   /* Accoppiamento del turno successivo: punteggi simili, senza rivincite (se possibile).
-     rank (facoltativo): la formula della classifica mostrata, così accoppiamenti e riposo seguono quella. */
-  function swPair(players, rounds, shuffleFn, rank) {
+     rank (facoltativo): la formula della classifica mostrata, così accoppiamenti e riposo seguono quella.
+     skip (facoltativo): chi non va più accoppiato (ha lasciato il torneo). La classifica si calcola su tutti,
+     così i punti vinti contro di lui contano per l'ordine. */
+  function swPair(players, rounds, shuffleFn, rank, skip) {
     var list, out = [];
     if (!rounds.length) list = shuffleFn ? shuffleFn(players.slice()) : players.slice();
     else list = swStandings(players, rounds, rank).map(function (t) { return t.n; });
+    if (skip) list = list.filter(function (n) { return !skip(n); });
     var hadBye = {};
     rounds.forEach(function (rd) { rd.forEach(function (m) { if (m.b === null) hadBye[m.a] = 1; }); });
     if (list.length % 2) {
@@ -199,12 +268,28 @@
     }
     return out;
   }
-  function rrStandings(gr, rank) {
+  /* out (facoltativo): chi ha lasciato il torneo. Le sue partite senza punteggio completo le vince a tavolino
+     l'avversario (3 punti o la formula con vinta e bye, nessun punto fatto o subito); tra due ritirati la vince chi
+     si è ritirato dopo, se out ne dà l'ordine, altrimenti non conta.
+     Le partite m.void (di chi è uscito senza giocare) non contano mai. */
+  function rrStandings(gr, rank, out) {
     var T = {};
-    gr.players.forEach(function (p) { T[p] = { n: p, g: 0, w: 0, d: 0, l: 0, gf: 0, gs: 0, pt: 0 }; });
+    gr.players.forEach(function (p) { T[p] = { n: p, g: 0, w: 0, d: 0, l: 0, gf: 0, gs: 0, pt: 0, out: !!(out && out(p)) }; });
     gr.matches.forEach(function (m) {
-      if (m.sa == null || m.sb == null || !T[m.a] || !T[m.b]) return;
+      if (m.void || !T[m.a] || !T[m.b]) return;
       var A = T[m.a], B = T[m.b];
+      if (m.sa == null || m.sb == null) {
+        if (!out) return;
+        var oa = out(m.a) || 0, ob = out(m.b) || 0;
+        /* tra due ritirati vince a tavolino chi si è ritirato dopo (out = ordine di ritiro): il tavolino che aveva
+           già vinto resta suo. Con out vero/falso, o con nessuno dei due fuori, la partita non conta. */
+        if (+oa === +ob) return;
+        var bw = ffSide(oa, ob), W = bw ? B : A, L = bw ? A : B;
+        W.g++; L.g++; W.w++; L.l++;
+        if (rank) { W.pt += rank.run(fxMatchVars(null, null, true)); L.pt += rank.run({ punti: 0, avversario: 0, diff: 0, vinta: 0, pareggio: 0, persa: 1, bye: 0 }); }
+        else W.pt += WIN;
+        return;
+      }
       A.g++; B.g++; A.gf += m.sa; A.gs += m.sb; B.gf += m.sb; B.gs += m.sa;
       if (m.sa > m.sb) { A.w++; B.l++; } else if (m.sa < m.sb) { B.w++; A.l++; } else { A.d++; B.d++; }
       if (rank) { A.pt += rank.run(fxMatchVars(m.sa, m.sb)); B.pt += rank.run(fxMatchVars(m.sb, m.sa)); }
@@ -212,8 +297,37 @@
     });
     return Object.keys(T).map(function (k) { return T[k]; }).sort(rrCmp);
   }
+  /* nuovo iscritto in un girone già iniziato: una partita contro ognuno, ciascuna in una giornata nuova in fondo
+     al calendario (nessuno gioca due volte nella stessa giornata, gli indici delle partite esistenti non cambiano) */
+  function rrJoin(gr, n) {
+    var d = 0, k = 0;
+    gr.matches.forEach(function (m) { if (m.day > d) d = m.day; });
+    gr.players.forEach(function (p, j) { gr.matches.push({ a: j % 2 ? p : n, b: j % 2 ? n : p, sa: null, sb: null, day: d + 1 + j }); k++; });
+    gr.players.push(n);
+    return k;
+  }
   /* ordine della classifica all'italiana: punti, differenza reti, reti fatte, nome (lo usa anche la classifica complessiva) */
   function rrCmp(x, y) { return y.pt - x.pt || (y.gf - y.gs) - (x.gf - x.gs) || y.gf - x.gf || x.n.localeCompare(y.n); }
+
+  /* ---------------- Free for all ----------------
+     Un girone: {p:[nomi], s:{nome: punti}}. Pareggi ammessi: punti uguali = stessa posizione (1,2,2,4).
+     out (facoltativo): chi ha lasciato il torneo. Non serve il suo punteggio, non passa e non ha posizione (pos null);
+     se in gara restano al massimo quanti passano, passano tutti senza giocare (free). */
+  function ffaEval(grp, fin, adv, out) {
+    var arr = grp.p.map(function (n, i) { return { n: n, s: grp.s[n], i: i, out: !!(out && out(n)) }; }),
+      act = arr.filter(function (x) { return !x.out; }), wd = arr.filter(function (x) { return x.out; }),
+      full = act.every(function (x) { return x.s != null; }),
+      sortedA = act.slice().sort(function (a, b) { return (b.s == null ? -1 : b.s) - (a.s == null ? -1 : a.s) || a.i - b.i; }),
+      na = fin ? Math.min(3, act.length) : Math.min(adv, Math.max(1, arr.length - 1), act.length),
+      free = !fin && act.length <= na, rk = {}, tie = false, adn = [], fb = false;
+    sortedA.forEach(function (x, k) { x.pos = (k > 0 && x.s === sortedA[k - 1].s) ? sortedA[k - 1].pos : k + 1; rk[x.n] = x.pos; if (k > 0 && x.pos === sortedA[k - 1].pos) tie = true; });
+    wd.forEach(function (x) { x.pos = null; });
+    if (full) {
+      adn = sortedA.filter(function (x) { return x.pos <= na; });
+      if (!fin && !free && adn.length >= sortedA.length) { adn = sortedA.slice(0, na); fb = true; } /* tutti pari: passano i primi per ordine di inserimento */
+    } else if (free) adn = act.slice();
+    return { sorted: sortedA.concat(wd), full: full, tie: tie, ok: full || free, free: free, na: na, rk: rk, adv: adn.map(function (x) { return x.n; }), fb: fb, extra: full ? Math.max(0, adn.length - na) : 0 };
+  }
 
   /* ---------------- Formule dei punti ----------------
      Piccolo linguaggio per le formule dei punti, senza eval: numeri, variabili,
@@ -301,9 +415,11 @@
 
   var TF = {
     seedOrder: seedOrder,
-    deBuild: deBuild, deEval: deEval,
+    deBuild: deBuild, deEval: deEval, deSeedMatch: deSeedMatch, deSeedSafe: deSeedSafe,
+    elSetWinner: elSetWinner, elUnsetWinner: elUnsetWinner, elClearFrom: elClearFrom, elForfeits: elForfeits, thirdForfeit: thirdForfeit,
     swStandings: swStandings, swPair: swPair, swDone: swDone, swDefaultRounds: swDefaultRounds,
-    rrMatches: rrMatches, rrStandings: rrStandings, rrCmp: rrCmp,
+    rrMatches: rrMatches, rrStandings: rrStandings, rrCmp: rrCmp, rrJoin: rrJoin,
+    ffaEval: ffaEval,
     fxCompile: fxCompile, fxMatchVars: fxMatchVars, FX_MATCH_VARS: FX_MATCH_VARS
   };
   if (typeof module !== "undefined" && module.exports) module.exports = TF;

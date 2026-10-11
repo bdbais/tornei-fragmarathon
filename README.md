@@ -18,6 +18,17 @@ Creato da [fragmarathon.net](https://fragmarathon.net) e Lazarus.
 | Sistema svizzero | Turni con avversari di punteggio simile, senza rivincite, spareggio Buchholz, playoff facoltativi. |
 | Gironi all'italiana | Tutti contro tutti a giornate, vittoria 3 e pareggio 1, playoff facoltativi. |
 
+## Cambiare i partecipanti a torneo iniziato
+
+Dopo il primo **START** il sorteggio non si rifà mai da solo. In **PAUSA** si aggiungono o si tolgono squadre e giocatori, e **START** riprende da dove era, con lo stesso tabellone e gli stessi risultati. Le regole sono uguali per squadre e giocatori singoli.
+
+- **Componenti di una squadra**: si cambiano nella scheda del gioco in pausa e anche a torneo concluso (dopo START le squadre fisse della scheda Partecipanti non arrivano più al gioco), senza toccare tabellone, gironi o risultati. I punti della Hall of Fame vanno a chi è in squadra quando la si consulta.
+- **Togliere** (× premuta due volte, la prima mostra cosa succederà): chi non ha ancora giocato e ha un posto che si può liberare esce come se non si fosse mai iscritto; gli altri si **ritirano**: restano con i risultati fatti, con la scritta *ritirata* o *ritirato*, e perdono a tavolino le partite che restano. Le vittorie a tavolino non hanno punteggio. Nelle classifiche a punti chi si ritira sta dietro a chi è in gara e non va né sul podio né ai playoff; prima dei playoff al suo posto entra il successivo della classifica. Se si ritirano tutti e due i giocatori di una partita non giocata, la vince a tavolino chi si è ritirato dopo. Nello svizzero il risultato della partita del turno va inserito prima di togliere qualcuno.
+- **Aggiungere**: il nuovo iscritto prende un posto libero senza spostare gli altri. Eliminazione diretta e doppia: al posto di un «Passa il turno» del primo turno (il tabellone non si ingrandisce). Gironi: nel girone più piccolo, con partite nuove in fondo al calendario. Svizzero: contro chi riposa, oppure dal turno dopo con 0 punti. Free for all: solo nel primo turno. Non si aggiunge più nessuno a playoff iniziati, a svizzero finito o a torneo concluso.
+- **Rifai il sorteggio** (si preme due volte, con backup automatico): cancella tabellone e risultati di quel gioco e torna alle iscrizioni; è l'unico modo di rifare il sorteggio. Dopo il primo START formato, tipo di partecipanti, gironi e giocatori per girone o per squadra si cambiano solo così.
+
+I tornei salvati in pausa con la 3.9 dopo aver cambiato i partecipanti mostrano un avviso: START integra quelle modifiche senza sorteggio; formato e impostazioni del sorteggio cambiati in pausa non si applicano (servirebbe «Rifai il sorteggio»).
+
 ## Funzioni
 
 - **Schermo proiettore**: l'icona su ogni pannello lo manda su una finestra separata (sul secondo monitor, a tutto schermo), da solo e ingrandito al massimo. `PgUp`/`PgDn` cambiano pannello; la **galleria** li fa scorrere da sola ogni N secondi, anche su tutti i giochi. Si aggiorna in tempo reale.

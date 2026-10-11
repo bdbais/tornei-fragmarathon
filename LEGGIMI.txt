@@ -1,5 +1,6 @@
 TORNEI FRAGMARATHON 3.7.0
 Creato da fragmarathon.net e Lazarus.
+Contributi: Tony Manga e Hirish.
 
 INSTALLARE (consigliato)
 1. Scarica "Tornei-Fragmarathon-Setup-3.7.0.exe" da

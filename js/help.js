@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "tornei", "partecipanti", "squadre", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "sala", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "tornei", "partecipanti", "squadre", "modifiche", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "sala", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     sala: { t: "Sala: postazioni, oggetti e server", h:
       "<p>La scheda <b>Sala</b> è la pianta della LAN, in 2D e in 3D. Si salva con il torneo.</p>" +
@@ -29,7 +29,7 @@ window.HELP = {
       "<ol><li>Nella scheda <b>Partecipanti</b> scrivi tutti i nomi una volta sola.</li>" +
       "<li>Se ci sono giochi a squadre, crea le squadre fisse nella stessa scheda.</li>" +
       "<li>Apri la scheda di un gioco, scegli il <b>formato</b> e premi <b>Aggiungi tutti</b> (oppure <b>Abbina team</b>).</li>" +
-      "<li>Premi <b>START</b>: il programma fa il sorteggio e crea tabellone o gironi.</li>" +
+      "<li>Premi <b>START</b>: il programma fa il sorteggio e crea tabellone o gironi. Da qui in poi <b>PAUSA</b> e <b>START</b> sospendono e riprendono il torneo senza rifare il sorteggio (vedi <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>).</li>" +
       "<li>Inserisci i punteggi man mano. Il torneo avanza da solo; quando serve una tua decisione compare un pulsante arancio.</li>" +
       "<li>Clicca l'icona del proiettore su un pannello per mostrarlo in sala.</li></ol>" +
       "<p class='note'>Tutto si salva da solo a ogni modifica. In più, a ogni cambio di turno o girone viene creato un backup automatico.</p>" +
@@ -44,17 +44,89 @@ window.HELP = {
 
     squadre: { t: "Scheda Squadre", h:
       "<p>Mostra tutte le squadre di tutti i giochi con i loro componenti, per controllare chi gioca con chi. Puoi stamparle in PDF A4.</p>" +
-      "<p>Le squadre si modificano nella scheda <b>Partecipanti</b> (squadre fisse) o nella scheda del gioco, con il torneo in <b>PAUSA</b>.</p>" },
+      "<p>Prima di START le squadre fisse si modificano nella scheda <b>Partecipanti</b> e si copiano nel gioco con <b>Abbina team</b>. Dopo START i componenti si cambiano solo nella scheda del gioco, con il torneo in <b>PAUSA</b>: tabellone e risultati restano (vedi <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>).</p>" },
+
+    modifiche: { t: "Cambiare i partecipanti a torneo iniziato", h:
+      "<p>Dopo il primo <b>START</b> il sorteggio <b>non si rifà mai da solo</b>, nemmeno se aggiungi o togli squadre o giocatori. Premi <b>PAUSA</b>, fai le modifiche e premi <b>START</b>: il torneo riprende da dove era, con lo stesso tabellone e gli stessi risultati. Le regole sono le stesse per le squadre e per i giocatori singoli.</p>" +
+      "<h4>Componenti di una squadra</h4>" +
+      "<p>Aggiungere, togliere o sostituire giocatori in una squadra non cambia mai tabellone, gironi o risultati. Si può fare in pausa e anche a torneo concluso, nella scheda del gioco: dopo START le modifiche alle squadre fisse della scheda <b>Partecipanti</b> non arrivano più al gioco. Proiettore, bot Telegram e canali Discord seguono subito i componenti nuovi.</p>" +
+      "<p>I punti della Hall of Fame vanno a chi è in squadra quando la consulti: chi esce da una squadra perde i punti di quel gioco, chi entra li prende.</p>" +
+      "<h4>Togliere una squadra o un giocatore</h4>" +
+      "<p>Con il torneo in pausa premi due volte la <b>×</b> accanto al nome. Al primo clic il programma ti dice cosa succederà, al secondo confermi.</p>" +
+      "<ul>" +
+      "<li><b>Se non ha ancora giocato</b> e il suo posto si può liberare, esce come se non si fosse mai iscritto e il posto torna libero per un altro." +
+      "<ul>" +
+      "<li>Eliminazione diretta e doppia: solo se la sua partita del primo turno ha un avversario e non è stata giocata, e nel tabellone restano almeno due partecipanti. L'avversario passa il turno.</li>" +
+      "<li>Gironi all'italiana: le sue partite si annullano. Se nel girone resta un solo partecipante, passa nel girone più piccolo con partite nuove in fondo al calendario.</li>" +
+      "<li>Sistema svizzero: se nel turno c'è chi riposa, il suo avversario gioca contro di lui; altrimenti riposa e prende la vittoria.</li>" +
+      "<li>Free for all: solo nel primo turno. Se nel girone resta un solo giocatore, passa in un girone che non ha ancora giocato, oppure passa il turno senza giocare.</li>" +
+      "</ul></li>" +
+      "<li><b>Altrimenti si ritira</b>: resta nel tabellone o in classifica con la scritta <i>ritirata</i> o <i>ritirato</i> e con i risultati che ha fatto, e <b>perde a tavolino</b> le partite che gli restano.</li>" +
+      "</ul>" +
+      "<h4>Cosa succede quando qualcuno si ritira</h4>" +
+      "<ul>" +
+      "<li><b>I risultati già inseriti restano.</b> Una vittoria a tavolino non ha punteggio: conta come vittoria, ma non cambia la differenza punti, i punti fatti né i punti della Hall of Fame. Nelle formule vale come un riposo: <code>vinta</code> = 1 e <code>bye</code> = 1.</li>" +
+      "<li><b>Prima di togliere qualcuno, inserisci i risultati delle partite che ha già giocato.</b> Un risultato inserito vale sempre più del tavolino, anche se lo scrivi dopo. Nel sistema svizzero no: la partita del turno diventa subito un riposo a tavolino e il risultato non si può più inserire, quindi scrivilo prima.</li>" +
+      "<li><b>Eliminazione diretta</b>: l'avversario passa il turno a tavolino, anche quello che arriverà più avanti, appena sarà noto. Se il ritirato è in finale, l'avversario vince il torneo e il ritirato è secondo. Vale anche per la finale del 3º posto.</li>" +
+      "<li><b>Doppia eliminazione</b>: perde a tavolino nel tabellone vincenti, scende nel tabellone perdenti e perde a tavolino anche lì. Se la finale è vinta a tavolino, la bella non si gioca. Se si ritirano tutti e due i giocatori di una partita non giocata, la vince a tavolino chi si è ritirato dopo: così una vittoria a tavolino già ottenuta non cambia.</li>" +
+      "<li><b>Sistema svizzero</b>: la sua partita del turno in corso, se non è stata giocata, la vince a tavolino l'avversario. Vale come un riposo: 3 punti, e chi la riceve non riposerà più. Dal turno dopo il ritirato non viene più accoppiato. I suoi risultati restano e contano per il Buchholz degli avversari, ma in classifica sta dietro a chi è in gara e non va né sul podio né ai playoff.</li>" +
+      "<li><b>Gironi all'italiana</b>: i risultati giocati restano e le partite che gli mancano le vincono a tavolino gli avversari, 3 punti ciascuno. Non passa ai playoff: al suo posto passa il successivo della classifica. Senza playoff, nella classifica finale sta dietro a chi è in gara. Se si ritirano tutti e due, la partita non giocata la vince a tavolino chi si è ritirato dopo, che si tiene i punti già presi.</li>" +
+      "<li><b>Free for all</b>: resta nel suo girone, con il punteggio se l'ha già fatto, ma non passa il turno e non va sul podio: passano i primi tra chi resta. Se in gara restano al massimo tanti giocatori quanti ne passano, passano tutti senza bisogno di giocare. Chi è già stato eliminato in un turno passato non si ritira: togliendolo non cambia niente.</li>" +
+      "<li><b>Playoff dopo gironi o svizzero</b>: se si ritira prima di giocare la sua prima partita dei playoff, al suo posto entra il <b>successivo della classifica</b> (con più gironi, chi lo segue nel suo girone). Se restano in gara meno di due partecipanti, i playoff non si giocano e vale la classifica. Se ha già giocato, vale la regola dell'eliminazione diretta.</li>" +
+      "<li><b>Classifica finale</b>: chi si ritira prende il posto di chi perde nel turno in cui perde a tavolino. Nelle classifiche a punti sta dietro a chi è rimasto in gara.</li>" +
+      "<li>Chi si è ritirato non può rientrare. Se l'hai tolto per errore, usa subito <b>Annulla cancellazione</b> (resta un minuto, finché non cambi altro) oppure <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</li>" +
+      "</ul>" +
+      "<h4>Aggiungere una squadra o un giocatore</h4>" +
+      "<p>Scrivi il nome e premi <b>Aggiungi</b>: il programma lo mette in un posto libero, senza spostare gli altri, e ti dice dove.</p>" +
+      "<ul>" +
+      "<li><b>Eliminazione diretta e doppia eliminazione</b>: entra al posto di un <i>Passa il turno</i> del primo turno, se chi passava il turno non ha ancora giocato quello dopo. Ora i due si affrontano. Se i posti liberi sono più di uno, si sorteggia solo quello del nuovo arrivato." +
+      "<ul>" +
+      "<li>Se il tabellone è pieno (4, 8, 16, 32… partecipanti), togli prima chi non ha ancora giocato: il suo posto si libera.</li>" +
+      "<li>Altrimenti serve <b>Rifai il sorteggio</b>.</li>" +
+      "</ul></li>" +
+      "<li><b>Gironi all'italiana</b>: entra nel girone con meno partecipanti in gara (mai in uno dove si sono ritirati tutti) e gioca una partita contro ognuno, in giornate aggiunte in fondo al calendario. Contro chi si è ritirato vince a tavolino. Si può solo prima dei playoff.</li>" +
+      "<li><b>Sistema svizzero</b>: se nel turno in corso qualcuno riposa, gioca subito contro di lui; altrimenti entra dal turno dopo con 0 punti. All'ultimo turno, se nessuno riposa, non fa più in tempo: puoi aumentare i <b>Turni</b>.</li>" +
+      "<li><b>Free for all</b>: si entra solo durante il primo turno, nel girone più piccolo che non ha ancora punteggi e non è pieno.</li>" +
+      "<li>Quando i playoff sono iniziati, quando lo svizzero è finito o quando il torneo è concluso non si aggiunge più nessuno.</li>" +
+      "<li>Le iscrizioni dal bot Telegram entrano nel gioco solo prima di START: dopo, aggiungi il nome a mano.</li>" +
+      "</ul>" +
+      "<h4>Impostazioni dopo START</h4>" +
+      "<p>Dopo il primo START non si cambiano più:</p>" +
+      "<ul>" +
+      "<li>il formato;</li>" +
+      "<li>giocatori singoli o squadre;</li>" +
+      "<li>il numero di gironi;</li>" +
+      "<li>i giocatori per girone e quanti passano per girone;</li>" +
+      "<li>i giocatori per squadra.</li>" +
+      "</ul>" +
+      "<p>Sono bloccati anche <b>Aggiungi tutti</b>, <b>Crea squadre casuali</b> e <b>Abbina team</b>: da qui in poi si aggiunge o si toglie un partecipante alla volta.</p>" +
+      "<p>In pausa restano modificabili, senza rifare niente:</p>" +
+      "<ul>" +
+      "<li>i <b>Turni</b> dello svizzero, ma non meno di quelli già creati;</li>" +
+      "<li>quanti vanno ai <b>Playoff</b>, finché i playoff non sono iniziati;</li>" +
+      "<li>la <b>bella</b> della doppia eliminazione, finché la finale non ha un risultato.</li>" +
+      "</ul>" +
+      "<h4>Rifai il sorteggio</h4>" +
+      "<p>Il sorteggio si rifà solo se lo chiedi tu: in pausa premi <b>Rifai il sorteggio</b> due volte.</p>" +
+      "<ul>" +
+      "<li>Di quel gioco si cancellano tabellone, gironi, risultati e server assegnati agli incontri.</li>" +
+      "<li>Partecipanti, squadre e impostazioni restano; chi si era ritirato esce dall'elenco.</li>" +
+      "<li>Il gioco torna alle iscrizioni: cambia formato o impostazioni se serve, poi premi START per il nuovo sorteggio.</li>" +
+      "<li>Prima viene fatto un backup automatico, e per un minuto puoi usare <b>Annulla cancellazione</b>.</li>" +
+      "</ul>" +
+      "<h4>Cosa vedono gli altri</h4>" +
+      "<p>Proiettore, bot Telegram e canali Discord si aggiornano subito. Chi entra riceve <i>Tocca a te</i> quando ha una partita. Le vittorie a tavolino compaiono tra i risultati e chiudono il canale Discord della partita con un messaggio. Il canale di una partita che non si gioca più viene cancellato.</p>" },
 
     ffa: { t: "Free for all a punti", h:
       "<p>Tutti i partecipanti di un girone giocano insieme nella stessa partita (battle royale, Quake, giochi di corse): vince chi fa più punti.</p>" +
-      "<h4>Impostazioni</h4><ul><li><b>Giocatori per girone</b>: un numero qualsiasi da 2 in su. Se i conti non tornano i gironi si bilanciano da soli (per esempio 10 giocatori con gironi da 4 diventano 4, 3, 3) e non nasce mai un girone con una sola persona.</li>" +
+      "<h4>Impostazioni</h4><ul><li><b>Giocatori per girone</b>: un numero qualsiasi da 2 in su. Se i conti non tornano i gironi si bilanciano da soli (per esempio 10 giocatori con gironi da 4 diventano 4, 3, 3) e al sorteggio non nasce mai un girone con una sola persona.</li>" +
       "<li><b>Passano per girone</b>: quanti vanno al turno dopo.</li></ul>" +
       "<h4>Durante il torneo</h4><ul><li>Scrivi i punti di ognuno; con <kbd>Invio</kbd> passi al campo successivo.</li>" +
       "<li>I pareggi sono ammessi: chi è a pari punti sul limite passa insieme.</li>" +
       "<li><b>Rimescola</b> rifà i gironi del turno corrente; <b>Bilancia</b> mette i più forti in gironi diversi.</li>" +
       "<li>Trascina la maniglia ⠿ su un altro nome per scambiare due giocatori, o su un girone per spostarlo lì. Chi viene spostato perde i punti di quel turno.</li>" +
-      "<li>Quando tutti hanno un punteggio, premi <b>Genera turno successivo</b>. L'ultimo turno con un solo girone è la finale.</li></ul>" },
+      "<li>Quando tutti hanno un punteggio, premi <b>Genera turno successivo</b>. L'ultimo turno con un solo girone è la finale.</li></ul>" +
+      "<p>Ritiri e nuovi iscritti a torneo iniziato: <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>.</p>" },
 
     elim: { t: "Eliminazione diretta", h:
       "<p>Partite uno contro uno: chi perde esce. È il formato dei playoff di quasi tutti i tornei.</p>" +
@@ -62,7 +134,8 @@ window.HELP = {
       "<li>Inserisci i punteggi: vince il più alto e avanza da solo. Puoi anche toccare il nome del vincitore.</li>" +
       "<li>Se correggi un risultato, le partite successive che ne dipendevano vengono azzerate.</li>" +
       "<li>Si gioca la finale per il 3º posto tra i perdenti delle semifinali.</li>" +
-      "<li>Finché una partita del primo turno non ha risultati, trascina ⠿ su un altro nome per scambiare gli accoppiamenti.</li></ul>" },
+      "<li>Finché una partita del primo turno non ha risultati, trascina ⠿ su un altro nome per scambiare gli accoppiamenti.</li></ul>" +
+      "<p>Ritiri e nuovi iscritti a torneo iniziato: <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>.</p>" },
 
     double: { t: "Doppia eliminazione", h:
       "<p>Si esce solo dopo <b>due sconfitte</b>: è il formato chiamato anche <i>double bracket</i> o <i>double elimination</i>, quello di EVO e di molti tornei di picchiaduro e sparatutto.</p>" +
@@ -71,7 +144,8 @@ window.HELP = {
       "<li><b>Finale</b>: il vincitore dei vincenti contro il vincitore dei perdenti.</li>" +
       "<li><b>Bella</b> (bracket reset): se vince chi arriva dai perdenti, entrambi hanno una sconfitta e si gioca un'ultima partita. Puoi disattivarla nelle impostazioni.</li>" +
       "<li>Il 3º posto è chi perde la finale del tabellone perdenti.</li></ul>" +
-      "<p>I risultati si inseriscono come nell'eliminazione diretta. Se ne correggi uno, le partite che dipendevano da quello si liberano da sole.</p>" },
+      "<p>I risultati si inseriscono come nell'eliminazione diretta. Se ne correggi uno, le partite che dipendevano da quello si liberano da sole.</p>" +
+      "<p>Ritiri e nuovi iscritti a torneo iniziato: <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>.</p>" },
 
     swiss: { t: "Sistema svizzero", h:
       "<p>Tutti giocano lo stesso numero di turni e nessuno viene eliminato subito. A ogni turno si affronta chi ha un punteggio simile, senza rivincite. È la fase a gruppi dei Major di Counter-Strike.</p>" +
@@ -80,7 +154,8 @@ window.HELP = {
       "<h4>Punti e classifica</h4><ul><li>Vittoria 3, pareggio 1 (punteggi uguali), sconfitta 0.</li>" +
       "<li>Con un numero dispari di partecipanti, a turno uno riposa e prende la vittoria (mai due volte la stessa persona).</li>" +
       "<li>A pari punti decide il <b>Buchholz</b>: la somma dei punti degli avversari affrontati. Chi ha battuto avversari forti sta più in alto.</li></ul>" +
-      "<p>Prima di inserire risultati puoi trascinare ⠿ i nomi per cambiare gli accoppiamenti del turno.</p>" },
+      "<p>Prima di inserire risultati puoi trascinare ⠿ i nomi per cambiare gli accoppiamenti del turno.</p>" +
+      "<p>Ritiri e nuovi iscritti a torneo iniziato: <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>.</p>" },
 
     rr: { t: "Gironi all'italiana", h:
       "<p>Nel girone tutti giocano contro tutti una volta. È il formato dei campionati e della fase a gironi dei Worlds.</p>" +
@@ -88,7 +163,8 @@ window.HELP = {
       "<li><b>Playoff</b>: quanti vanno all'eliminazione diretta finale. I primi di ogni girone entrano per primi e hanno l'accoppiamento migliore.</li>" +
       "<li>Vittoria 3 punti, pareggio 1. A pari punti contano la differenza punti e poi i punti fatti.</li>" +
       "<li>Le partite sono divise in <b>giornate</b>: nessuno gioca due partite nella stessa giornata.</li>" +
-      "<li>Prima dei risultati puoi trascinare ⠿ un partecipante su un altro girone o su un altro nome; il calendario si rifà da solo.</li></ul>" },
+      "<li>Prima dei risultati puoi trascinare ⠿ un partecipante su un altro girone o su un altro nome; il calendario si rifà da solo.</li></ul>" +
+      "<p>Ritiri e nuovi iscritti a torneo iniziato: <a href='#' data-topic='modifiche'>Cambiare i partecipanti a torneo iniziato</a>.</p>" },
 
     risultati: { t: "Risultati finali", h:
       "<p>Il podio di ogni gioco concluso, con i componenti delle squadre.</p>" +
@@ -108,7 +184,7 @@ window.HELP = {
       "<p>Ogni torneo ha il suo riquadro <b>Calcolo dei punti</b> nella scheda del gioco. Le formule si scrivono come in un foglio di calcolo e si vede subito il risultato su un esempio; se c'è un errore viene spiegato in rosso e la formula non viene salvata.</p>" +
       "<h4>Free for all</h4><p>Scegli i <b>campi</b> da inserire per ogni partecipante (per esempio Posizione e Uccisioni) e la <b>formula</b> che li trasforma nel punteggio. Il punteggio decide la classifica del girone e conta per la Hall of Fame. Modelli pronti: piazzamento + uccisioni (battle royale), punti stile Formula 1, uccisioni e morti, KDA. I campi si cambiano con il torneo in pausa; la formula sempre, e i punteggi si ricalcolano.</p>" +
       "<h4>Partite uno contro uno</h4><p><b>Punti in classifica</b> (gironi all'italiana e svizzero): quanti punti vale ogni partita, di base <code>3*vinta + pareggio</code>. <b>Punti per la Hall of Fame</b> (tutti i formati a partite): di base i punti fatti.</p>" +
-      "<p>Variabili delle partite: <code>punti</code> (fatti), <code>avversario</code> (subiti), <code>diff</code>, <code>vinta</code>, <code>pareggio</code>, <code>persa</code> (valgono 1 o 0), <code>bye</code> (riposo nello svizzero).</p>" +
+      "<p>Variabili delle partite: <code>punti</code> (fatti), <code>avversario</code> (subiti), <code>diff</code>, <code>vinta</code>, <code>pareggio</code>, <code>persa</code> (valgono 1 o 0), <code>bye</code> (vittoria senza giocare: riposo nello svizzero o vittoria a tavolino contro chi si è ritirato).</p>" +
       "<h4>Cosa si può scrivere</h4><ul><li>Operazioni: <code>+ - * / % ^</code> e parentesi; i decimali con il punto.</li>" +
       "<li>Confronti: <code>&gt; &lt; &gt;= &lt;= == !=</code>, e <code>&amp;&amp;</code> (e), <code>||</code> (o); <code>condizione ? a : b</code>.</li>" +
       "<li>Funzioni (argomenti separati da <code>;</code>): <code>min</code>, <code>max</code>, <code>abs</code>, <code>arrotonda</code>, <code>giu</code>, <code>su</code>, <code>se(condizione; a; b)</code>, <code>tabella(n; v1; v2; …)</code> che dà il valore n-esimo (utile per i punti per piazzamento).</li></ul>" +

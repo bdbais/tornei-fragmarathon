@@ -206,3 +206,9 @@ input[type=password]{flex:1 1 200px}
 .botppl select[multiple]{min-width:150px}
 .botppl td{vertical-align:top}
 #brg{min-width:160px}
+
+/* chi ha lasciato il torneo e le vittorie a tavolino: segni discreti accanto al nome, mai barrati con la riga */
+.wd{display:inline-block;margin-left:2px;padding:0 6px;border:1px dashed currentColor;border-radius:4px;font-size:.72rem;font-weight:600;line-height:1.5;color:var(--mut);text-decoration:none;vertical-align:middle;white-space:nowrap}
+.ffl{display:inline-block;font-size:.74rem;font-style:italic;font-weight:600;color:var(--mut);text-decoration:none;white-space:nowrap}
+.fft{margin:-2px 0 6px;text-align:center}
+#wfit .wd,#wfit .ffl{color:inherit}
