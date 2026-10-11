@@ -752,7 +752,8 @@
       if (e.target.id !== "salacv" || !geo) return;
       var pt = toRoom(e), h = hit(pt); hideMenu();
       if (e.button === 2) return;
-      if (!h && sel && sel.item) keepSel = { id: sel.item, t: Date.now() };
+      /* il doppio clic vale solo nel punto del clic che ha tolto la selezione: un clic su un punto vuoto senza selezione la dimentica */
+      if (!h) { if (sel && sel.item) keepSel = { id: sel.item, t: Date.now(), x: e.clientX, y: e.clientY }; else if (keepSel && (Date.now() - keepSel.t >= 800 || Math.abs(e.clientX - keepSel.x) >= 8 || Math.abs(e.clientY - keepSel.y) >= 8)) keepSel = null; }
       select(h);
       /* trascinando una postazione si sposta tutta la fila */
       var it = selItem(); if (it && h) { drag = { it: it, dx: it.x - pt.x, dy: it.y - pt.y, moved: false }; e.target.setPointerCapture(e.pointerId); }
@@ -767,7 +768,7 @@
       if (e.target.id !== "salacv" || !geo) return;
       var pt = toRoom(e); if (hit(pt)) return;
       var X = sala(); if (pt.x < 0 || pt.y < 0 || pt.x > X.w || pt.y > X.h) return;
-      var src = keepSel && Date.now() - keepSel.t < 800 && X.items.filter(function (i) { return i.id === keepSel.id; })[0]; keepSel = null;
+      var src = keepSel && Date.now() - keepSel.t < 800 && Math.abs(e.clientX - keepSel.x) < 8 && Math.abs(e.clientY - keepSel.y) < 8 && X.items.filter(function (i) { return i.id === keepSel.id; })[0]; keepSel = null;
       if (!src) return;
       e.preventDefault(); cloneItem(src, pt);
     });

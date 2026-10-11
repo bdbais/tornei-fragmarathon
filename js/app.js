@@ -4,6 +4,8 @@
   window.addEventListener("error",function(e){if(n++<50)window.desk.logError("errore",(e.message||"")+" @ "+(e.filename||"").split("/").pop()+":"+e.lineno+(e.error&&e.error.stack?"\n"+e.error.stack:""))});
   window.addEventListener("unhandledrejection",function(e){if(n++<50)window.desk.logError("promessa",String(e.reason&&e.reason.stack||e.reason))});
 })();
+/* tastiere cinese e giapponese: Invio ed Esc che confermano o annullano la composizione non sono comandi della pagina */
+document.addEventListener("keydown",function(e){if(e.isComposing||e.keyCode===229)e.stopImmediatePropagation()},true);
 var KEY="tornei-v2",WALL=/[?&]wall=1/.test(location.search);
 var DEF={quake:{l:"QUAKE LIVE",m:"ffa",t:0},tf2:{l:"Team Fortress 2",m:"elim",t:1},wreck:{l:"Wreckfest",m:"ffa",t:0},cs2:{l:"Counter-Strike 2",m:"elim",t:1},fifa:{l:"FIFA 26",m:"ffa",t:0}};
 var BUILTIN=Object.keys(DEF),ORIGL={},ORIGD=JSON.parse(JSON.stringify(DEF));BUILTIN.forEach(function(k){ORIGL[k]=DEF[k].l});
@@ -2549,14 +2551,16 @@ function discordVM(){
   return{ev:ev.id,guild:ev.dguild,voice:!!ev.dvoice,title:S.ui.title||UI0.title,accounts:Object.keys(acc),games:games,
     t:{only:evT("Questo canale lo vedono solo i giocatori della partita e gli organizzatori."),server:evT("Server"),pass:evT("password"),players:evT("Giocatori")}};
 }
-var dcT=null,dcErr="",dcLast=null,dcChk=0;
+var dcT=null,dcErr="",dcLast=null,dcChk=0,dcMove="";
 /* id del torneo aperto se i suoi canali Discord sono attivi; si ricontrolla anche quando parte il timer
    (nel frattempo può essere stato aperto un altro torneo, o tolti i canali) */
 function dcOn(){var ev=S.ev||{};return ev.id&&ev.dguild&&ev.dchan&&!ev.draft?ev.id:null}
 function dcRun(){var vm;try{vm=discordVM()}catch(e){if(DESK.logError)DESK.logError("discord",String(e&&e.stack||e));return}
   /* "Aggiorna i canali adesso": discord.js controlla anche i canali pronti e rifà quelli cancellati a mano su Discord */
   if(dcChk){vm.now=true;dcChk=0}
-  DESK.discordSync(vm).then(function(r){if(r&&r.err){if(r.err!==dcErr)toast(r.err);dcErr=r.err}else dcErr="";if((S.ev&&S.ev.id)!==vm.ev)return;dcLast=r||{};dcStat()}).catch(function(){})}
+  /* cambio di server: i canali del server vecchio si eliminano solo dopo la conferma dell'utente (anche dopo un ripristino) */
+  vm.confirmMove=!!(dcMove&&dcMove===vm.guild);
+  DESK.discordSync(vm).then(function(r){if(r&&!r.needConfirm&&vm.confirmMove)dcMove="";if(r&&r.err){if(r.err!==dcErr)toast(r.err);dcErr=r.err}else dcErr="";if((S.ev&&S.ev.id)!==vm.ev)return;dcLast=r||{};dcStat()}).catch(function(){})}
 function discordPush(now,chk){
   if(!DESK||!DESK.discordSync||WALL)return;if(chk)dcChk=1;if(later(function(){discordPush(now)}))return;
   clearTimeout(dcT);dcT=null;var id=dcOn();if(!id){dcChk=0;return}
@@ -2568,7 +2572,8 @@ function dcStat(){
   var el=$("dcstat");if(!el||!dcLast)return;var r=dcLast,h="";
   /* errore su singole partite (r.errors): la sincronizzazione è finita, i conteggi restano e l'errore va sotto */
   var part=r.err&&r.errors&&r.errors.length&&!r.skipped;
-  if(r.err&&!part)h='<span class="cres err">'+esc(r.err)+'</span>';
+  if(r.needConfirm)h='<span class="cres err">Questo torneo ha canali in un altro server Discord: spostandolo nel server scelto, quelli verranno eliminati.</span> <b>'+(r.channels||0)+'</b><br><button type="button" id="dcmove">Sposta nel server scelto ed elimina i canali vecchi</button>';
+  else if(r.err&&!part)h='<span class="cres err">'+esc(r.err)+'</span>';
   else if(!r.skipped)h='<span>Canali delle partite</span>: <b>'+(r.channels||0)+'</b>'+(r.created?' <span>(nuovi</span> <b>'+r.created+'</b>)':'')+
     (r.missing&&r.missing.length?'<br><span>Account non trovati nel server Discord</span>: <b data-noi18n>'+esc(r.missing.join(", "))+'</b>':'')+
     (part?'<br><span class="cres err">'+esc(r.err)+'</span>':'');
@@ -2614,6 +2619,7 @@ $("editbox").addEventListener("click",function(e){
       if(!S.ev||S.ev.id!==evId){if(evId&&window.HOME&&window.HOME.editOther){window.HOME.editOther(evId,function(st){st.ev=st.ev||{};st.ev.discord=r.url;return true});toast("Invito al server Discord creato.")}
         else toast("Invito creato, ma nel frattempo è stato aperto un altro torneo: torna al torneo e crealo di nuovo.");return}
       S.ev.discord=r.url;var i=$("dcinv");if(i)i.value=r.url;save();toast("Invito al server Discord creato.")}).catch(function(){b.disabled=false})}
+  else if(b.id==="dcmove"){if(!S.ev||!S.ev.dguild)return;dcMove=S.ev.dguild;discordPush(1)}
   else if(b.id==="dcsync"){if(!S.ev.dguild){toast("Scegli prima il server Discord del torneo.");return}if(!S.ev.dchan){S.ev.dchan=true;var c=$("dcchan");if(c)c.checked=true;save()}discordPush(1,1);toast("Aggiorno i canali Discord…")}
   else if(b.id==="dcclear"){
     if(!dcArm){dcArm=true;b.textContent="Conferma: elimina i canali";b.classList.add("p");setTimeout(function(){dcArm=false;if(b.isConnected){b.textContent="Elimina i canali di questo torneo";b.classList.remove("p")}},5000);return}
@@ -2630,7 +2636,7 @@ $("editbox").addEventListener("change",function(e){
     if(og&&t.value!==og&&S.ev.dchan&&!(dcLast&&dcLast.channels===0)&&!(dcGArm&&dcGArm.ev===S.ev.id&&dcGArm.to===t.value&&Date.now()<dcGArm.until)){
       dcGArm={ev:S.ev.id,to:t.value,until:Date.now()+8000};t.value=og;
       toast("Cambiando server Discord, i canali di questo torneo nel server attuale verranno eliminati. Per confermare scegli di nuovo la stessa voce entro 8 secondi.");return}
-    dcGArm=null;S.ev.dguild=t.value;save();discordPush(1)}
+    dcGArm=null;if(og&&t.value&&t.value!==og)dcMove=t.value;S.ev.dguild=t.value;save();discordPush(1)}
   else if(t.id==="dcchan"){S.ev.dchan=t.checked;save();if(t.checked){if(!S.ev.dguild)toast("Scegli anche il server Discord del torneo.");discordPush(1)}}
   else if(t.id==="dcvoice"){S.ev.dvoice=t.checked;save();discordPush(1)}
 });
@@ -2659,15 +2665,15 @@ $("rosterBox").addEventListener("change",function(e){
 });
 function botDiscord(m){
   var nm=String(m.name||"").trim(),acc=dcOk(m.account);if(!nm||!acc)return;
-  /* il bot può solo riempire un account vuoto: cambiarne uno già scritto lo decide l'organizzatore */
-  var evs=(m.evs||[]).filter(Boolean),here=S.ev&&S.ev.id&&(!evs.length||evs.indexOf(S.ev.id)>=0),n=0,diff=0,ex=here&&sameName(S.roster,nm);
-  if(ex){S.disc=S.disc||{};if(S.disc[ex]&&S.disc[ex]!==acc)diff++;else{S.disc[ex]=acc;save();n++;if($("rdcbox")&&!$("rdcbox").hidden)renderDcRoster()}}
-  /* negli altri tornei si salva in modo asincrono: il messaggio aspetta tutti i salvataggi e dice se è servito a qualcosa */
+  /* il bot accetta /discord solo da collegamenti confermati dall'organizzatore: l'account si aggiorna, e se cambia lo si dice */
+  var evs=(m.evs||[]).filter(Boolean),here=S.ev&&S.ev.id&&(!evs.length||evs.indexOf(S.ev.id)>=0),n=0,old="",ex=here&&sameName(S.roster,nm);
+  if(ex){S.disc=S.disc||{};if(S.disc[ex]&&S.disc[ex]!==acc)old=S.disc[ex];if(S.disc[ex]!==acc){S.disc[ex]=acc;save();if($("rdcbox")&&!$("rdcbox").hidden)renderDcRoster()}n++}
+  /* negli altri tornei si salva in modo asincrono: il messaggio aspetta tutti i salvataggi */
   var oth=window.HOME&&window.HOME.editOther?evs.filter(function(id){return!(S.ev&&S.ev.id===id)}):[];
-  Promise.all(oth.map(function(id){return window.HOME.editOther(id,function(st){var x=sameName(st.roster,nm);if(!x)return false;ex=ex||x;if(st.disc&&st.disc[x]&&st.disc[x]!==acc){diff++;return false}st.disc=st.disc||{};st.disc[x]=acc;n++;return true})})).then(function(){
-    if(diff)toast("Il bot chiede di cambiare l'account Discord di "+(ex||nm)+" in "+acc+": cambialo a mano in Partecipanti, Account Discord se è corretto.");
-    else if(n)toast("Account Discord di "+(ex||nm)+" dal bot Telegram: "+acc+".");
-    else toast("Account Discord dal bot Telegram: "+nm+" non è tra i partecipanti.")});
+  Promise.all(oth.map(function(id){return window.HOME.editOther(id,function(st){var x=sameName(st.roster,nm);if(!x)return false;ex=ex||x;st.disc=st.disc||{};if(st.disc[x]===acc){n++;return false}if(st.disc[x])old=old||st.disc[x];st.disc[x]=acc;n++;return true})})).then(function(){
+    if(!n)toast("Account Discord dal bot Telegram: "+nm+" non è tra i partecipanti.");
+    else if(old)toast("Account Discord di "+(ex||nm)+" cambiato dal bot Telegram: "+old+" → "+acc+".");
+    else toast("Account Discord di "+(ex||nm)+" dal bot Telegram: "+acc+".")});
 }
 
 
@@ -2784,6 +2790,7 @@ window.__app={
   /* vero mentre la pagina lavora su un altro torneo (S non è quello aperto): niente salvataggi del file dell'evento */
   swapping:function(){return SWAP>0},
   /* proiettore: ridisegna i pannelli (sala.js lo chiama appena caricato, così la Sala compare subito) */
+  botRefresh:function(){botRefresh()},
   wallRebuild:function(){if(WALL&&$("wall"))wRebuild(false)}
 };
 lastJ=JSON.stringify(S);
