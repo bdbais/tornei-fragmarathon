@@ -12,6 +12,9 @@
    tools/i18n-extract.mjs estrae i modelli interi, segnaposto compresi.
 
    build(facts, opt) -> { md, data, lines }
+     facts.games[].seeded true = ci sono teste di serie: participants[].seed è la posizione (null per chi non lo è);
+     participants[].rating (facoltativo) = punteggio della ladder (js/ladder.js). La sorpresa usa le teste di serie,
+     o in mancanza la ladder.
      opt: { tr (frasi di questo file), trData (etichette dei fatti: fase, stato, formato; di base tr), now }
      lines: [{ game, id, at (ISO o null), time ("21:04", con la data se l'evento dura più giorni), stage, text, comment }] */
 (function (root) {
@@ -101,6 +104,18 @@
       "Sorpresa, signore e signori, sorpresa! {w}, testa di serie numero {i}, batte {l}, che partiva con il numero {j}!",
       "Chi l'avrebbe detto? {w}, numero {i} del tabellone, rovescia ogni pronostico contro {l}, numero {j}!",
       "Il tabellone diceva {l}, il campo dice {w}! La testa di serie numero {i} manda al tappeto la numero {j}."
+    ],
+    /* la stessa sorpresa fuori dai tabelloni (gironi, svizzero, manche): solo le frasi che non parlano di tabellone */
+    upsetG: [
+      "Clamoroso! La testa di serie numero {i}, {w}, abbatte la numero {j}, {l}. Pronostico in frantumi!",
+      "Sorpresa, signore e signori, sorpresa! {w}, testa di serie numero {i}, batte {l}, che partiva con il numero {j}!"
+    ],
+    /* sorpresa secondo la ladder (senza teste di serie): il perdente aveva almeno 100 punti più del vincitore */
+    upsetR: [
+      "Pronostico ribaltato! Sulla carta il favorito era {l}, ma a vincere è {w}!",
+      "Vince lo sfavorito! {w} batte {l} e manda in frantumi i pronostici della classifica.",
+      "La classifica diceva {l}, il campo dice {w}! Una vittoria contro ogni pronostico.",
+      "Davide contro Golia, e stavolta vince Davide: {w} supera {l}, il grande favorito della vigilia!"
     ],
     out: [
       "{w} passa il turno, e per {e} il torneo finisce qui. Onore a chi esce!",
@@ -294,7 +309,8 @@
   var LEGEND = {
     about: "Field guide for this JSON. The texts intro, outro and comment are only commentary in the style of a TV host: the facts are the results, the times and the standings.",
     times: "The fields at, started, finished and generated are ISO 8601 with the UTC offset of the computer that wrote the file. The field at is null for a match that is not played yet, and also for a played match whose time was not recorded (state done with at null: older versions of the program).",
-    "participants.seed": "Order of registration, starting from 1. It is a seeding rank only when the game has seeded true; with seeded false the bracket was drawn at random and the seed says nothing about the strength of the participant.",
+    "participants.seed": "Seeding rank set by the organizer before the draw (1 = top seed), or null for a participant without a seed; the game has seeded true when it had seeds. Files from older versions put here the order of registration: with seeded false the bracket was drawn at random and that number says nothing about the strength of the participant.",
+    "participants.rating": "Rating in the ladder across tournaments (Elo style, everyone starts at 2000) from the last calculation of the ladder before the file was written, so it can already include the results of this tournament; for a team it is the mean of its members. Null when the participant has no rating.",
     "participants.withdrawn": "The participant left the tournament; the matches left to play were awarded to the opponents (forfeit true).",
     "matches.order": "Position of the match in the bracket or schedule, round after round; the text follows the times when every played match has one, otherwise this order.",
     "matches.kind": "final; semi (semifinal); third (match for the 3rd place); grand (grand final of a double elimination); bella (the deciding rematch of the grand final, played when the finalist from the lower bracket wins the first one); winners and losers (upper and lower bracket of a double elimination); group (group stage); swiss (round of the swiss system); heat (heat of a free for all with many players); round (any other knockout round).",
@@ -375,7 +391,8 @@
       format: format,
       formatLabel: str(g.formatLabel) || (OWN.call(FMT, format) ? FMT[format] : ""),
       team: !!g.team,
-      /* false: il tabellone è sorteggiato e seed è solo l'ordine di iscrizione (niente teste di serie né sorprese) */
+      /* true: ci sono teste di serie (seed = posizione, null per chi non lo è); false: niente teste di serie (nei file
+         vecchi seed è l'ordine di iscrizione e non conta); assente (fatti vecchi): seed è l'ordine del tabellone */
       seeded: typeof g.seeded === "boolean" ? g.seeded : null,
       done: !!g.done,
       status: str(g.status),
@@ -383,7 +400,9 @@
       finished: time(g.finished),
       participants: list(g.participants).map(function (p, i) {
         p = p && typeof p === "object" ? p : { name: p };
-        return { name: str(p.name), seed: int1(p.seed) || i + 1, members: names(p.members), withdrawn: !!p.withdrawn };
+        /* rating: il punteggio della ladder, se l'app lo passa */
+        var sd = int1(p.seed), rt = num(p.rating);
+        return { name: str(p.name), seed: sd || (typeof g.seeded === "boolean" ? null : i + 1), members: names(p.members), withdrawn: !!p.withdrawn, rating: rt != null ? Math.round(rt * 10) / 10 : null };
       }).filter(function (p) { return p.name; }),
       matches: list(g.matches).map(cleanMatch).filter(Boolean),
       standings: list(g.standings).map(function (s, i) {
@@ -511,8 +530,9 @@
     if (d <= 1 || d / W <= 0.16) return "close";
     return "";
   }
-  /* teste di serie solo in eliminazione e doppia, e solo se il tabellone non è sorteggiato (seeded false) */
-  function seeded(g) { return g.seeded !== false && /^(elim|double|de)$/.test(g.format); }
+  /* teste di serie vere: seeded true (in ogni formato, solo chi ha seed). Fatti vecchi senza il campo: l'ordine del
+     tabellone, solo in eliminazione e doppia. seeded false: nessuna */
+  function seeded(g) { return g.seeded === true || (g.seeded == null && /^(elim|double|de)$/.test(g.format)); }
   function heatSorted(m) {
     return m.heat.map(function (h, i) { return { h: h, i: i }; }).sort(function (x, y) {
       var a = x.h.pos == null ? 1e9 : x.h.pos, b = y.h.pos == null ? 1e9 : y.h.pos;
@@ -571,9 +591,10 @@
 
     /* ---- un gioco: cronaca, classifica, numeri ---- */
     function story(g) {
-      var pick = chooser(g.key, {}), seedOf = {}, wd = {}, memb = {};
-      g.participants.forEach(function (p) { seedOf[p.name] = p.seed; if (p.withdrawn) wd[p.name] = 1; memb[p.name] = p.members; });
-      var seeds = seeded(g), n = g.participants.length;
+      var pick = chooser(g.key, {}), seedOf = {}, wd = {}, memb = {}, rateOf = {};
+      g.participants.forEach(function (p) { seedOf[p.name] = p.seed; if (p.withdrawn) wd[p.name] = 1; memb[p.name] = p.members; rateOf[p.name] = p.rating; });
+      /* per la sorpresa conta quante sono le teste di serie (fatti vecchi: tutti i partecipanti) */
+      var seeds = seeded(g), n = g.participants.filter(function (p) { return p.seed; }).length;
       var hasThird = g.matches.some(function (m) { return m.kind === "third"; });
       var bellaOn = g.matches.some(function (m) { return m.kind === "bella" && m.state !== "pending"; });
       var played = g.matches.map(function (m, i) { return { m: m, i: i }; }).filter(function (x) {
@@ -659,8 +680,11 @@
           else if (k === "third") { big = true; P.push({ t: pk("third"), v: v }); }
           else if (k === "semi") { big = true; P.push({ t: pk(m.eliminated || !hasThird ? "semiOut" : "semi"), v: v }); }
           else {
-            var i1 = seedOf[d.w], j1 = seedOf[d.l];
-            if (seeds && i1 && j1 && i1 - j1 >= Math.max(3, Math.ceil(n / 4))) { v.i = i1; v.j = j1; P.push({ t: pk("upset"), v: v }); mg = mg || "upset"; }
+            /* sorpresa: con due teste di serie decide il loro numero; altrimenti la ladder (almeno 100 punti di differenza) */
+            var i1 = seedOf[d.w], j1 = seedOf[d.l], ra = rateOf[d.w], rb = rateOf[d.l], up = "";
+            if (seeds && typeof i1 === "number" && typeof j1 === "number") { if (i1 - j1 >= Math.max(3, Math.ceil(n / 4))) up = /^(elim|double|de)$/.test(g.format) ? "upset" : "upsetG"; }
+            else if (typeof ra === "number" && typeof rb === "number" && rb - ra >= 100) up = "upsetR";
+            if (up) { if (up !== "upsetR") { v.i = i1; v.j = j1; } P.push({ t: pk(up), v: v }); mg = mg || "upset"; }
             else P.push({ t: pk(mg || (m.eliminated ? "out" : k === "winners" ? "drop" : "win")), v: v });
             /* il margine ha già preso la frase principale: chi esce o chi scende lo dice una frase breve */
             if (mg && m.eliminated) P.push({ t: pk("outTag"), v: v });
@@ -722,7 +746,7 @@
         var seeds = seeded(g);
         g.participants.forEach(function (p) {
           var s = "- **" + mdEsc(p.name) + "**";
-          if (seeds) s += " (" + text("testa di serie {n}", { n: p.seed }) + ")";
+          if (seeds && p.seed) s += " (" + text("testa di serie {n}", { n: p.seed }) + ")";
           if (p.members.length) s += ": " + p.members.map(mdEsc).join(", ");
           if (p.withdrawn) s += " — *" + T("fuori per ritiro") + "*";
           out.push(s);

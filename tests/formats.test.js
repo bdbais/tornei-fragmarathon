@@ -463,3 +463,106 @@ test("ritiri in sequenza: il tavolino già vinto resta a chi si ritira dopo", ()
   TF.thirdForfeit(t2, outOf("C", "D"));
   assert.strictEqual(t2.w, "C");
 });
+
+/* ---------------- teste di serie ---------------- */
+/* mescolamento riproducibile (Fisher-Yates con un generatore fisso): stessi dati, stesso risultato */
+function mixer(seed) {
+  return (a) => {
+    let s = seed;
+    const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+    a = a.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  };
+}
+/* il tabellone dell'app: posto p del primo turno = list[ordine[p] - 1] (null = riposo) */
+function slots(list) {
+  let P = 2;
+  while (P < list.length) P *= 2;
+  return TF.seedOrder(P).map((s) => list[s - 1] || null);
+}
+
+test("teste di serie: seedList mette le teste di serie in ordine e sorteggia gli altri", () => {
+  const pl = names(8), mix = mixer(11);
+  const L = TF.seedList(pl, ["P5", "X", "P3", "P5", "P8"], mix);
+  assert.deepStrictEqual(L.slice(0, 3), ["P5", "P3", "P8"], "nomi assenti e doppioni ignorati");
+  assert.deepStrictEqual(L.slice(3), mix(["P1", "P2", "P4", "P6", "P7"]));
+  assert.deepStrictEqual(L.slice().sort(), pl.slice().sort());
+  /* senza teste di serie (vuote, assenti o tutte fuori elenco) = il sorteggio di prima */
+  [[], null, undefined, ["X", "Y"]].forEach((tds) => assert.deepStrictEqual(TF.seedList(pl, tds, mix), mix(pl)));
+  /* senza shuffleFn resta l'ordine dato; players non viene toccato */
+  assert.deepStrictEqual(TF.seedList(pl, ["P4"]), ["P4", "P1", "P2", "P3", "P5", "P6", "P7", "P8"]);
+  assert.deepStrictEqual(pl, names(8));
+});
+
+test("teste di serie: tabellone da 8 e da 6 con 4 teste di serie", () => {
+  [8, 6].forEach((n) => {
+    const pl = names(n), tds = ["P6", "P2", "P5", "P1"];
+    for (let s = 1; s < 30; s++) {
+      const L = TF.seedList(pl, tds, mixer(s)), S = slots(L), at = (name) => S.indexOf(name);
+      const half = (p) => (p < 4 ? 0 : 1), quarter = (p) => p >> 1;
+      assert.notStrictEqual(half(at("P6")), half(at("P2")), "1 e 2 in metà opposte (n=" + n + ")");
+      assert.strictEqual(new Set(tds.map((t) => quarter(at(t)))).size, 4, "1, 2, 3, 4 in quarti diversi (n=" + n + ")");
+      assert.strictEqual(at("P6"), 0, "la testa di serie 1 in cima");
+      /* 1 contro 8, 4 contro 5, 2 contro 7, 3 contro 6: nessuna testa di serie contro un'altra al primo turno */
+      for (let p = 0; p < 8; p += 2) assert.ok(!(tds.includes(S[p]) && tds.includes(S[p + 1])), "due teste di serie al primo turno");
+      if (n === 6) {
+        /* i due riposi vanno alle prime due teste di serie */
+        const byes = [];
+        for (let p = 0; p < 8; p += 2) if (!S[p] || !S[p + 1]) byes.push(S[p] || S[p + 1]);
+        assert.deepStrictEqual(byes.sort(), ["P2", "P6"]);
+        /* doppia eliminazione: g.de.seeds = la stessa lista, stessi riposi */
+        const e = TF.deEval(TF.deBuild(n), L, {});
+        assert.deepStrictEqual(Object.values(e.M).filter((m) => m.bye && m.w).map((m) => m.w).sort(), ["P2", "P6"]);
+      }
+    }
+  });
+});
+
+test("teste di serie: gironi e manche a serpentina, dimensioni identiche a j % k", () => {
+  for (let n = 2; n <= 20; n++) {
+    for (let k = 1; k <= Math.min(5, n); k++) {
+      const pl = names(n), mix = mixer(n * 7 + k), want = Array.from({ length: k }, (_, i) => pl.filter((_, j) => j % k === i).length);
+      /* senza teste di serie: esattamente come oggi (sorteggio, poi j % k) */
+      const old = Array.from({ length: k }, () => []);
+      mix(pl).forEach((p, j) => old[j % k].push(p));
+      assert.deepStrictEqual(TF.seedSpread(pl, [], k, mix), old);
+      const tds = pl.slice().reverse().slice(0, Math.min(n, 7));
+      const G = TF.seedSpread(pl, tds, k, mix);
+      assert.deepStrictEqual(G.map((g) => g.length), want, "dimensioni n=" + n + " k=" + k);
+      assert.deepStrictEqual(G.flat().sort(), pl.slice().sort(), "tutti una volta sola n=" + n + " k=" + k);
+      /* le teste di serie aprono i gruppi; la 1 sta nel primo */
+      assert.strictEqual(G[0][0], tds[0]);
+      if (k === 3 && n >= 6) {
+        /* serpentina piena: 1→A, 2→B, 3→C, 4→C, 5→B, 6→A */
+        const where = (t) => G.findIndex((g) => g.includes(t));
+        assert.deepStrictEqual(tds.slice(0, 6).map(where), [0, 1, 2, 2, 1, 0], "n=" + n);
+      }
+    }
+  }
+  /* gruppo già pieno: si salta (5 in 3 gruppi da 2, 2, 1) */
+  const G = TF.seedSpread(names(5), names(5), 3);
+  assert.deepStrictEqual(G, [["P1", "P5"], ["P2", "P4"], ["P3"]]);
+  /* nomi fuori elenco ignorati */
+  assert.deepStrictEqual(TF.seedSpread(names(4), ["X", "P4"], 2), [["P4", "P1"], ["P2", "P3"]]);
+});
+
+test("teste di serie: primo turno dello svizzero metà alta contro metà bassa", () => {
+  const pair = (r) => r.map((m) => [m.a, m.b]);
+  /* pari: 1-5, 2-6, 3-7, 4-8 */
+  assert.deepStrictEqual(pair(TF.swSeedRound(names(8), names(8))), [["P1", "P5"], ["P2", "P6"], ["P3", "P7"], ["P4", "P8"]]);
+  /* dispari: riposa l'ultimo, poi 1-4, 2-5, 3-6 */
+  const r7 = TF.swSeedRound(names(7), names(7));
+  assert.deepStrictEqual(pair(r7), [["P1", "P4"], ["P2", "P5"], ["P3", "P6"], ["P7", null]]);
+  r7.forEach((m) => assert.deepStrictEqual([m.sa, m.sb, m.w], [null, null, null]));
+  /* teste di serie parziali: gli altri sorteggiati in fondo alla lista */
+  const mix = mixer(5), L = TF.seedList(names(6), ["P6", "P3"], mix);
+  assert.deepStrictEqual(pair(TF.swSeedRound(names(6), ["P6", "Z", "P3"], mix)), [[L[0], L[3]], [L[1], L[4]], [L[2], L[5]]]);
+  assert.deepStrictEqual([L[0], L[1]], ["P6", "P3"]);
+  /* il risultato si gioca come un turno normale: il secondo turno lo accoppia swPair */
+  const r1 = TF.swSeedRound(names(4), names(4));
+  r1.forEach((m) => { m.w = m.a; m.sa = 1; m.sb = 0; });
+  assert.strictEqual(TF.swPair(names(4), [r1]).length, 2);
+  /* senza teste di serie: identico a swPair con lo stesso sorteggio */
+  [5, 8].forEach((n) => [[], ["X"]].forEach((tds) => assert.deepStrictEqual(TF.swSeedRound(names(n), tds, mixer(3)), TF.swPair(names(n), [], mixer(3)))));
+});

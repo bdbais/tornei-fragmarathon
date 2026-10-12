@@ -400,3 +400,79 @@ html.set-on body{overflow:hidden}
 .ev-share .row{display:flex;flex-wrap:wrap;gap:8px}
 .ev-share a.btn{display:inline-flex;align-items:center;padding:8px 14px;border:2px solid var(--line);border-radius:8px;color:var(--ink);text-decoration:none;font-weight:700}
 .ev-share a.btn:hover,.ev-share a.btn:focus-visible{border-color:var(--ev,var(--acc))}
+
+/* ---- ladder fra tutti i tornei (js/home.js, paintLadder) ----
+   una scala: le posizioni nel carattere dei titoli, le prime tre come gradini in rilievo (accento e ombra piena,
+   come la scheda scelta); il resto è una tabella sobria. Salita verde, discesa rossa, mescolate al colore del testo
+   così restano leggibili sia sul chiaro sia sullo scuro. */
+.ld{--ld-up:color-mix(in srgb,#1f9d47 72%,var(--ink));--ld-dn:color-mix(in srgb,#d03a3a 78%,var(--ink))}
+.ld .hm-title .hb{align-self:flex-start;margin-top:.5em}
+.ld-when{display:flex;flex-wrap:wrap;gap:4px 18px;margin:-10px 0 14px;color:var(--mut);font-size:.9rem}
+.ld-when b{color:var(--ink)}
+.ld-stale{margin:0 0 14px;padding:10px 14px;border:2px dashed var(--acc);border-radius:8px;background:color-mix(in srgb,var(--acc) 10%,var(--panel));font-weight:600;max-width:75ch}
+.ld-empty{max-width:68ch;padding:18px 20px;border:2px solid var(--edge);border-radius:10px;background:var(--panel)}
+.ld-empty p{margin:0 0 8px}.ld-empty p:last-child{margin:0;color:var(--mut)}
+.ld-lead{font-size:1.15rem;font-weight:600}
+.ld-boards{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.ld-boards button{padding:7px 13px;font-size:.9rem}
+.ld-boards button[aria-pressed=true]{background:var(--acc);color:var(--accink);box-shadow:3px 3px 0 var(--edge)}
+.ld-tw{overflow-x:auto;border:2px solid var(--edge);border-radius:10px;background:var(--panel);margin-bottom:22px}
+.ld-tab{margin:0;font-size:.95rem;font-variant-numeric:tabular-nums}
+.ld-tab th{padding:8px;font-size:.8rem;white-space:nowrap}
+.ld-tab td{padding:8px;vertical-align:middle}
+.ld-tab tbody tr:last-child td{border-bottom:0}
+.ld-tab td.ld-pos,.ld-tab th.ld-pos{width:3.2em;text-align:center}
+.ld-tab td.ld-pos{font:400 1.15rem/1 "FragDisplay","Arial Black",Impact,sans-serif}
+.ld-tab td.ld-mv{width:4.2em;text-align:left;white-space:nowrap;font-size:.82rem;font-weight:700}
+.ld-tab td.ld-nm,.ld-tab th.ld-nm{text-align:left;min-width:9em;overflow-wrap:anywhere;font-weight:600}
+.ld-tab td.ld-pt{text-align:right;white-space:nowrap}
+.ld-tab th.ld-pt{text-align:right}
+.ld-tab td.ld-pt b{font-size:1.05rem}
+.ld-tab td.ld-pt small{display:block;font-size:.75rem;font-weight:700}
+.ld-up{color:var(--ld-up)}.ld-dn{color:var(--ld-dn)}.ld-eq{color:var(--mut)}
+.ld-new{display:inline-block;padding:0 6px;border:1px dashed currentColor;border-radius:4px;color:var(--mut);font-weight:600;font-size:.72rem}
+/* le prime tre: il numero è un gradino pieno */
+.ld-tab td.ld-pos span{display:inline-grid;place-items:center;min-width:1.8em;height:1.8em}
+.ld-tab tr.ld-top td.ld-pos{padding:8px 10px 10px 8px}
+.ld-tab tr.ld-top td.ld-pos span{font-size:1.25rem;padding:0 .2em;border:2px solid var(--edge);border-radius:6px;background:var(--acc);color:var(--accink);box-shadow:3px 3px 0 var(--edge)}
+.ld-tab tr.ld-top td.ld-nm{font-weight:800}
+.ld-sec{margin:0 0 14px;padding:12px 16px;border:2px solid var(--edge);border-radius:10px;background:var(--panel)}
+.ld-sec[open]>summary{margin-bottom:8px}
+.ld-sec .hm-note{margin:0 0 10px}
+.ld-evs{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:6px 14px}
+.ld-evs label{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;padding:6px 8px;border-radius:8px;cursor:pointer}
+.ld-evs label:hover{background:color-mix(in srgb,var(--ink) 6%,transparent)}
+.ld-evs input{width:20px;height:20px;margin:0;accent-color:var(--acc)}
+.ld-evt{font-weight:700;overflow-wrap:anywhere}
+.ld-evs small{color:var(--mut);font-size:.8rem}
+/* torneo che non conta (in lavorazione) o non letto nell'ultimo calcolo: si legge come un avviso, non come un dettaglio */
+.ld-evs small.ld-bad{color:var(--ink);font-weight:600;padding-left:6px;border-left:3px solid var(--acc)}
+.ld-evs label:has(input:disabled){cursor:default}
+.ld-evs input:disabled{opacity:.55}
+.ld-merge{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:10px}
+.ld-merge label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600;color:var(--mut);min-width:min(220px,100%)}
+.ld-merge select{min-width:0}
+.ld-al{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:620px}
+.ld-al li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 6px 6px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.ld-al li span[aria-hidden]{color:var(--acc);font-weight:800}
+.ld-al li button{margin-left:auto;padding:5px 10px;font-size:.84rem}
+.ld-cfg{display:flex;flex-wrap:wrap;gap:12px 18px;margin-bottom:10px}
+.ld-cfg label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600;color:var(--mut)}
+.ld-cfg input{width:140px;padding:9px 11px;border:2px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.ld-how{margin:0;padding-left:20px;max-width:72ch;line-height:1.55}
+.ld-how li{margin-bottom:4px}
+@media (max-width:640px){
+  .ld-tab{font-size:.88rem}
+  .ld-tab th,.ld-tab td{padding:6px 5px}
+  .ld-tab td.ld-nm{min-width:7em}
+  .ld-merge label{flex:1 1 100%}
+  .ld-merge button{flex:1 1 100%}
+}
+/* telefono: la tabella sta nello schermo senza scorrere di lato; vinte, pari, perse e tornei restano nel CSV e in
+   orizzontale */
+@media (max-width:520px){
+  .ld-tab .ld-x{display:none}
+  .ld-tab td.ld-pos,.ld-tab th.ld-pos{width:2.6em}
+  .ld-tab td.ld-mv{width:auto}
+  .ld-tab td.ld-nm{min-width:0}
+}

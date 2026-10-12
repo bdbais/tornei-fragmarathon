@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld("desk", {
   evWrite: (id, data) => ipcRenderer.invoke("ev:write", id, data),
   evTrash: (id) => ipcRenderer.invoke("ev:trash", id),
   evUntrash: (id) => ipcRenderer.invoke("ev:untrash", id),
+  /* ladder fra tutti i tornei: ladder.json nella cartella dei tornei ("" se non c'è ancora) */
+  ladderRead: () => ipcRenderer.invoke("ladder:read"),
+  ladderWrite: (data) => ipcRenderer.invoke("ladder:write", data),
+  /* copia della ladder nel cestino prima di un ripristino: il percorso relativo, "" se non c'era */
+  ladderBackup: () => ipcRenderer.invoke("ladder:backup"),
   botsList: () => ipcRenderer.invoke("bots:list"),
   botsUse: (id) => ipcRenderer.invoke("bots:use", id),
   botsAdd: (label) => ipcRenderer.invoke("bots:add", label),

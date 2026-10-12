@@ -83,6 +83,8 @@ if (fs.existsSync(path.join(root, "js/cronaca.js"))) literals(rd("js/cronaca.js"
   const prose = /[A-ZÀ-Ý{(«]/.test(l) || IT.test(l) || (/^[a-zà-ù' ]+ [a-zà-ù' ]+$/.test(l) && l !== "use strict");
   if (prose && clean(t) && keep(t)) ui.add(l.replace(/\s+/g, " "));
 });
+/* ladder (js/ladder.js): solo le intestazioni del CSV (var HEAD), il resto del file è logica */
+if (fs.existsSync(path.join(root, "js/ladder.js"))) { const m = /\bvar HEAD = \[([^\]]*)\]/.exec(rd("js/ladder.js")); if (m) literals(m[1]).forEach((l) => ui.add(l)); }
 literals(rd("bot.js")).forEach((l) => pieces(l, bot)); ternaries(rd("bot.js"), bot);
 /* frasi composte a pezzi nel codice, scritte intere in tools/i18n/extra.json */
 JSON.parse(rd("tools/i18n/extra.json")).ui.forEach((x) => ui.add(x));

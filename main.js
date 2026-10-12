@@ -259,6 +259,39 @@ ipcMain.handle("sheets:fetch", async (_e, url) => {
   } catch (e) { return { error: String(e.message || e).slice(0, 200) }; }
 });
 ipcMain.handle("ev:write", (_e, id, data) => { ensureDirs(); JSON.parse(data); writeAtomic(evFile(id), data); return true; });
+/* Ladder fra tutti i tornei (classifica a punti, alias dei giocatori, impostazioni): un solo file accanto a "eventi".
+   Si scrive solo JSON valido, in modo atomico; se non c'è ancora si legge "". */
+const LADDER_FILE = path.join(ROOT, "ladder.json");
+/* letto a ogni avvio: un file rovinato si mette da parte (ladder.json.rovinato-<data>) e la pagina lo dice
+   ({ broken: nome }), così il primo salvataggio non lo copre senza lasciarne traccia. Un file che non si riesce a leggere
+   (bloccato, permessi) è un errore: la pagina non salva finché non lo rilegge. */
+/* il nome della copia rovinata resta finché non si salva una ladder nuova: anche ricaricando la pagina l'avviso c'è */
+let ladderBroken = null;
+ipcMain.handle("ladder:read", () => {
+  let t;
+  try { t = fs.readFileSync(LADDER_FILE, "utf8"); } catch (e) { if (e && e.code === "ENOENT") return ladderBroken ? { broken: ladderBroken } : ""; throw e; }
+  try { JSON.parse(t); return t; } catch (e) {
+    const name = path.basename(LADDER_FILE) + ".rovinato-" + stamp();
+    fs.renameSync(LADDER_FILE, path.join(ROOT, name));
+    logErr("ladder", "archivio illeggibile (" + e.message + "): messo da parte come " + name);
+    ladderBroken = name;
+    return { broken: name };
+  }
+});
+/* ripristino di un backup completo: la ladder di adesso va nel cestino prima di essere sostituita ("" se non c'è) */
+ipcMain.handle("ladder:backup", () => {
+  if (!fs.existsSync(LADDER_FILE)) return "";
+  fs.mkdirSync(DIRS.cestino, { recursive: true });
+  const name = stamp() + "_ladder.json";
+  fs.copyFileSync(LADDER_FILE, path.join(DIRS.cestino, name));
+  return path.basename(DIRS.cestino) + "/" + name;
+});
+ipcMain.handle("ladder:write", (_e, data) => {
+  const t = String(data || "");
+  if (t.length > 32e6) throw new Error("ladder troppo grande");
+  const j = JSON.parse(t); if (!j || typeof j !== "object" || Array.isArray(j)) throw new Error("ladder non valida");
+  fs.mkdirSync(ROOT, { recursive: true }); writeAtomic(LADDER_FILE, t); ladderBroken = null; return true;
+});
 ipcMain.handle("ev:trash", (_e, id) => {
   const f = evFile(id); if (!fs.existsSync(f)) return false;
   fs.mkdirSync(DIRS.cestino, { recursive: true });
@@ -669,6 +702,9 @@ function migrate() {
       try { JSON.parse(fs.readFileSync(path.join(DIRS.eventi, f), "utf8")); } catch { notes.push("torneo " + f + " illeggibile: spostato nel cestino"); fs.mkdirSync(DIRS.cestino, { recursive: true }); fs.renameSync(path.join(DIRS.eventi, f), path.join(DIRS.cestino, stamp() + "_rovinato_" + f)); }
     });
   } catch (e) { logErr("migrazione tornei", e); }
+  /* ladder: file leggibile; uno rovinato si mette da parte (la classifica si rifà con Ricalcola) */
+  try { if (fs.existsSync(LADDER_FILE)) JSON.parse(fs.readFileSync(LADDER_FILE, "utf8")); }
+  catch { notes.push("ladder illeggibile: messa da parte, premi Ricalcola"); try { fs.renameSync(LADDER_FILE, LADDER_FILE + ".rovinato-" + stamp()); } catch {} }
   /* diretta: impostazioni leggibili */
   try { const sf = path.join(app.getPath("userData"), "stream.json"); if (fs.existsSync(sf)) JSON.parse(fs.readFileSync(sf, "utf8")); }
   catch { notes.push("impostazioni della diretta illeggibili: ripristinate"); try { fs.renameSync(path.join(app.getPath("userData"), "stream.json"), path.join(app.getPath("userData"), "stream.json.rovinato-" + stamp())); } catch {} }

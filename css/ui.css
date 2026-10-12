@@ -241,3 +241,26 @@ input[type=password]{flex:1 1 200px}
 .cron-act{margin-top:12px}
 /* il punto sporge di 7px a sinistra della linea: lo spazio tra l'ora e la linea deve superarlo, anche sul telefono */
 @media (max-width:640px){.cron{padding:12px 10px 10px}.cron-list li{grid-template-columns:2.9em minmax(0,1fr);column-gap:11px}.cron-t{font-size:.82rem}.cron-b{padding-left:12px}.cron-list li.cron-day{margin-left:calc(2.9em + 11px);padding-left:12px}}
+
+/* ---- teste di serie ----
+   il numero accanto al nome (tabellone, gironi, svizzero, manche, iscritti): un tassello piccolo con il bordo del tema,
+   come le schede; sul proiettore resta leggibile perché eredita il colore del testo */
+.tdn{display:inline-grid;place-items:center;min-width:1.6em;height:1.6em;padding:0 .3em;margin-right:6px;border:1.5px solid var(--edge);border-radius:4px;background:var(--panel);color:var(--ink);font:700 .72rem/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;vertical-align:.1em;flex:0 0 auto}
+.slot.w .tdn{background:var(--acc);color:var(--accink);border-color:var(--edge)}
+#setup .tdsbox{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+#setup .tdsbox>summary{color:var(--ink)}
+.tdc{display:inline-block;min-width:1.7em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--acc);color:var(--accink);font:700 .78rem/1.6 Inter,system-ui,sans-serif;text-align:center;vertical-align:.15em}
+.tdlist{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-width:560px}
+.tdlist li{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.tdlist li:first-child{border:2px solid var(--edge);box-shadow:3px 3px 0 var(--acc)}
+.tdlist .tdn{min-width:2em;height:2em;font-size:.85rem;margin-right:4px}
+.tdlist li:first-child .tdn{background:var(--acc);color:var(--accink)}
+/* il nome va a capo solo fra le parole (o se una parola sola non ci sta): i pulsanti hanno larghezza fissa */
+.tdname{flex:1 1 auto;min-width:0;font-weight:600;overflow-wrap:break-word}
+.tdlist button{flex:0 0 auto;width:44px;min-width:0;min-height:36px;padding:0;font-size:.9rem;line-height:1}
+.tdhead{margin:14px 0 6px;color:var(--mut);font-size:.9rem}
+.tdadd{display:flex;flex-wrap:wrap;gap:6px}
+.tdadd button{min-height:36px;padding:5px 12px;border-width:1px;border-style:dashed;border-radius:999px;font-weight:600;background:var(--bg)}
+.tdadd button span{color:var(--acc);font-weight:800;margin-right:2px}
+.tdact{margin-top:12px}
+@media (max-width:640px){.tdlist li{padding-left:6px;gap:4px}.tdlist button{width:42px;min-height:42px}}

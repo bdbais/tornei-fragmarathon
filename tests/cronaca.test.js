@@ -258,7 +258,7 @@ test("storico: password, account e server non arrivano mai nel file", () => {
   const all = r.md + JSON.stringify(r.data) + JSON.stringify(r.lines);
   SECRETS.forEach((s) => assert.ok(all.indexOf(s) < 0, "trovato " + s));
   assert.deepStrictEqual(Object.keys(r.data.event), ["id", "title", "subtitle", "date", "time", "place", "mode", "address", "intro", "outro"]);
-  assert.deepStrictEqual(Object.keys(r.data.games[0].participants[0]), ["name", "seed", "members", "withdrawn"]);
+  assert.deepStrictEqual(Object.keys(r.data.games[0].participants[0]), ["name", "seed", "members", "withdrawn", "rating"]);
   assert.deepStrictEqual(Object.keys(r.data.games[0].matches[0]), ["id", "order", "at", "stage", "kind", "state", "sides", "score", "winner", "draw", "forfeit", "eliminated", "heat", "comment"]);
 });
 
@@ -387,6 +387,8 @@ test("storico: l'estrattore delle traduzioni prende i modelli interi", () => {
   f.games.forEach((g) => { g.done = false; g.formatLabel = ""; g.format = "?"; });
   f.event.mode = "online";
   CR.build(f, { now: NOW, tr });
+  /* sorpresa secondo la ladder */
+  CR.build(rated({ Cervi: 1900, Orsi: 2050 }), { now: NOW, tr });
   let n = 0;
   seen.forEach((s) => { if (src.indexOf(JSON.stringify(s)) >= 0) { n++; assert.ok(ui.has(s), "non estratta: " + s); } });
   assert.ok(n > 60, "frasi controllate: " + n);
@@ -402,6 +404,82 @@ test("storico: tabellone sorteggiato (seeded false), niente teste di serie né s
   assert.strictEqual(r.data.games[0].seeded, false);
   /* senza il campo resta il comportamento di prima */
   assert.match(CR.build(facts(), { now: NOW }).md, /testa di serie 1/);
+});
+
+/* cs2 con le teste di serie vere: seeds = { squadra: numero }, chi non c'è non è testa di serie */
+function seededFacts(seeds, ratings) {
+  const f = facts(), g = f.games[0];
+  g.seeded = true;
+  g.participants.forEach((p) => { p.seed = seeds[p.name] || null; if (ratings && ratings[p.name] != null) p.rating = ratings[p.name]; });
+  return f;
+}
+/* cs2 senza teste di serie, con i punteggi della ladder */
+function rated(ratings) {
+  const f = facts(), g = f.games[0];
+  g.seeded = false;
+  g.participants.forEach((p) => { p.seed = null; if (ratings[p.name] != null) p.rating = ratings[p.name]; });
+  return f;
+}
+const SURPRISE = /numero \d|favorit|pronostic|Davide/;
+
+test("storico: teste di serie vere, sorpresa e partecipanti senza seed", () => {
+  /* e0-2: Cervi (testa di serie 4) batte Orsi (testa di serie 1) */
+  const r = CR.build(seededFacts({ Orsi: 1, Lupi: 2, Volpi: 3, Cervi: 4, Falchi: 5 }), { now: NOW });
+  const L = (id) => r.lines.find((l) => l.game === "cs2" && l.id === id);
+  assert.match(L("e0-2").comment, /numero 4/);
+  assert.match(L("e0-2").comment, /numero 1/);
+  /* e0-1: Aquile (senza seed) batte Falchi (testa di serie 5): con un seed null niente sorpresa */
+  assert.doesNotMatch(L("e0-1").comment, SURPRISE);
+  /* solo chi è testa di serie lo porta scritto; nel JSON seed null per gli altri */
+  assert.match(r.md, /- \*\*Orsi\*\* \(testa di serie 1\): Ada, Bea\n/);
+  assert.match(r.md, /- \*\*Aquile\*\*: Gino, Ugo\n/);
+  const P = r.data.games[0].participants;
+  assert.strictEqual(r.data.games[0].seeded, true);
+  assert.deepStrictEqual(P.map((p) => p.seed), [2, 1, 3, 5, null, null, 4, null]);
+  P.forEach((p) => assert.strictEqual(p.rating, null));
+  /* teste di serie vere in ogni formato (qui i gironi): la 4 che batte la 1 */
+  const f = facts(), tf = f.games[2];
+  tf.seeded = true;
+  tf.participants.forEach((p) => { p.seed = { Gea: 1, Fil: 2, Ivo: 3, Eva: 4 }[p.name]; });
+  const r2 = CR.build(f, { now: NOW });
+  assert.match(r2.lines.find((l) => l.game === "tf2" && l.id === "g0-2").comment, /numero 4/);
+  /* fuori dai tabelloni la frase non parla di tabellone: con qualunque seme di scelta delle frasi */
+  for (let i = 0; i < 12; i++) {
+    const fi = facts(), ti = fi.games[2];
+    ti.key = "tf2x" + i; ti.seeded = true;
+    ti.participants.forEach((p) => { p.seed = { Gea: 1, Fil: 2, Ivo: 3, Eva: 4 }[p.name]; });
+    const ci = CR.build(fi, { now: NOW }).lines.find((l) => l.game === ti.key && l.id === "g0-2").comment;
+    assert.match(ci, /numero 4/);
+    assert.doesNotMatch(ci, /tabellone/);
+  }
+  /* fra due teste di serie decide il seed, anche se la ladder direbbe sorpresa */
+  const r3 = CR.build(seededFacts({ Cervi: 1, Orsi: 2 }, { Cervi: 1800, Orsi: 2100 }), { now: NOW });
+  assert.doesNotMatch(r3.lines.find((l) => l.game === "cs2" && l.id === "e0-2").comment, SURPRISE);
+  /* seeded true ma nessun seed: nessuna testa di serie scritta (gli altri giochi sono fatti vecchi, senza il campo) */
+  const r4 = CR.build(seededFacts({}), { now: NOW }), md4 = r4.md;
+  assert.doesNotMatch(md4.slice(md4.indexOf("## Counter-Strike 2"), md4.indexOf("## QUAKE LIVE")), /testa di serie/);
+  assert.match(md4.slice(md4.indexOf("## QUAKE LIVE")), /testa di serie 1/);
+});
+
+test("storico: sorpresa secondo la ladder (almeno 100 punti di differenza)", () => {
+  const C = (f) => CR.build(f, { now: NOW }).lines.find((l) => l.game === "cs2" && l.id === "e0-2").comment;
+  /* Cervi (1900) batte Orsi (2050): sfavorito che vince */
+  const c = C(rated({ Cervi: 1900, Orsi: 2050 }));
+  assert.match(c, /favorit|pronostic|Davide/);
+  assert.doesNotMatch(c, /numero \d/);
+  assert.match(c, /Cervi/);
+  assert.match(c, /Orsi/);
+  /* 99 punti: niente sorpresa; vince il favorito: niente sorpresa; un rating mancante: niente sorpresa */
+  assert.doesNotMatch(C(rated({ Cervi: 1951, Orsi: 2050 })), SURPRISE);
+  assert.doesNotMatch(C(rated({ Cervi: 2200, Orsi: 1900 })), SURPRISE);
+  assert.doesNotMatch(C(rated({ Orsi: 2400 })), SURPRISE);
+  /* con le teste di serie ma un seed mancante vale la ladder */
+  assert.match(C(seededFacts({ Orsi: 1 }, { Cervi: 1900, Orsi: 2050 })), /favorit|pronostic|Davide/);
+  /* il rating finisce nel JSON (un decimale), null per chi non lo ha */
+  const r = CR.build(rated({ Cervi: 1900.04, Orsi: "2050.26" }), { now: NOW });
+  const P = r.data.games[0].participants, by = (n) => P.find((p) => p.name === n);
+  assert.deepStrictEqual([by("Cervi").rating, by("Orsi").rating, by("Lupi").rating], [1900, 2050.3, null]);
+  assert.ok(r.data.legend["participants.rating"]);
 });
 
 test("storico: frasi tradotte solo intere (tr), etichette dei fatti a pezzi (trData)", () => {

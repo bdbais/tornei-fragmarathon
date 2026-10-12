@@ -413,6 +413,56 @@
   }
   var FX_MATCH_VARS = ["punti", "avversario", "diff", "vinta", "pareggio", "persa", "bye"];
 
+  /* ---------------- Teste di serie ----------------
+     tds = nomi in ordine di testa di serie (1 = la prima). Contano solo quelli presenti in players, una volta sola;
+     senza teste di serie valide ogni funzione fa esattamente il sorteggio di prima (stesso shuffleFn, stesso risultato).
+     shuffleFn riceve sempre una copia; se manca resta l'ordine dato. */
+  function seedPick(players, tds) {
+    var has = {}, used = {}, top = [];
+    players.forEach(function (p) { has["\u0001" + p] = 1; });
+    (Array.isArray(tds) ? tds : []).forEach(function (n) { var k = "\u0001" + n; if (has[k] && !used[k]) { used[k] = 1; top.push(n); } });
+    return { top: top, rest: players.filter(function (p) { return !used["\u0001" + p]; }) };
+  }
+  function seedMix(a, shuffleFn) { return shuffleFn ? shuffleFn(a.slice()) : a.slice(); }
+  /* eliminazione e doppia: teste di serie in ordine, poi gli altri sorteggiati. Il tabellone (ordine 1 contro N)
+     mette 1 e 2 in metà opposte e dà i riposi alle prime teste di serie. */
+  function seedList(players, tds, shuffleFn) {
+    players = (players || []).slice();
+    var s = seedPick(players, tds);
+    return s.top.length ? s.top.concat(seedMix(s.rest, shuffleFn)) : seedMix(players, shuffleFn);
+  }
+  /* gironi e manche: k gruppi con le stesse dimensioni della distribuzione j % k (i primi n % k hanno uno in più).
+     Teste di serie a serpentina (1→A, 2→B, ..., poi all'indietro), saltando un gruppo già pieno; poi gli altri sorteggiati
+     a riempire. */
+  function seedSpread(players, tds, k, shuffleFn) {
+    players = (players || []).slice();
+    k = Math.max(1, Math.floor(+k) || 1);
+    var n = players.length, out = [], cap = [], i, s = seedPick(players, tds);
+    for (i = 0; i < k; i++) { out.push([]); cap.push(Math.floor(n / k) + (i < n % k ? 1 : 0)); }
+    if (!s.top.length) { seedMix(players, shuffleFn).forEach(function (p, j) { out[j % k].push(p); }); return out; }
+    var t = 0;
+    s.top.forEach(function (p) {
+      for (;;) {
+        var r = Math.floor(t / k), q = t % k, gi = r % 2 ? k - 1 - q : q;
+        t++;
+        if (out[gi].length < cap[gi]) { out[gi].push(p); return; }
+      }
+    });
+    var g = 0;
+    seedMix(s.rest, shuffleFn).forEach(function (p) { while (out[g].length >= cap[g]) g++; out[g].push(p); });
+    return out;
+  }
+  /* primo turno dello svizzero: metà alta contro metà bassa della lista seminata (1 contro n/2+1, 2 contro n/2+2, ...),
+     con un numero dispari riposa l'ultimo. Stessa forma di swPair; dal secondo turno non cambia niente. */
+  function swSeedRound(players, tds, shuffleFn) {
+    players = (players || []).slice();
+    if (!seedPick(players, tds).top.length) return swPair(players, [], shuffleFn);
+    var L = seedList(players, tds, shuffleFn), bye = L.length % 2 ? L.pop() : null, h = L.length / 2, out = [];
+    for (var i = 0; i < h; i++) out.push({ a: L[i], b: L[i + h], sa: null, sb: null, w: null });
+    if (bye !== null) out.push({ a: bye, b: null, sa: null, sb: null, w: null });
+    return out;
+  }
+
   var TF = {
     seedOrder: seedOrder,
     deBuild: deBuild, deEval: deEval, deSeedMatch: deSeedMatch, deSeedSafe: deSeedSafe,
@@ -420,6 +470,7 @@
     swStandings: swStandings, swPair: swPair, swDone: swDone, swDefaultRounds: swDefaultRounds,
     rrMatches: rrMatches, rrStandings: rrStandings, rrCmp: rrCmp, rrJoin: rrJoin,
     ffaEval: ffaEval,
+    seedList: seedList, seedSpread: seedSpread, swSeedRound: swSeedRound,
     fxCompile: fxCompile, fxMatchVars: fxMatchVars, FX_MATCH_VARS: FX_MATCH_VARS
   };
   if (typeof module !== "undefined" && module.exports) module.exports = TF;
