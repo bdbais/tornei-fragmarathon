@@ -26,7 +26,7 @@ function logErr(where, e) {
 }
 process.on("uncaughtException", (e) => logErr("processo principale", e));
 process.on("unhandledRejection", (e) => logErr("processo principale (promessa)", e));
-const DIRS = { tornei: path.join(ROOT, "tornei"), backup: path.join(ROOT, "backup"), dirette: path.join(ROOT, "dirette"), eventi: path.join(ROOT, "eventi"), cestino: path.join(ROOT, "cestino") };
+const DIRS = { tornei: path.join(ROOT, "tornei"), backup: path.join(ROOT, "backup"), dirette: path.join(ROOT, "dirette"), eventi: path.join(ROOT, "eventi"), cestino: path.join(ROOT, "cestino"), storici: path.join(ROOT, "storici") };
 const MAX_BACKUPS = 200;
 function ensureDirs() { [DIRS.tornei, DIRS.backup, DIRS.eventi].forEach((d) => fs.mkdirSync(d, { recursive: true })); }
 
@@ -179,6 +179,28 @@ ipcMain.handle("backup:list", () => { ensureDirs(); return listJson(DIRS.backup)
 ipcMain.handle("backup:read", (_e, file) => fs.readFileSync(safeFile(DIRS.backup, file), "utf8"));
 ipcMain.handle("folder:open", (_e, which) => { ensureDirs(); return shell.openPath(DIRS[which] || ROOT); });
 ipcMain.handle("wall:open", () => { openWall(); return true; });
+/* Storico dei tornei (Markdown con il JSON in fondo): uno per torneo in "storici", riscritto dalla pagina dopo ogni partita.
+   Solo un nome semplice .md dentro quella cartella e testo fino a 5 MB. */
+const HIST_MAX = 5 * 1024 * 1024;
+ipcMain.handle("hist:save", (_e, name, md, ifExists) => {
+  const base = String(name || "");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.md$/.test(base) || base.includes("..") || path.basename(base) !== base) throw new Error("Nome file non valido");
+  if (typeof md !== "string" || Buffer.byteLength(md, "utf8") > HIST_MAX) throw new Error("Storico non valido o troppo grande");
+  const file = path.join(DIRS.storici, base);
+  if (path.relative(DIRS.storici, file) !== base) throw new Error("Percorso non valido");
+  fs.mkdirSync(DIRS.storici, { recursive: true });
+  /* stesso torneo con un titolo nuovo (<titolo>_<id>.storico.md): il file vecchio si rinomina, così non ne restano due */
+  const id = /_([A-Za-z0-9-]{4,})\.storico\.md$/.exec(base);
+  if (id && !fs.existsSync(file)) {
+    const old = fs.readdirSync(DIRS.storici).find((f) => f !== base && f.endsWith("_" + id[1] + ".storico.md"));
+    if (old) try { fs.renameSync(path.join(DIRS.storici, old), file); } catch (e) { logErr("storico (rinomina)", e); }
+  }
+  /* torneo senza più giochi avviati: si aggiorna il file che c'è, ma non se ne crea uno nuovo */
+  if (ifExists === true && !fs.existsSync(file)) return { file: base, skipped: true };
+  writeAtomic(file, md);
+  return { file: base };
+});
+ipcMain.handle("hist:open", () => { fs.mkdirSync(DIRS.storici, { recursive: true }); return shell.openPath(DIRS.storici); });
 /* Generazione loghi: la richiesta parte da qui, senza i limiti CORS della pagina. */
 ipcMain.handle("ai:image", async (_e, cfg, prompt, seed, size) => {
   try { return { data: await AI.generate(cfg || {}, prompt, seed, Math.min(1024, Math.max(256, size || 512))) }; }

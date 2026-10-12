@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "tornei", "partecipanti", "squadre", "modifiche", "ffa", "elim", "double", "swiss", "rr", "risultati", "hof", "sala", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "tornei", "partecipanti", "squadre", "modifiche", "ffa", "elim", "double", "swiss", "rr", "risultati", "storico", "hof", "sala", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     sala: { t: "Sala: postazioni, oggetti e server", h:
       "<p>La scheda <b>Sala</b> è la pianta della LAN, in 2D e in 3D. Si salva con il torneo.</p>" +
@@ -18,7 +18,7 @@ window.HELP = {
       "<li><b>Nuovo torneo</b>: vuoto, con le impostazioni di un altro (giochi, formule, tema, logo) o anche con gli stessi giocatori, senza risultati.</li>" +
       "<li><b>Modifica</b>: nome, sottotitolo, data, luogo, colore, bot e <b>In lavorazione</b>.</li>" +
       "<li><b>In lavorazione</b>: nel bot il torneo lo vedono solo amministratori e organizzatori e i partecipanti non ricevono avvisi. Lo stesso vale per un singolo gioco (pulsante <b>Segna in lavorazione</b> nella sua scheda), che sparisce anche dal proiettore.</li>" +
-      "<li><b>Duplica</b> (con o senza risultati), <b>Esporta</b> (file da portare su un altro PC), <b>Importa</b>, la stella per tenerlo in cima.</li>" +
+      "<li><b>Duplica</b> (con o senza risultati), <b>Esporta</b> (file da portare su un altro PC), <b>Importa</b>, la stella per tenerlo in cima. <b>Storico</b> scarica la cronaca delle partite di quel torneo (vedi <a href='#' data-topic='storico'>Storico del torneo</a>).</li>" +
       "<li><b>Elimina</b> (si preme due volte; per un minuto c'è <b>Annulla cancellazione</b>, anche Ctrl+Z): nell'app installata il file va in <code>Documenti&#92;Tornei Fragmarathon&#92;cestino</code>, da cui si recupera.</li></ul>" +
       "<h4>Bot Telegram</h4><p>In fondo all'elenco ci sono i bot: ognuno ha token, ruoli, iscritti, avvisi e messaggio di benvenuto propri. Ogni torneo usa il bot che scegli. Tutti i bot accesi partono con il programma e rispondono per tutti i loro tornei, anche quelli non aperti; l'interruttore li accende o spegne. Le impostazioni (token, ruoli, iscrizioni da confermare) sono quelle del bot del torneo aperto. Rinominalo cliccando sul nome.</p>" +
       "<h4>Luogo e mappa</h4><p>Nel modulo <b>Modifica</b> scegli se si gioca in presenza, online o in entrambi i modi e scrivi l'indirizzo. Per il link della mappa: apri Google Maps (app o sito), cerca il posto, tocca <b>Condividi</b> e poi <b>Copia link</b> (inizia con <code>https://maps.app.goo.gl/</code>), e incollalo nel campo <b>Link Google Maps</b>. Se lo lasci vuoto, il programma crea un link di ricerca con l'indirizzo. Il luogo compare sulla scheda del torneo e nel messaggio di benvenuto del bot.</p>" +
@@ -169,7 +169,19 @@ window.HELP = {
     risultati: { t: "Risultati finali", h:
       "<p>Il podio di ogni gioco concluso, con i componenti delle squadre.</p>" +
       "<ul><li><b>Scarica immagine (PNG)</b> crea un'immagine del torneo da pubblicare.</li>" +
-      "<li><b>Esporta risultati (CSV)</b> crea un file da aprire con Excel.</li></ul>" },
+      "<li><b>Esporta risultati (CSV)</b> crea un file da aprire con Excel.</li>" +
+      "<li><b>Scarica lo storico</b> crea la cronaca di tutto il torneo, partita per partita. Il riquadro <b>Cronaca del torneo</b> in fondo mostra le ultime partite (vedi <a href='#' data-topic='storico'>Storico del torneo</a>).</li></ul>" },
+
+    storico: { t: "Storico del torneo", h:
+      "<p>Lo <b>storico</b> è la cronaca di tutto il torneo in un solo file. Per ogni gioco: i partecipanti (le squadre con i componenti, chi si è ritirato), le partite giocate in ordine con orario, fase e risultato, il podio o la classifica e qualche numero (partite giocate, vittoria più larga, partita più combattuta, serie di vittorie più lunga). Ogni partita ha un commento da telecronista delle grandi finali.</p>" +
+      "<h4>Dove si scarica</h4><ul><li>Scheda <b>Risultati finali</b>: <b>Scarica lo storico</b> del torneo aperto. Il riquadro <b>Cronaca del torneo</b> mostra le ultime partite; <b>Leggi tutta la cronaca</b> apre l'elenco completo, gioco per gioco.</li>" +
+      "<li>Elenco dei tornei: <b>Storico</b> sulla scheda di un torneo, anche se non è quello aperto.</li>" +
+      "<li>Il file va nella cartella <b>Download</b>. La cronaca comincia con la prima partita giocata; i giochi segnati <b>In lavorazione</b> non ci sono.</li></ul>" +
+      "<h4>Archivio automatico (solo app installata)</h4><p>L'app per Windows tiene da sola una copia aggiornata dello storico di ogni torneo in <code>Documenti&#92;Tornei Fragmarathon&#92;storici</code>: si riscrive pochi secondi dopo ogni partita giocata o corretta e quando un gioco si conclude. <b>Apri la cartella degli storici</b>, nel riquadro della cronaca, la apre.</p>" +
+      "<h4>Fatti e commenti</h4><p>I commenti sono solo colore: non aggiungono nulla che non sia successo (niente mappe, uccisioni o minuti inventati). I fatti sono i risultati, gli orari e le classifiche. L'orario è quello in cui il risultato è stato inserito la prima volta: una correzione non lo sposta.</p>" +
+      "<p>Le partite giocate con le versioni precedenti del programma non hanno l'orario: compaiono in ordine di tabellone, senza ora.</p>" +
+      "<h4>Leggibile anche da una AI</h4><p>È un file Markdown (<code>.storico.md</code>) che si apre con qualsiasi editor di testo. In cima c'è un'intestazione con titolo, data, lingua e giochi, poi una nota su come leggerlo; in fondo c'è un blocco JSON con tutti i dati (schema <code>tornei-fragmarathon/storico@1</code>), così tra anni una persona, un programma o un'intelligenza artificiale lo leggono senza dover indovinare. Testi e commenti sono nella lingua del torneo.</p>" +
+      "<p class='note'>Nello storico ci sono nomi, squadre, risultati, orari e classifiche, più le informazioni del torneo che hai scritto (titolo, data, luogo e <b>indirizzo</b>): se il file va condiviso e l'indirizzo è quello di una casa, toglilo prima dalle informazioni del torneo. Mai password, account Discord o Telegram, indirizzi dei server di gioco o di TeamSpeak.</p>" },
 
     hof: { t: "Hall of Fame", h:
       "<p>La classifica di tutto l'evento. Per ogni torneo ogni partecipante prende dei punti Hall of Fame che dipendono dalla <b>posizione finale</b> e dai <b>punti fatti</b>; poi si sommano tutti i tornei.</p>" +

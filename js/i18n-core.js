@@ -37,7 +37,15 @@
     if (!c.re) return str;
     return m[1] + core.replace(c.re, function (x) { var v = c.map.get(x); return v == null ? x : v; }) + m[3];
   }
+  /* solo la frase intera, senza sostituzioni a pezzi: per i testi lunghi (storico) che, se il dizionario non li ha,
+     devono restare tutti nella lingua di partenza invece di diventare un misto di due lingue */
+  function exact(str, d) {
+    if (!d || str == null) return str;
+    str = String(str);
+    var m = /^(\s*)([\s\S]*?)(\s*)$/.exec(str), e = m[2] ? compile(d).exact.get(m[2]) : null;
+    return e != null ? m[1] + e + m[3] : str;
+  }
   function pick(code) { code = String(code || "").toLowerCase(); if (CODES.indexOf(code) >= 0) return code; var b = code.split(/[-_]/)[0]; return CODES.indexOf(b) >= 0 ? b : ""; }
-  var api = { LANGS: LANGS, CODES: CODES, compile: compile, tr: tr, pick: pick };
+  var api = { LANGS: LANGS, CODES: CODES, compile: compile, tr: tr, exact: exact, pick: pick };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.I18NCORE = api;
 })(typeof window !== "undefined" ? window : this);

@@ -77,6 +77,12 @@ function ternaries(src, set) {
   for (const m of src.matchAll(/\?\s*(["'])([a-zà-ù][a-zà-ù ]{2,30})\1\s*:\s*(["'])([a-zà-ù][a-zà-ù ]{2,30})\3/g)) [m[2], m[4]].forEach((w) => { if (IT.test(" " + w + " ") || /^[a-zà-ù]+[aeiou]$/.test(w)) set.add(w); });
 }
 for (const f of ["js/app.js", "js/home.js", "js/sections.js", "js/crypt.js", "js/pwa.js", "js/ai.js", "js/music.js", "js/sala.js", "js/sheets.js", "js/changelog.js"].filter((f) => f !== "js/changelog.js")) if (fs.existsSync(path.join(root, f))) { const src = rd(f); literals(src).forEach((l) => pieces(l, ui)); ternaries(src, ui); }
+/* storico (js/cronaca.js): modelli interi con i segnaposto {w} {l} ... (il traduttore li lascia come sono) */
+if (fs.existsSync(path.join(root, "js/cronaca.js"))) literals(rd("js/cronaca.js")).forEach((l) => {
+  const t = l.replace(/\{[a-z]\}/g, "Xx");
+  const prose = /[A-ZÀ-Ý{(«]/.test(l) || IT.test(l) || (/^[a-zà-ù' ]+ [a-zà-ù' ]+$/.test(l) && l !== "use strict");
+  if (prose && clean(t) && keep(t)) ui.add(l.replace(/\s+/g, " "));
+});
 literals(rd("bot.js")).forEach((l) => pieces(l, bot)); ternaries(rd("bot.js"), bot);
 /* frasi composte a pezzi nel codice, scritte intere in tools/i18n/extra.json */
 JSON.parse(rd("tools/i18n/extra.json")).ui.forEach((x) => ui.add(x));

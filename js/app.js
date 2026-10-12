@@ -47,7 +47,7 @@ initS();registerCustom();normGames();
 fixCur();
 var hist=[],lastJ=null,SWAP=0,swapQ=[];
 function nk(j){return j.replace(/"cur":"[^"]*"/,"")}
-function save(){if(SWAP)return;var j=JSON.stringify(S),jk=nk(j);
+function save(){if(SWAP)return;histStamp();histArch();var j=JSON.stringify(S),jk=nk(j);
   /* "Annulla cancellazione" vale finché dopo la cancellazione non cambia altro: il primo salvataggio è quello della cancellazione */
   if(lastDel){if(lastDel.after==null)lastDel.after=jk;else if(jk!==lastDel.after){lastDel=null;clearTimeout(delT);setTimeout(undoBtn)}}
   if(lastJ!==null&&jk!==nk(lastJ)){hist.push(lastJ);if(hist.length>60)hist.shift()}lastJ=j;var ok=true;try{localStorage.setItem(KEY,j)}catch(e){ok=false}afterSave(ok)}
@@ -72,7 +72,7 @@ function undoDel(){
   save();renderRoster();render();undoBtn();toast("Rimesso: "+l+".");
 }
 /* Rinominare un giocatore o una squadra: cambia il nome ovunque (elenco, squadre, tutti i giochi, risultati). */
-var RN_SKIP={name:1,mode:1,phase:1,plat:1,logo:1,calc:1,file:1,draft:1,l:1,cfg:1};
+var RN_SKIP={name:1,mode:1,phase:1,plat:1,logo:1,calc:1,file:1,draft:1,l:1,cfg:1,at:1};
 /* le chiavi si rinominano solo nelle mappe per nome (componenti delle squadre, punteggi dei gironi):
    altrove "p", "s", "a", "b"... sono campi, e un giocatore che si chiama così non deve toccarli. vo: solo i valori */
 var RN_KEYED={members:1,s:1,v:1};
@@ -117,7 +117,7 @@ function undo(){
   if(!hist.length)return;var cur=S.cur;S=JSON.parse(hist.pop());S.cur=cur;
   initS();registerCustom();normGames();applyUi();fixCur();lastJ=JSON.stringify(S);try{localStorage.setItem(KEY,lastJ)}catch(e){}
   /* come un salvataggio (bot, Discord, file dell'evento), ma senza toccare la cronologia; niente backup automatico per lo stato tornato indietro */
-  renderRoster();render();lastStat=statusMap();afterSave();
+  renderRoster();render();lastStat=statusMap();afterSave();histArch();
 }
 var $=function(i){return document.getElementById(i)};
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -410,7 +410,8 @@ async function exportCsv(){
   try{if(DL)await DL.save({filename:"risultati-fragmarathon.csv",data:blob});else dlBlob(blob,"risultati-fragmarathon.csv")}catch(e){}
 }
 function renderResults(){
-  var h='<div class="row" style="margin-bottom:12px"><button id="csv">Esporta risultati (CSV)</button></div>',med=["🥇","🥈","🥉"];
+  var hb=window.CRONACA?'<button id="histdl" title="Cronaca di tutte le partite con orari, risultati e classifiche: un file da leggere e da conservare">Scarica lo storico</button>':'';
+  var h='<div class="row" style="margin-bottom:12px"><button id="csv">Esporta risultati (CSV)</button>'+hb+'</div>',med=["🥇","🥈","🥉"];
   Object.keys(DEF).forEach(function(k){
     var g=S.games[k],r=result(g,k);
     h+='<section class="panel"><h2>'+ico(k,44)+esc(DEF[k].l)+(g.name?" — "+esc(g.name):"")+'</h2>';
@@ -425,6 +426,7 @@ function renderResults(){
     }else h+='<p class="empty">'+r.status+'</p>';
     h+='</section>';
   });
+  if(window.CRONACA)h+=histBox();
   $("resbox").innerHTML=h;
 }
 function render(){
@@ -678,6 +680,8 @@ function dzEnd(){dzOver(null);var d=document.querySelector(".dragging");if(d)d.c
    I server assegnati agli incontri del sorteggio vecchio non valgono per quello nuovo. */
 function startT(g){
   delete g.wd;delete g.srv;delete g.dirty;
+  /* storico: il gioco comincia adesso, le partite avranno l'orario vero (senza g.at varrebbe la regola dei dati vecchi) */
+  g.at={};g.t0=Date.now();delete g.t1;
   g.groups=null;g.rounds=null;g.third=null;g.ffa=null;g.de=null;g.sw=null;g.running=true;
   if(g.mode==="elim"){g.rounds=bracket(shuffle(g.players));g.phase="final";syncThird(g)}
   else if(g.mode==="double"){g.de={seeds:shuffle(g.players),res:{}};g.phase="de"}
@@ -887,7 +891,7 @@ function redraw(g,k){
   var l=DEF[k].l;
   delSnap("sorteggio e risultati di "+l);autoBackup(l+" - prima del nuovo sorteggio");
   (g.wd||[]).slice().forEach(function(n){dropFull(g,n)});delete g.wd;
-  g.groups=g.rounds=g.third=g.ffa=g.de=g.sw=null;delete g.srv;delete g.dirty;
+  g.groups=g.rounds=g.third=g.ffa=g.de=g.sw=null;delete g.srv;delete g.dirty;delete g.at;delete g.t0;delete g.t1;
   g.phase="setup";g.running=false;
   save();render();
   toast("Sorteggio annullato: tabellone e risultati di "+l+" cancellati, con un backup automatico. Partecipanti e impostazioni restano (chi si era ritirato esce dall'elenco). Cambia quello che serve e premi START per il nuovo sorteggio. Per tornare indietro: «Annulla cancellazione».");
@@ -1041,7 +1045,8 @@ async function savePng(k){
     say("Immagine pronta.");
   }catch(e){say(e&&e.code==="declined"?"Salvataggio annullato.":"Non sono riuscito a creare l'immagine.")}
 }
-$("resbox").onclick=function(e){var b=e.target.closest("button");if(b&&b.dataset.png)savePng(b.dataset.png);if(b&&b.id==="csv")exportCsv()};
+$("resbox").onclick=function(e){var b=e.target.closest("button");if(b&&b.dataset.png)savePng(b.dataset.png);if(b&&b.id==="csv")exportCsv();if(b&&(b.id==="histdl"||b.id==="histdl2"))histDownload();
+  if(b&&b.id==="histdir"&&DESK&&DESK.histOpen)DESK.histOpen().then(function(r){if(r)histErr(r)}).catch(histErr)};
 var TICON={"ALPHA": "<path d=\"M12 3l9 5.2v3.3L12 6.3 3 11.5V8.2z\"/><path d=\"M12 10.5l9 5.2V19L12 13.8 3 19v-3.3z\"/>", "DELTA": "<path d=\"M12 3 22 20.5H2zM12 9.5 6.6 18.3h10.8z\"/>", "BRAVO": "<path d=\"M12 2 20 5v6.5c0 4.8-3.3 8.7-8 10.5-4.7-1.8-8-5.7-8-10.5V5zM12 7l1.5 3.1 3.4.5-2.5 2.4.6 3.4-3-1.6-3 1.6.6-3.4-2.5-2.4 3.4-.5z\"/>", "FOX": "<path d=\"M2.5 3l6 3.3h7L21.5 3l-.8 9.5L12 21.5 3.3 12.5zM7.5 11.5l2.3 1-2.3 1zM16.5 11.5l-2.3 1 2.3 1zM12 17.5l-1.2-1.5h2.4z\"/>", "OMEGA": "<path d=\"M4 20h5v-2.7A7.3 7.3 0 1 1 15 17.3V20h5\" fill=\"none\" stroke=\"%C\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>", "WOLF": "<path d=\"M4 3c3 6 4 12 3 18C5 15 4 9 4 3zM10.5 3c3 6 4 12 3 18-2-6-3-12-3-18zM17 3c3 6 4 12 3 18-2-6-3-12-3-18z\"/>", "ACE": "<path d=\"M12 2c3.2 4.2 8 6.7 8 11.2a4.3 4.3 0 0 1-7.2 3.1c.2 2 .7 3.7 2 5.7H9.2c1.3-2 1.8-3.7 2-5.7A4.3 4.3 0 0 1 4 13.2C4 8.7 8.800 6.2 12 2z\"/>", "SKYNET": "<circle cx=\"12\" cy=\"12\" r=\"3.2\"/><circle cx=\"12\" cy=\"3.8\" r=\"1.9\"/><circle cx=\"20.2\" cy=\"12\" r=\"1.9\"/><circle cx=\"12\" cy=\"20.2\" r=\"1.9\"/><circle cx=\"3.8\" cy=\"12\" r=\"1.9\"/><path d=\"M12 5.7v3.1M18.3 12h-3.1M12 18.3v-3.1M5.7 12h3.1\" fill=\"none\" stroke=\"%C\" stroke-width=\"1.7\"/>", "VIPER": "<path d=\"M12 2C7.5 2 4.5 5 4.5 8.8c0 2.8 1.8 4.8 3.7 6L7 19l2.5 3h5L17 19l-1.2-4.2c1.9-1.2 3.7-3.2 3.7-6C19.5 5 16.5 2 12 2zM7.5 8.2l3.2 1.5-3.2.8zM16.5 8.2l-3.2 1.5 3.2.8z\"/>", "GHOST": "<path d=\"M12 2C8 2 5 5 5 9.5V22l3-2 4 2 4-2 3 2V9.5C19 5 16 2 12 2zM8 9l3 1.3-3 1zM16 9l-3 1.3 3 1z\"/>", "TITAN": "<path d=\"M12 2C7 2 3.5 5.5 3.5 10.5V17l3.5 1.2V22h10v-3.8l3.5-1.2v-6.5C20.5 5.5 17 2 12 2zM7 10h10v3.2H7zM10.8 13.2h2.4V18h-2.4z\"/>", "RAVEN": "<path d=\"M12 4l2 5 8-4c-1 6-4 10-8 11.5L13 21h-2l-1-4.5C6 15 3 11 2 5l8 4z\"/>", "COBRA": "<path d=\"M12 2c-2 0-3.5 1.5-3.5 3.5 0 1.500.8 2.700 2 3.300C6.800 10 3 12.600 3 15.800 3 18.500 5.200 20 8 20h1v2h6v-2h1c2.800 0 5-1.500 5-4.200 0-3.200-3.800-5.800-7.500-7 1.200-.6 2-1.800 2-3.300C15.500 3.500 14 2 12 2zM10 5.500l1.200.8-1.200.5zM14 5.500l-1.200.8 1.200.5z\"/>", "REAPER": "<path d=\"M12 2C7 2 3.5 5.500 3.500 10c0 2.800 1.200 4.700 3 6V20h3v-2h1v2h2v-2h1v2h3v-4c1.800-1.300 3-3.200 3-6C20.500 5.500 17 2 12 2zM7.500 9.500a2 2.300 0 1 0 4 0 2 2.300 0 1 0-4 0zM12.500 9.500a2 2.300 0 1 0 4 0 2 2.300 0 1 0-4 0zM12 13l-1.200 2h2.400z\"/>", "HAWK": "<path d=\"M1.500 12C4 7.500 8 5 12 5s8 2.500 10.500 7C20 16.500 16 19 12 19S4 16.500 1.500 12z\" fill=\"none\" stroke=\"%C\" stroke-width=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"3.500\"/>", "STORM": "<path d=\"M13.500 2 4.500 13.500H11L9.500 22l10-12.500H13z\"/>", "PHANTOM": "<path d=\"M12 3C7 3 3 6.200 3 10.500c0 3 2 5.500 4.500 6.800C8 19.500 9.700 21.500 12 21.500s4-2 4.500-4.200C19 16 21 13.500 21 10.500 21 6.200 17 3 12 3zM5.800 9.300l5.200 1.600-.6 2.700zM18.200 9.300l-5.200 1.600.6 2.700z\"/>", "BLADE": "<path d=\"M12 1.500l3 11H9z\"/><path d=\"M6 13h12v2.200H6z\"/><path d=\"M10.800 15.200h2.400v6.300h-2.400z\"/>", "GENERIC": "<circle cx=\"12\" cy=\"12\" r=\"6\" fill=\"none\" stroke=\"%C\" stroke-width=\"2\"/><path d=\"M12 2v5M12 17v5M2 12h5M17 12h5\" fill=\"none\" stroke=\"%C\" stroke-width=\"2\" stroke-linecap=\"round\"/>"};
 function tkey(n){var b=String(n).toUpperCase().replace(/\s+\d+$/,"");if(TICON[b]&&b!=="GENERIC")return b;var h=0;for(var i=0;i<b.length;i++)h=(h*31+b.charCodeAt(i))>>>0;return TEAMS[h%TEAMS.length]}
 function tsvg(n,sz,col){return'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="'+sz+'" height="'+sz+'" fill="'+col+'" fill-rule="evenodd" aria-hidden="true">'+TICON[tkey(n)].split("%C").join(col)+'</svg>'}
@@ -3171,11 +3176,187 @@ $("setup").addEventListener("change",function(e){
   if(gk==="k"){var v=t.closest("tr")&&t.closest("tr").querySelector('[data-gk="v"]');if(v)v.type=gcSecret(s.k)?"password":"text"}
 });
 
+/* ======================================================================
+   Storico del torneo: orari delle partite (g.at), fatti per js/cronaca.js (window.CRONACA),
+   file Markdown da scaricare e, nell'app per Windows, archiviato da solo in "storici"
+   ====================================================================== */
+/* tutte le partite di un gioco in ordine di tabellone, con le chiavi di dcMatches (servono anche agli orari).
+   sig = firma del risultato: chi gioca, punteggi, vincitore. Le partite «pending» non si possono ancora giocare. */
+function histMatches(g,k){
+  var M=[],n=0;if(!g||g.phase==="setup")return M;
+  function num(v){return v==null||v===""||isNaN(+v)?null:+v}
+  function two(id,stage,kind,a,b,st,o){o=o||{};var dn=st==="done",sa=num(o.sa),sb=num(o.sb),w=dn&&o.w||null;
+    M.push({id:id,order:++n,stage:stage,kind:kind,state:st,sides:[a||null,b||null],score:dn&&sa!=null&&sb!=null?[sa,sb]:null,winner:w,draw:dn&&!!o.draw,forfeit:dn&&!!o.ff,eliminated:dn&&o.out||null,heat:null,sig:[a,b,sa,sb,w,o.draw?1:0,o.ff?1:0].join("|")})}
+  if(g.ffa){var F=g.ffa;F.rounds.forEach(function(rd,ri){var fin=rd.groups.length===1,last=ri===F.rounds.length-1,fo=ffaOut(g,ri);rd.groups.forEach(function(gr,gi){
+    if(!gr.p.length)return;var e=gEval(gr,fin,F.adv,fo),pl=e.sorted.filter(function(x){return x.pos!=null}),st=e.full&&pl.length?"done":last?"ready":"";if(!st)return;
+    var dn=st==="done",top=pl.filter(function(x){return x.pos===1}),hs=e.sorted.map(function(x){return{name:x.n,score:num(gr.s[x.n]),pos:x.pos==null?null:x.pos}});
+    M.push({id:"f"+ri+"-"+gi,order:++n,stage:fin?"Finale":"Manche "+(ri+1)+", girone "+letter(gi),kind:fin?"final":"heat",state:st,sides:gr.p.slice(),score:null,winner:dn&&top.length===1?top[0].n:null,draw:dn&&top.length>1,forfeit:false,eliminated:null,
+      heat:dn?hs:null,adv:fin?null:e.na,advanced:dn&&!fin?e.adv.slice():null,sig:hs.map(function(h){return h.name+":"+h.score}).join("|")})})});return M}
+  if(g.de){var D=deState(g),E=D.ev,L=[];
+    D.st.WB.forEach(function(rd,r){rd.forEach(function(m){L.push({id:m.id,lv:r*2,b:"W",r:r,end:r===D.st.WB.length-1})})});
+    D.st.LB.forEach(function(rd,r){rd.forEach(function(m){L.push({id:m.id,lv:r+1.5,b:"L",r:r,end:r===D.st.LB.length-1})})});
+    L.sort(function(p,q){return p.lv-q.lv});L.push({id:"GF"});if(E.M.GF2)L.push({id:"GF2"});
+    L.forEach(function(x){var m=E.M[x.id];if(!m||m.bye||m.a===null||m.b===null)return;var a=m.a===undefined?null:m.a,b=m.b===undefined?null:m.b,dn=m.ready&&m.w!=null;
+      var stg=x.id==="GF"?"Finale":x.id==="GF2"?"Bella":x.b==="W"?(x.end?"Finale dei vincenti":"Vincenti, turno "+(x.r+1)):(x.end?"Finale dei perdenti":"Perdenti, turno "+(x.r+1));
+      /* esce chi perde nei perdenti, nella bella o nella finale (se non c'è la bella); chi perde nei vincenti scende nei perdenti */
+      var out=x.b==="L"||x.id==="GF2"||(x.id==="GF"&&!E.M.GF2)?m.l:null;
+      two("d"+x.id,stg,x.id==="GF"?"grand":x.id==="GF2"?"bella":x.b==="W"?"winners":"losers",a,b,dn?"done":m.ready?"ready":"pending",dn?{sa:m.sa,sb:m.sb,w:m.w,ff:m.ff,out:out}:null)});return M}
+  if(g.groups){var Q=[];g.groups.forEach(function(x,gi){var op=x.matches.filter(function(m){return rrOpen(g,m)}),d=op.length?op[0].day:null;
+      x.matches.forEach(function(m,mi){var dn=m.sa!=null&&m.sb!=null,fw=rrFf(g,m);if(m.void||(!dn&&!fw&&isWd(g,m.a)&&isWd(g,m.b)))return;Q.push({m:m,gi:gi,mi:mi,dn:dn,fw:fw,st:dn||fw?"done":m.day===d?"ready":"pending"})})});
+    Q.sort(function(p,q){return(p.m.day||0)-(q.m.day||0)||p.gi-q.gi||p.mi-q.mi});
+    Q.forEach(function(x){var m=x.m,sa=num(m.sa),sb=num(m.sb),gl=g.groups.length>1?"Girone "+letter(x.gi):"";
+      two("g"+x.gi+"-"+x.mi,m.day?(gl?gl+", giornata "+m.day:"Giornata "+m.day):gl||"Girone unico","group",m.a,m.b,x.st,x.dn?{sa:sa,sb:sb,w:sa>sb?m.a:sb>sa?m.b:null,draw:sa===sb}:{w:x.fw,ff:!!x.fw})})}
+  if(g.sw)g.sw.rounds.forEach(function(rd,ri){rd.forEach(function(m,mi){var id="s"+ri+"-"+mi,stg="Turno "+(ri+1);
+    /* riposo: niente avversario, vale una vittoria in classifica (swStandings); nei fatti spiega la classifica */
+    if(!m.b){if(m.ff)two(id,stg,"swiss",m.a,m.ff,"done",{w:m.a,ff:1});else if(m.b===null&&m.a)M.push({id:id,order:++n,stage:stg,kind:"swiss",state:"done",sides:[m.a],score:null,winner:m.a,draw:false,forfeit:false,eliminated:null,heat:null,bye:true,sig:m.a+"|riposo"});return}
+    var dn=m.w!=null;two(id,stg,"swiss",m.a,m.b,dn?"done":"ready",dn?{sa:m.sa,sb:m.sb,w:m.w==="="?null:m.w,draw:m.w==="=",ff:m.ff===1||m.ff===true}:null)})});
+  if(g.rounds){var R=g.rounds,T=R.length,t=g.third,tm=!!(t&&t.match),EK={1:"final",2:"semi"};
+    var el=function(ri){var l=T-ri;R[ri].forEach(function(m,mi){if(!m.a||!m.b){if(ri>0)two("e"+ri+"-"+mi,roundName(ri,T).replace("Semifinali","Semifinale"),EK[l]||"round",m.a,m.b,"pending");return}
+      /* chi perde una semifinale con la finale per il 3º posto non esce ancora */
+      two("e"+ri+"-"+mi,roundName(ri,T).replace("Semifinali","Semifinale"),EK[l]||"round",m.a,m.b,m.w?"done":"ready",m.w?{sa:m.sa,sb:m.sb,w:m.w,ff:m.ff,out:l===2&&tm?null:loser(m)}:null)})};
+    for(var ri=0;ri<T-1;ri++)el(ri);
+    if(tm)two("e3","Finale 3º posto","third",t.a,t.b,t.a&&t.b?(t.w?"done":"ready"):"pending",t.w?{sa:t.sa,sb:t.sb,w:t.w,ff:t.ff,out:t.w===t.a?t.b:t.a}:null);
+    el(T-1)}
+  return M;
+}
+/* orari: g.at = {id partita: [ms, firma]}, g.t0 inizio, g.t1 fine (tolto se il gioco non è più concluso).
+   L'orario è quello della prima volta che la partita risulta giocata: correggere il punteggio o rinominare
+   chi ha giocato non la sposta (è stata giocata allora), cambia solo la firma. Se torna da giocare l'orario resta
+   in riserva ([ms, firma, 1]): se poi torna giocata con la stessa firma (es. doppia eliminazione: correzione a monte
+   annullata, il risultato a valle torna valido) riprende l'orario di prima; con un'altra firma è giocata adesso.
+   g.t1 = l'orario dell'ultima partita giocata, finché il gioco è concluso.
+   Dati vecchi (gioco avviato senza g.at: versione precedente, backup, file importato): le partite già giocate
+   prendono 0 = orario sconosciuto, mai l'ora di adesso. START crea g.at vuoto, quindi la regola vale solo per loro.
+   Gira in save() (mai durante SWAP): restituisce true se è cambiato qualcosa. */
+function histStamp(){
+  if(WALL)return false;var ch=false,now=Date.now();
+  Object.keys(DEF).forEach(function(k){var g=S.games[k];if(!g||typeof g!=="object")return;
+    if(g.phase==="setup"){if(g.at!==undefined||g.t0!==undefined||g.t1!==undefined){delete g.at;delete g.t0;delete g.t1;ch=true}return}
+    var old=!g.at||typeof g.at!=="object"||Array.isArray(g.at),A=old?{}:g.at,seen={},when=old?0:now,mx=-1;
+    if(old){g.at=A;ch=true}if(typeof g.t0!=="number"){g.t0=0;ch=true}
+    histMatches(g,k).forEach(function(m){if(m.state!=="done")return;seen[m.id]=1;var e=A[m.id];
+      if(!Array.isArray(e)||typeof e[0]!=="number"||(e[2]&&e[1]!==m.sig)){e=A[m.id]=[when,m.sig];ch=true}
+      else if(e[2]){e=A[m.id]=[e[0],e[1]];ch=true}else if(e[1]!==m.sig){e[1]=m.sig;ch=true}
+      if(e[0]>mx)mx=e[0]});
+    Object.keys(A).forEach(function(id){var e=A[id];if(seen[id])return;if(!Array.isArray(e)||typeof e[0]!=="number"){delete A[id];ch=true}else if(!e[2]){A[id]=[e[0],e[1],1];ch=true}});
+    /* fine = l'ultima partita: un gioco è già «Concluso» con la finale, ma la finale per il 3º posto si può giocare dopo */
+    var dn=result(g,k).status==="Concluso",t1=mx>=0?mx:when;
+    if(dn&&g.t1!==t1){g.t1=t1;ch=true}else if(!dn&&g.t1!==undefined){delete g.t1;ch=true}});
+  return ch;
+}
+/* classifica finale (gioco concluso) o attuale (gironi e svizzero prima dei playoff); vuota se non c'è */
+function histStand(g,k,r){
+  if(r.status==="Concluso"){var P=placements(g,k);return Object.keys(P).map(function(n){return{pos:P[n],name:n}}).sort(function(a,b){return a.pos-b.pos})}
+  var L=g.rounds||g.ffa||g.de?[]:g.groups?overall(g):g.sw?swRank(g).map(function(x){return x.n}):[];
+  return L.map(function(n,i){return{pos:i+1,name:n}});
+}
+/* i fatti del torneo aperto (S) per CRONACA.build: solo dati di gioco. Mai password, account Discord, Telegram,
+   server di gioco o TeamSpeak. Giochi in bozza e non ancora avviati esclusi. */
+function histFacts(){
+  var ev=S.ev||{},ML={},games=[];MODES.forEach(function(m){ML[m[0]]=m[1]});
+  Object.keys(DEF).forEach(function(k){var g=S.games[k];if(!g||g.phase==="setup"||g.draft)return;
+    var r=result(g,k),team=isTeam(g,k),at=g.at&&typeof g.at==="object"?g.at:{},conc=r.status==="Concluso",mb=g.members||{};
+    var ms=histMatches(g,k).map(function(m){var e=at[m.id];m.at=m.state!=="done"?null:Array.isArray(e)&&typeof e[0]==="number"&&(!e[2]||e[1]===m.sig)?e[0]:0;delete m.sig;return m});
+    var ones=(r.tpos||[]).filter(function(x){return x===1}).length;
+    /* eliminazione: dopo la finale il gioco è «Concluso» (c'è il campione), ma finché manca la finale per il 3º posto
+       il podio non è deciso: nello storico il gioco non è finito e i due semifinalisti non hanno ancora un posto */
+    var t3=ms.filter(function(m){return m.kind==="third"&&m.state!=="done"})[0],done=conc&&!t3,st=histStand(g,k,r);
+    if(t3)st=st.filter(function(x){return t3.sides.indexOf(x.name)<0});
+    games.push({key:k,game:DEF[k].l,name:DEF[k].l+(g.name?" — "+g.name:""),format:g.mode,formatLabel:ML[g.mode]||g.mode,team:team,done:done,status:conc&&t3?"Finale 3º posto in corso":r.status,
+      started:typeof g.t0==="number"?g.t0:null,finished:done&&typeof g.t1==="number"?g.t1:null,
+      /* il sorteggio è casuale: l'ordine di iscrizione (seed) non dice chi è più forte */
+      seeded:false,
+      participants:g.players.map(function(p,i){return{name:p,seed:i+1,members:team&&Array.isArray(mb[p])?mb[p].slice():[],withdrawn:isWd(g,p)}}),
+      matches:ms,standings:st,champion:conc&&r.top[0]&&ones<2?r.top[0]:null})});
+  return{app:{name:"Tornei Fragmarathon",version:(window.VERSION||{}).v||""},lang:ev.lang||"it",
+    event:{id:ev.id||"",title:S.ui.title||UI0.title,subtitle:S.ui.sub||"",date:ev.date||"",time:ev.time||"",place:ev.place||"",mode:ev.mode||"lan",address:ev.addr||""},games:games};
+}
+function histErr(e){if(DESK&&DESK.logError)DESK.logError("storico",String(e&&e.stack||e))}
+/* storico del torneo aperto, nella lingua del torneo (i nomi non si traducono: li sostituisce cronaca.js dopo) */
+function histDoc(f){
+  if(!window.CRONACA)return null;f=f||histFacts();var lang=f.lang;
+  /* le frasi della cronaca solo intere (se il dizionario non le ha restano in italiano, mai un misto di due lingue);
+     fasi, stati e formati sono composti a pezzi, come nel resto del programma */
+  var I=lang!=="it"&&window.I18N?I18N:null;
+  var r=CRONACA.build(f,{tr:function(s){return I&&I.exact?I.exact(s,lang):s},trData:function(s){return I?I.tr(s,lang):s}});
+  return{md:r.md,name:CRONACA.fileName(f),lines:r.lines||[],facts:f};
+}
+/* storico di un altro torneo (stato salvato): si lavora per un attimo su quello, poi si torna sempre a questo */
+function histOf(st){if(!st||st===S)return histDoc();var keep=swapIn(st);try{return histDoc()}finally{swapOut(keep)}}
+function histDownload(){
+  var lang=(S.ev&&S.ev.lang)||"it";
+  (window.I18N&&I18N.load?I18N.load(lang):Promise.resolve()).then(function(){
+    var h=histDoc();if(!h){toast("Lo storico non è disponibile in questa versione.");return}
+    /* come il pulsante Storico della Home: senza giochi avviati non c'è niente da raccontare */
+    if(!h.facts.games.length){toast("Questo torneo non ha ancora giochi avviati: lo storico comincia con la prima partita.");return}
+    var blob=new Blob([h.md],{type:"text/markdown;charset=utf-8"});
+    return(DL?DL.save({filename:h.name,data:blob}):Promise.resolve(dlBlob(blob,h.name))).then(function(){toast("Storico scaricato: lo trovi nella cartella Download.")});
+  }).catch(function(e){histErr(e);toast("Storico non riuscito: "+((e&&e.message)||e))});
+}
+/* app per Windows: Documenti\Tornei Fragmarathon\storici\<titolo>_<id>.storico.md, riscritto al massimo 5 secondi
+   dopo un salvataggio (un solo timer, che i salvataggi seguenti non spostano: anche con modifiche continue il file
+   resta indietro di pochi secondi). Si riscrive solo se lo storico è cambiato. Prima di cambiare torneo o chiudere si scrive subito. */
+var histT=null;
+function histArch(){if(!DESK||!DESK.histSave||WALL||!window.CRONACA||histT)return;histT=setTimeout(histWrite,5000)}
+/* histLast: per ogni torneo (id) nome del file e fatti dell'ultima scrittura riuscita, così un salvataggio che non cambia
+   lo storico non riscrive il file. Il nome è nella firma: se il titolo cambia e poi torna com'era, main.js ha già rinominato
+   il file, quindi va riscritto anche se i fatti sono quelli di prima */
+var histLast={};
+function histWrite(){clearTimeout(histT);histT=null;if(later(histWrite))return;
+  try{var f=histFacts();
+    /* nome solo con lettere semplici, cifre, . _ - (main.js non accetta altro); l'id (senza _) distingue tornei con lo stesso titolo
+       e, se il titolo cambia, fa rinominare a main.js il file vecchio dello stesso torneo invece di lasciarne due */
+    var id=String((S.ev&&S.ev.id)||"").replace(/[^A-Za-z0-9-]/g,""),b=String(CRONACA.fileName(f)).replace(/\.storico\.md$/i,"").replace(/\.md$/i,"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9._-]+/g,"-").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g,"").slice(0,80)||"torneo";
+    var nm=b+(id?"_"+id:"")+".storico.md",key=id||nm,sig=nm+"|"+JSON.stringify(f)+"|"+!!(window.I18N_DICT||{})[f.lang];if(histLast[key]===sig)return;
+    /* nessun gioco avviato (azzerato, sorteggio da rifare, in lavorazione): mai un file nuovo, ma quello che c'è già
+       si riscrive, così non restano partite che nell'app non esistono più (main.js scrive solo se il file esiste) */
+    var h=histDoc(f);if(h)DESK.histSave(nm,h.md,!f.games.length).then(function(){histLast[key]=sig}).catch(histErr)}catch(e){histErr(e)}}
+function histFlush(){if(histT)histWrite()}
+if(DESK)window.addEventListener("beforeunload",histFlush);
+/* riquadro «Cronaca del torneo» nella scheda Risultati finali: le ultime partite e, aperta a richiesta, la cronaca intera.
+   Non è un section.panel: non va al proiettore. Le righe sono nella lingua del torneo, come il file. */
+/* la cronaca intera resta aperta anche quando la scheda si ridisegna (ogni salvataggio) */
+var histAll=false;
+$("resbox").addEventListener("toggle",function(e){if(e.target.classList&&e.target.classList.contains("cron-all"))histAll=e.target.open},true);
+function histHm(t){var d=new Date(t);return isNaN(d)?"":d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}
+/* x.at è ISO con il fuso di chi ha scritto (come nel file): l'ora e il giorno si leggono da lì */
+function histDay(x){return typeof x.at==="string"&&/^\d{4}-\d\d-\d\dT/.test(x.at)?x.at.slice(0,10):""}
+function histLine(x,game){
+  /* nella colonna solo l'ora: il giorno, se l'evento ne tocca più d'uno, è nelle intestazioni (histItems) */
+  var hm=histDay(x)?x.at.slice(11,16):x.at>0?histHm(x.at):"";
+  return'<li><span class="cron-t">'+esc(hm)+'</span><div class="cron-b"><p class="cron-m"><span class="cron-st">'+esc(x.stage||"")+'</span>'+(game&&DEF[x.game]?'<span class="cron-g">'+esc(DEF[x.game].l)+'</span>':'')+'</p>'
+   +'<p class="cron-r">'+esc(String(x.text||"").replace(/\*\*/g,""))+'</p>'+(x.comment?'<p class="cron-c">'+esc(x.comment)+'</p>':'')+'</div></li>';
+}
+/* righe della cronaca; con più giorni un'intestazione a ogni cambio di giorno (nella lingua del torneo, come le righe) */
+function histItems(arr,game,multi){
+  var lang=(S.ev&&S.ev.lang)||"it",last=null;
+  function day(d){var p=d.split("-"),t=new Date(+p[0],+p[1]-1,+p[2]);try{return t.toLocaleDateString(lang==="vec"?"it":lang,{weekday:"long",day:"numeric",month:"long"})}catch(e){return d}}
+  return arr.map(function(x){var d=histDay(x),h="";
+    if(multi&&d!==last){h='<li class="cron-day"><span>'+esc(d?day(d):evT("Senza orario"))+'</span></li>';last=d}
+    return h+histLine(x,game)}).join("");
+}
+function histBox(){
+  var h='<div class="cron" id="cronbox"><h2>Cronaca del torneo'+helpBtn("storico")+'</h2>',d=null,dir=DESK&&DESK.histOpen?'<div class="row cron-act"><button id="histdir">Apri la cartella degli storici</button></div>':'';
+  try{d=histDoc()}catch(e){histErr(e)}
+  var L=d?d.lines:[];
+  if(!L.length)return h+'<p class="empty">La cronaca comincia con la prima partita giocata: avvia un gioco con START e inserisci un risultato. Da lì ogni partita ha il suo orario e il suo commento.</p>'+dir+'</div>';
+  /* le ultime: prima quelle con l'orario (la più recente in cima), poi quelle senza (giocate con una versione precedente) */
+  function ms(x){var t=typeof x.at==="string"?Date.parse(x.at):x.at;return t>0?t:0}
+  var last=L.filter(function(x){return ms(x)>0}).sort(function(a,b){return ms(b)-ms(a)}).concat(L.filter(function(x){return!ms(x)}).reverse()).slice(0,5);
+  var days={};L.forEach(function(x){var d=histDay(x);if(d)days[d]=1});var multi=Object.keys(days).length>1;
+  h+='<ol class="cron-list cron-last" data-noi18n>'+histItems(last,1,multi)+'</ol>';
+  var by={};L.forEach(function(x){(by[x.game]=by[x.game]||[]).push(x)});
+  h+='<details class="cron-all"'+(histAll?" open":"")+'><summary>Leggi tutta la cronaca <span class="cron-n">'+L.length+'</span></summary>'
+   +Object.keys(by).map(function(k){return'<h3 data-noi18n>'+esc(DEF[k]?DEF[k].l:k)+'</h3><ol class="cron-list" data-noi18n>'+histItems(by[k],0,multi)+'</ol>'}).join("")+'</details>';
+  /* in fondo alla cronaca anche il file intero: chi la legge fin qui lo trova senza tornare in cima alla scheda */
+  return h+'<div class="row cron-act"><button class="p" id="histdl2">Scarica lo storico</button>'+(DESK&&DESK.histOpen?'<button id="histdir">Apri la cartella degli storici</button>':'')+'</div></div>';
+}
+
 window.__app={
   S:function(){return S},
   WALL:WALL,DESK:DESK,esc:esc,toast:toast,dl:dlBlob,fresh:fresh,
   /* lo stesso torneo ricaricato (informazioni modificate) o {keepHist:true}: Ctrl+Z conserva la cronologia */
-  load:function(p,o){var same=p===S||!!(o&&o.keepHist);discordFlush();if(!same){dcLast=null;aiRes=[];aiMsg=""}S=p;if(lastDel&&lastDel.ev&&lastDel.ev!==(S.ev&&S.ev.id)){lastDel=null;clearTimeout(delT)}initS();registerCustom();normGames();fixCur();if(!same){hist=[];lastJ=null}applyUi();lastStat=statusMap();save();renderRoster();render();renderArch();botPush()},
+  load:function(p,o){var same=p===S||!!(o&&o.keepHist);discordFlush();histFlush();if(!same){dcLast=null;aiRes=[];aiMsg=""}S=p;if(lastDel&&lastDel.ev&&lastDel.ev!==(S.ev&&S.ev.id)){lastDel=null;clearTimeout(delT)}initS();registerCustom();normGames();fixCur();if(!same){hist=[];lastJ=null}applyUi();lastStat=statusMap();save();renderRoster();render();renderArch();botPush()},
   touch:function(){save()},
   DEF:function(){return DEF},makePdf:makePdf,delSnap:function(l){delSnap(l)},evWhen:function(){return evWhen()},
   botLink:function(){return window.__botUser?"https://t.me/"+window.__botUser:""},
@@ -3191,8 +3372,14 @@ window.__app={
   /* proiettore: ridisegna i pannelli (sala.js lo chiama appena caricato, così la Sala compare subito) */
   botRefresh:function(){botRefresh()},
   png:function(k){return makePng(k)},
+  /* storico (Markdown) del torneo aperto o di uno stato salvato di un altro torneo: null se manca js/cronaca.js.
+     Per un'altra lingua del torneo chi chiama carica prima il dizionario (I18N.load). */
+  history:function(st){var h=histOf(st);return h?{md:h.md,name:h.name,games:h.facts.games.length}:null},
   wallRebuild:function(){if(WALL&&$("wall"))wRebuild(false)}
 };
+/* orari dello storico: un torneo di una versione precedente si segna adesso (partite già giocate = orario sconosciuto),
+   prima che la prima modifica le confonda con quelle nuove */
+histStamp();histArch();
 lastJ=JSON.stringify(S);
 if(WALL)wallInit();else{lastStat=statusMap();applyUi();renderRoster();render();botPush();if(S.cur==="sala"&&!window.SALA)document.addEventListener("DOMContentLoaded",function(){if(S.cur==="sala")render()})}
 /* dopo un aggiornamento: cosa è cambiato nelle configurazioni */

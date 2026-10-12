@@ -212,3 +212,32 @@ input[type=password]{flex:1 1 200px}
 .ffl{display:inline-block;font-size:.74rem;font-style:italic;font-weight:600;color:var(--mut);text-decoration:none;white-space:nowrap}
 .fft{margin:-2px 0 6px;text-align:center}
 #wfit .wd,#wfit .ffl{color:inherit}
+
+/* ---------- cronaca del torneo (scheda Risultati finali): non è un .panel, il proiettore non la prende ----------
+   una colonna del tempo a sinistra e la linea della serata con un punto per partita; l'ultima ha il punto acceso */
+.cron{margin:0 0 16px;padding:16px 18px 14px;background:var(--panel);border:2px solid var(--edge);border-radius:8px}
+.cron h2{margin-bottom:14px}
+.cron-list{list-style:none;margin:0;padding:0}
+.cron-list li{display:grid;grid-template-columns:3.4em minmax(0,1fr);column-gap:12px}
+.cron-t{padding-top:1px;font:700 .88rem Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink);white-space:nowrap}
+/* evento su più giorni: il giorno sta sulla linea, a ogni cambio di giorno (l'ora resta sola nella colonna) */
+.cron-list li.cron-day{display:block;margin-left:calc(3.4em + 12px);padding:0 0 10px 16px;border-left:2px solid var(--line);font-weight:700;color:var(--mut)}
+.cron-day span{font-size:.8rem}
+.cron-list li.cron-day::first-letter{text-transform:uppercase}
+.cron-list li.cron-day:not(:first-child){padding-top:6px}
+.cron-b{position:relative;padding:0 0 14px 16px;border-left:2px solid var(--line)}
+.cron-list li:last-child .cron-b{padding-bottom:4px}
+.cron-b::before{content:"";position:absolute;left:-7px;top:5px;width:12px;height:12px;border:2px solid var(--edge);border-radius:50%;background:var(--panel)}
+.cron-last li:first-child .cron-b::before,.cron-last li.cron-day:first-child+li .cron-b::before{border-color:var(--acc);background:var(--acc)}
+.cron-m{display:flex;flex-wrap:wrap;gap:0 10px;margin:0;font-size:.8rem;line-height:1.5;color:var(--mut)}
+.cron-st{font-weight:700}
+.cron-r{margin:1px 0 0;font-weight:700;overflow-wrap:anywhere}
+.cron-c{margin:3px 0 0;max-width:70ch;font-style:italic;color:var(--ink);opacity:.85}
+.cron-all{margin-top:10px;padding-top:10px;border-top:2px solid var(--line)}
+.cron-all summary{padding:4px 0;font-weight:700;cursor:pointer}
+.cron-all summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px;border-radius:4px}
+.cron-n{display:inline-block;min-width:1.9em;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--acc);color:var(--accink);font-size:.78rem;text-align:center}
+.cron-all h3{margin:16px 0 10px;color:var(--mut)}
+.cron-act{margin-top:12px}
+/* il punto sporge di 7px a sinistra della linea: lo spazio tra l'ora e la linea deve superarlo, anche sul telefono */
+@media (max-width:640px){.cron{padding:12px 10px 10px}.cron-list li{grid-template-columns:2.9em minmax(0,1fr);column-gap:11px}.cron-t{font-size:.82rem}.cron-b{padding-left:12px}.cron-list li.cron-day{margin-left:calc(2.9em + 11px);padding-left:12px}}

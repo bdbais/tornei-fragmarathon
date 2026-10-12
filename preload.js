@@ -36,6 +36,9 @@ contextBridge.exposeInMainWorld("desk", {
   listBackups: () => ipcRenderer.invoke("backup:list"),
   readBackup: (file) => ipcRenderer.invoke("backup:read", file),
   openFolder: (which) => ipcRenderer.invoke("folder:open", which),
+  /* ifExists: scrive solo se il file di quel torneo c'è già (torneo senza più giochi avviati) */
+  histSave: (name, md, ifExists) => ipcRenderer.invoke("hist:save", name, md, !!ifExists),
+  histOpen: () => ipcRenderer.invoke("hist:open"),
   openWall: () => ipcRenderer.invoke("wall:open"),
   aiImage: (cfg, prompt, seed, size) => ipcRenderer.invoke("ai:image", cfg, prompt, seed, size),
   aiProbe: (base, prov) => ipcRenderer.invoke("ai:probe", base, prov),

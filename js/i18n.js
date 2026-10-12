@@ -128,6 +128,7 @@
     LANGS: C.LANGS, ui: function () { return ui; }, ev: function () { return ev; },
     setUi: setUi, setEv: setEv, load: load, refresh: all,
     tr: function (s, code) { return C.tr(s, dict(code || ui)); }, keep: keep,
+    exact: function (s, code) { return C.exact(s, dict(code || ui)); },
     onChange: function (f) { waiters.push(f); }
   };
   Promise.all([load(ui), load(ev)]).then(function () {

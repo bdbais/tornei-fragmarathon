@@ -230,6 +230,22 @@
       A.toast("Torneo esportato: lo trovi nella cartella Download.");
     }).catch(function (e) { A.toast("Esportazione non riuscita: " + ((e && e.message) || e)); });
   }
+  /* storico (cronaca delle partite) di un torneo, anche non aperto: lo stato si legge come in exportEv;
+     per quello aperto prima si salva, poi vale quello in memoria */
+  function histEv(id) {
+    if (!A.history) return;
+    var p = id === curId() ? flush(true).then(function () { return null; }) : readState(id);
+    p.then(function (st) {
+      if (st && !okState(st)) throw new Error("file non valido");
+      var lang = ((st || cur()).ev || {}).lang || "it";
+      return (window.I18N && I18N.load ? I18N.load(lang) : Promise.resolve()).then(function () { return A.history(st || undefined); });
+    }).then(function (h) {
+      if (!h) { A.toast("Lo storico non è disponibile in questa versione."); return; }
+      if (!h.games) { A.toast("Questo torneo non ha ancora giochi avviati: lo storico comincia con la prima partita."); return; }
+      A.dl(new Blob([h.md], { type: "text/markdown;charset=utf-8" }), h.name);
+      A.toast("Storico scaricato: lo trovi nella cartella Download.");
+    }).catch(function (e) { A.toast("Storico non riuscito: " + ((e && e.message) || e)); });
+  }
   function importFile(file) {
     var r = new FileReader();
     r.onload = function () {
@@ -444,7 +460,7 @@
     var acts = '<div class="ev-act">' +
       (hero ? '<button class="p ev-go" data-a="open">' + (isCur ? "Continua" : "Apri") + '</button>' : '<button class="p" data-a="open">' + (isCur ? "Continua" : "Apri") + '</button>') +
       '<button data-a="edit">Modifica</button>' + (dupAsk === id ? '<button data-a="dup0">Duplica senza risultati</button><button data-a="dup1">Duplica con i risultati</button>' : '<button data-a="dup" title="Copia di questo torneo, con o senza risultati">Duplica</button>') +
-      '<button data-a="share" aria-expanded="' + (shareAsk === id ? "true" : "false") + '">Condividi</button><button data-a="export">Esporta</button><button data-a="trash">Elimina</button></div>' + (shareAsk === id ? shareHtml(m) : "");
+      '<button data-a="share" aria-expanded="' + (shareAsk === id ? "true" : "false") + '">Condividi</button><button data-a="export">Esporta</button>' + (A.history && window.CRONACA ? '<button data-a="hist" title="Cronaca delle partite con orari, risultati e classifiche (Markdown)">Storico</button>' : '') + '<button data-a="trash">Elimina</button></div>' + (shareAsk === id ? shareHtml(m) : "");
     var pin = '<button class="ev-pin" data-a="pin" aria-pressed="' + (m.pinned ? "true" : "false") + '" title="' + (m.pinned ? "Togli dai preferiti" : "Tieni in cima") + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>';
     var body = editing === id ? editForm(m, id) :
       (hero && isCur ? '<p class="ev-kicker">Aperto adesso</p>' : "") +
@@ -585,6 +601,7 @@
         /* la copia tiene lingua, modalità, indirizzo, ora e link; i canali Discord no (create riparte da un ev nuovo) */
         return create(Object.assign({}, m1, { title: (m1.title || "Torneo") + " (copia)", sub: m1.sub || "", date: a === "dup1" ? m1.date || "" : "", place: m1.place || "", color: m1.color || "", bot: m1.bot || "", draft: m1.draft, from: (a === "dup1" ? "copia:" : "tutto:") + id })); }
       if (a === "export") return exportEv(id);
+      if (a === "hist") return histEv(id);
       if (a === "trash") return trashEv(id, b);
       if (a === "botadd") return D.botsAdd("Bot " + ((bots || []).length + 1)).then(render).then(function () { var n = root.querySelectorAll(".bt-name"); if (n.length) { n[n.length - 1].focus(); n[n.length - 1].select(); } });
       if (a === "bottog") { var on = b.getAttribute("aria-checked") !== "true"; b.disabled = true; return D.botsEnable(bid, on).then(function (L) { bots = L; paint(); A.toast(on ? "Bot acceso: risponde per tutti i tornei che lo usano." : "Bot spento."); }); }

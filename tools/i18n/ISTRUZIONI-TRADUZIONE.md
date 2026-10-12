@@ -34,6 +34,7 @@ Consiglio: scrivi le traduzioni in un file JSON di appoggio nella cartella tempo
 4. Stile: interfaccia concisa e naturale, verbi all'imperativo sui pulsanti, terminologia esports che si usa davvero nella lingua (bracket, round, playoff, free for all, swiss, double elimination...). Coerenza: la stessa parola italiana sempre tradotta allo stesso modo ("torneo", "girone", "turno", "giocatore", "squadra", "proiettore", "diretta").
 5. Se una stringa non è testo per persone (CSS, font come "bold 16px ", tipi MIME come "image/*", codici), il valore è uguale alla chiave.
 6. Se una frase è un frammento (es. " passano il primo turno senza giocare" o "Conferma: elimina "), traducila come frammento che si incastra con il resto, mantenendo gli spazi ai bordi.
+7. Storico del torneo (frasi da telecronista di `js/cronaca.js`): i segnaposto tra graffe di una lettera (`{w}` vincitore, `{l}` perdente, `{a}` `{b}` i due lati, `{s}` punteggio, `{e}` chi esce, `{k}` vittorie di fila, `{g}` gioco, `{x}` `{y}` secondo e terzo (sempre nomi), `{c}` campione, `{p}` elenco di nomi, `{f}` formato, `{t}` titolo, `{n}` un numero (quanti giocatori, squadre, tornei o partite), `{i}` `{j}` teste di serie (numeri), `{v}` nome del programma o dello schema, `{z}` fuso orario come `+02:00`) restano identici e tutti presenti; puoi spostarli nella frase. I numeri sono dentro la frase intera, mai in un pezzo già composto: per l'italiano il programma sceglie la frase al singolare o al plurale; se la tua lingua ha più forme del plurale (russo, romeno…) scrivi la frase in modo che vada bene con ogni numero, per esempio con il numero dopo i due punti («Игроков: {n}»). Un segnaposto sbagliato sparisce dal testo. Queste frasi si usano solo intere: se manca la traduzione resta l'italiano, quindi traducile intere e con lo stesso tono (entusiasta, mai volgare, senza aggiungere fatti come uccisioni, mappe o minuti).
 
 ## Verifica obbligatoria prima di finire
 
@@ -43,6 +44,6 @@ Nella cartella del progetto:
 node -e "const d=require('./js/lang/<codice>.js'),s=require('./tools/i18n/strings.json');const all=[...s.ui,...s.bot,...s.changelog];const miss=all.filter(k=>!(k in d.s));const bad=all.filter(k=>k in d.s&&(/^\s/.test(k)!==/^\s/.test(d.s[k])||/\s$/.test(k)!==/\s$/.test(d.s[k])));console.log('mancano',miss.length,'spazi diversi',bad.length,'help',Object.keys(d.help).length,'/',Object.keys(s.help).length)"
 ```
 
-Deve stampare: `mancano 0 spazi diversi 0 help 19 / 19`. Se no, correggi e ripeti.
+Deve stampare: `mancano 0 spazi diversi 0` e per `help` due numeri uguali (tutti gli argomenti della guida, es. `help 22 / 22`). Se no, correggi e ripeti.
 
 Alla fine rispondi con una riga: codice lingua, numero di stringhe, al massimo 3 dubbi di traduzione importanti.
