@@ -1,7 +1,7 @@
 /* Tornei Fragmarathon: testi della guida contestuale.
    Ogni argomento si apre dal pulsante "?" della finestra corrispondente o con F1. */
 window.HELP = {
-  order: ["inizio", "tornei", "partecipanti", "squadre", "modifiche", "ffa", "elim", "double", "swiss", "rr", "tds", "risultati", "storico", "ladder", "hof", "sala", "formule", "proiettore", "diretta", "bot", "temi", "archivio", "scorciatoie", "info"],
+  order: ["inizio", "tornei", "partecipanti", "squadre", "modifiche", "ffa", "elim", "double", "swiss", "rr", "tds", "risultati", "storico", "ladder", "hof", "sala", "formule", "proiettore", "diretta", "bot", "feed", "temi", "archivio", "scorciatoie", "info"],
   topics: {
     sala: { t: "Sala: postazioni, oggetti e server", h:
       "<p>La scheda <b>Sala</b> è la pianta della LAN, in 2D e in 3D. Si salva con il torneo.</p>" +
@@ -260,6 +260,27 @@ window.HELP = {
       "<li>Il pallino del pulsante è rosso quando sei in onda, giallo mentre si avvia o si riconnette.</li>" +
       "<li>Appena la diretta parte, il <b>bot Telegram avvisa tutte le chat</b> con i link per guardarla. Chiunque può chiedere al bot <code>/diretta</code>; gli organizzatori possono usare <code>/diretta avvia</code>, <code>/diretta ferma</code> e <code>/diretta scena</code>.</li>" +
       "<li>Se la connessione cade, il programma si riconnette da solo (fino a 60 tentativi). Il dettaglio tecnico è in Documenti\\Tornei Fragmarathon\\diretta-ffmpeg.log.</li></ul>" },
+
+    feed: { t: "Feed per MaiTv e altre app", h:
+      "<p>Il programma può passare le notizie dei tornei ad altri programmi: un <b>feed RSS</b> (il formato dei siti di notizie) e lo <b>storico</b> completo del torneo, in Markdown e in JSON. È pensato per <b>MaiTv</b>, la TV generata dall'AI, ma lo legge qualsiasi lettore di feed. Funziona nell'app installata per Windows, finché il programma è aperto.</p>" +
+      "<h4>Attivarlo</h4><ul>" +
+      "<li>In <b>IMPOSTAZIONI</b>, sezione <b>Feed per MaiTv e altre app</b>, spunta <b>Feed attivo</b>. È spento finché non lo accendi; acceso, riparte da solo a ogni avvio del programma.</li>" +
+      "<li><b>Accessibile da</b>: <b>Solo questo PC</b> basta se MaiTv gira sullo stesso PC; <b>Tutta la rete locale</b> serve se gira su un altro PC della LAN.</li>" +
+      "<li><b>Porta</b>: 8810 di base. Se lo stato dice <b>Porta occupata</b>, un altro programma la sta usando: scrivi un altro numero (da 1024 a 65535) e il feed riparte da solo.</li>" +
+      "<li>Lo stato mostra il pallino verde e l'indirizzo quando il feed è <b>in ascolto</b>.</li></ul>" +
+      "<h4>Collegarlo a MaiTv</h4><p>Sotto i link c'è il blocco <b>Per MaiTv</b>: premi <b>Copia</b> e incollalo nel file <code>canale.json</code> del canale dei tornei di MaiTv, al posto delle voci <code>\"feed\"</code> e <code>\"tornei\"</code>. Ha una riga per categoria, così ogni notizia finisce nella sua rubrica:</p>" +
+      "<pre>\"feed\": [\n  { \"url\": \"http://192.168.1.20:8810/feed.rss?cat=evento&amp;k=…\", \"categoria\": \"evento\" },\n  { \"url\": \"http://192.168.1.20:8810/feed.rss?cat=risultati&amp;k=…\", \"categoria\": \"risultati\" },\n  { \"url\": \"http://192.168.1.20:8810/feed.rss?cat=prossime-partite&amp;k=…\", \"categoria\": \"prossime-partite\" },\n  { \"url\": \"http://192.168.1.20:8810/feed.rss?cat=tabellone&amp;k=…\", \"categoria\": \"tabellone\" }\n],\n\"tornei\": [\"solo-feed\"]</pre>" +
+      "<p>Se MaiTv gira su questo stesso PC può anche leggere direttamente i file <code>.storico.md</code> della cartella <b>storici</b>; con il feed li legge anche da un altro PC. Scegli uno dei due modi: con tutti e due le notizie dello stesso torneo arrivano due volte. Per questo il blocco cambia anche la voce <code>\"tornei\"</code>: <code>solo-feed</code> è una cartella che non esiste, MaiTv non ci trova file e legge solo il feed. Non togliere la voce <code>\"tornei\"</code>: senza, MaiTv rilegge i feed ogni 10 minuti invece che ogni 20 secondi, e risultati e prossime partite arrivano in ritardo.</p>" +
+      "<h4>Categorie</h4><ul>" +
+      "<li><b>evento</b>: la presentazione dell'evento, con luogo, data e ora.</li>" +
+      "<li><b>risultati</b>: ogni partita finita con il punteggio (o il vincitore, il pareggio, la vittoria a tavolino, il podio della manche) e il commento, se c'è; poi il campione di ogni gioco concluso. Se correggi un risultato esce una notizia nuova.</li>" +
+      "<li><b>prossime-partite</b>: fino a 6 partite pronte da giocare, divise fra i giochi (una per gioco, poi la seconda di ogni gioco e così via).</li>" +
+      "<li><b>tabellone</b>: per ogni gioco lo stato, le partite giocate e le prime 8 posizioni della classifica.</li></ul>" +
+      "<p>Il link <b>RSS di tutte le notizie</b> le ha tutte insieme. I testi sono nella lingua del torneo.</p>" +
+      "<h4>La chiave</h4><p>Ogni link finisce con <code>k=</code> e una chiave di 24 caratteri: senza la chiave giusta la richiesta viene rifiutata. Chi ha un link può leggere notizie e storici finché il feed è acceso, quindi passalo solo a chi serve. <b>Rigenera la chiave</b> (due clic) ne crea una nuova: i link vecchi smettono subito di funzionare e vanno ricopiati, anche in MaiTv.</p>" +
+      "<h4>Rete locale e firewall</h4><p>Con <b>Tutta la rete locale</b> la prima volta Windows può chiedere il permesso del firewall per Tornei Fragmarathon: consenti l'accesso alle <b>reti private</b>. Se hai già risposto di no, cambialo in Windows Defender Firewall, <i>Consenti app attraverso Windows Firewall</i>. Se il PC ha più reti (per esempio Wi-Fi e cavo), scegli in <b>Indirizzo nei link</b> quella a cui è collegato l'altro PC. Il feed non va su internet: è solo per la LAN.</p>" +
+      "<h4>Cosa contiene</h4><p>Solo tornei, giochi, nomi di giocatori e squadre, partite, risultati, commenti e classifiche: quello che finisce nello storico. Niente password (né dei server di gioco né del Wi-Fi), niente indirizzi dei server, niente account Discord o Telegram, niente token o chiavi.</p>" +
+      "<p class='note'>Per chi programma: <code>/feed.rss</code> (anche <code>?cat=</code> con una categoria e <code>&amp;ev=</code> con l'id di un torneo), <code>/storico.md</code> e <code>/storico.json</code> del torneo aperto, <code>/storico/&lt;id&gt;.md</code> e <code>.json</code> di ogni torneo archiviato, <code>/eventi.json</code> con l'elenco. Sempre con <code>k=</code>; solo lettura.</p>" },
 
     bot: { t: "Bot Telegram", h:
       "<p>Con un bot Telegram i partecipanti possono vedere tornei, classifiche, partite e Hall of Fame dal telefono, seguire un torneo per ricevere gli avvisi e iscriversi. Il bot è tuo: lo crei una volta sola, gratis, in due minuti.</p>" +

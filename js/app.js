@@ -1407,10 +1407,10 @@ function renderEdit(keep){
    +renderAi()
    +'<h3 style="margin-top:20px">CSS personalizzato</h3><div class="row" id="ecssrow">'+cssRow()+'</div>'+cssWebRow()
    +'<textarea id="ecss" spellcheck="false" aria-label="CSS personalizzato" placeholder="/* Incolla qui il tuo CSS oppure importa un file .css */">'+esc(S.ui.css||"")+'</textarea>'
-   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings()+renderDiscordSettings()+renderStreamSettings();
+   +'<p class="hint">Si applica sopra al tema scelto, anche sul proiettore, e si salva con i dati dell&#39;evento (anche nei backup). Le risorse da internet (url(https://…), @import) sono bloccate: per le immagini usa url(data:…). Premi Salva per applicare le modifiche scritte qui.</p>'+renderBotSettings()+renderDiscordSettings()+renderStreamSettings()+renderFeedSettings();
   $("editform").innerHTML=h;
   if(kv){$("etitle").value=kv.t;$("esub").value=kv.s;if(kv.c!=null&&$("ecss"))$("ecss").value=kv.c;document.querySelectorAll("#editform .egn").forEach(function(x){if(kv.g[x.dataset.k]!=null)x.value=kv.g[x.dataset.k]})}
-  botRefresh();dcRefresh();strFill();
+  botRefresh();dcRefresh();strFill();fdRefresh();
 }
 
 /* ---------- logo con l'AI (impostazioni per questo PC, fuori dai backup perché possono contenere una chiave) ---------- */
@@ -3171,6 +3171,76 @@ $("editbox").addEventListener("change",function(e){
   else if(t.id==="dcchan"){S.ev.dchan=t.checked;save();if(t.checked){if(!S.ev.dguild)toast("Scegli anche il server Discord del torneo.");discordPush(1)}}
   else if(t.id==="dcvoice"){S.ev.dvoice=t.checked;save();discordPush(1)}
 });
+/* ======================================================================
+   Feed per MaiTv e altre app (solo app per Windows): main.js tiene acceso un piccolo server (feedserver.js) con l'RSS
+   delle notizie e lo storico del torneo aperto. Impostazioni del PC, non del torneo: fuori dai backup.
+   fdLast: ultima risposta di main.js; fdAddr: indirizzo scelto quando il PC ne ha più di uno (rete locale).
+   ====================================================================== */
+var fdLast=null,fdAddr="",fdArm=false,fdArmT=0;
+var FD_CATS=[["evento","RSS dell'evento"],["risultati","RSS dei risultati"],["prossime-partite","RSS delle prossime partite"],["tabellone","RSS del tabellone"]];
+function renderFeedSettings(){return'<h3 style="margin-top:20px">Feed per MaiTv e altre app'+helpBtn("feed")+'</h3><p class="hint">Le notizie dei tornei (risultati, prossime partite, tabellone) in formato RSS e lo storico completo del torneo, per MaiTv o per un altro programma che legge i feed. Niente password né account: solo tornei, partite e risultati.</p>'
+  +(DESK&&DESK.feedGet?'<div id="fdbox"><p class="hint">Caricamento…</p></div>':'<p class="hint">Il feed si attiva solo nell&#39;app installata per Windows: la versione web non può fare da server.</p>')}
+function fdBase(st){var u=st.urls||[];return u.indexOf(fdAddr)>=0?fdAddr:(u[0]||"")}
+function fdLinks(st){
+  var b=fdBase(st),k="k="+encodeURIComponent(st.key||"");if(!b)return[];
+  return[["RSS di tutte le notizie",b+"/feed.rss?"+k]].concat(FD_CATS.map(function(c){return[c[1],b+"/feed.rss?cat="+c[0]+"&"+k]}))
+    .concat([["Storico del torneo aperto (Markdown)",b+"/storico.md?"+k],["Storico del torneo aperto (JSON)",b+"/storico.json?"+k],["Elenco dei tornei archiviati (JSON)",b+"/eventi.json?"+k]]);
+}
+/* voci "feed" e "tornei" di canale.json di MaiTv: un feed per categoria, così ogni notizia arriva già nella sua rubrica;
+   "tornei" punta a una cartella che non esiste (MaiTv la ignora): così MaiTv non legge gli stessi risultati anche dai
+   file .storico.md (andrebbero in onda due volte, con id diversi) e rilegge i feed ogni 20 secondi, non ogni 10 minuti */
+function fdMaitv(st){var b=fdBase(st);return'"feed": [\n'+FD_CATS.map(function(c){return'  { "url": '+JSON.stringify(b+"/feed.rss?cat="+c[0]+"&k="+encodeURIComponent(st.key||""))+', "categoria": "'+c[0]+'" }'}).join(",\n")+'\n],\n"tornei": ["solo-feed"]'}
+function fdBusy(st){return st.code==="EADDRINUSE"}
+function fdHtml(st){
+  if(!st.avail)return'<p class="cres err">Il server del feed non è disponibile in questa versione del programma.</p>';
+  var h='<label class="row chk" style="margin-top:10px"><input type="checkbox" id="fdon"'+(st.on?' checked':'')+'>Feed attivo</label>'
+   +'<div class="row" style="margin-top:8px"><label for="fdlan">Accessibile da</label><select id="fdlan"><option value="0"'+(st.lan?'':' selected')+'>Solo questo PC</option><option value="1"'+(st.lan?' selected':'')+'>Tutta la rete locale</option></select>'
+   +'<label for="fdport">Porta</label><input type="number" id="fdport" min="1024" max="65535" step="1" value="'+esc(st.port)+'" style="width:110px"></div>'
+   +'<p class="hint">Solo questo PC basta se MaiTv gira qui. Se gira su un altro PC scegli Tutta la rete locale: la prima volta Windows può chiedere il permesso del firewall, consenti le reti private.</p>';
+  /* stato: pallino verde in ascolto, rosso se non è partito (di solito porta occupata), grigio spento */
+  if(!st.on)h+='<p class="fdst"><span class="fdot" aria-hidden="true"></span><span>Spento: attivalo per avere i link.</span></p>';
+  else if(!st.ok)h+='<p class="fdst err" role="status"><span class="fdot" aria-hidden="true"></span><span>'+(fdBusy(st)?'<span>Porta occupata da un altro programma:</span> <b data-noi18n>'+esc(st.port)+'</b>. <span>Scegli un&#39;altra porta, il feed riparte da solo.</span>':'<span>'+(st.err?esc(st.err):'Il feed non è partito.')+'</span>')+'</span><button type="button" id="fdretry">Riprova</button></p>';
+  else h+='<p class="fdst ok" role="status"><span class="fdot" aria-hidden="true"></span><span><span>'+(st.lan?'In ascolto sulla rete locale':'In ascolto solo su questo PC')+'</span> <b data-noi18n>'+esc((st.urls||[]).join("  "))+'</b></span></p>';
+  if(st.on&&st.ok&&(st.urls||[]).length){
+    if(st.urls.length>1)h+='<div class="row"><label for="fdaddr">Indirizzo nei link</label><select id="fdaddr">'+st.urls.map(function(u){return'<option value="'+esc(u)+'"'+(u===fdBase(st)?' selected':'')+' data-noi18n>'+esc(u)+'</option>'}).join("")+'</select></div><p class="hint">Questo PC ha più di una rete: scegli quella a cui è collegato il PC di MaiTv.</p>';
+    /* ogni Copia ha nome «Copia» + l'etichetta del suo link (aria-labelledby): in un lettore di schermo si distinguono */
+    h+='<div class="fdlinks">'+fdLinks(st).map(function(l,i){return'<span class="fdlab" id="fdl'+i+'">'+esc(l[0])+'</span><input type="text" class="fdurl" readonly value="'+esc(l[1])+'" aria-label="'+esc(l[0])+'" spellcheck="false"><button type="button" id="fdc'+i+'" data-fdcopy="'+i+'" aria-labelledby="fdc'+i+' fdl'+i+'">Copia</button>'}).join("")+'</div>';
+    h+='<p class="fdsub" id="fdsubt">Per MaiTv, da incollare nel file canale.json</p><textarea id="fdjson" class="fdjson" readonly spellcheck="false" rows="7" aria-label="Voce da incollare nel file canale.json">'+esc(fdMaitv(st))+'</textarea>'
+     +'<div class="row"><button type="button" id="fdcm" data-fdcopy="maitv" aria-labelledby="fdcm fdsubt">Copia</button><span class="hint" style="margin:0">Sostituisce le voci "feed" e "tornei" del canale di MaiTv nel file canale.json. Una riga per categoria; "tornei" indica una cartella che non esiste, così MaiTv non legge gli stessi risultati anche dai file dello storico (andrebbero in onda due volte) e rilegge il feed ogni 20 secondi: senza "tornei" lo rilegge ogni 10 minuti.</span></div>';
+  }
+  if(st.key)h+='<div class="row" style="margin-top:14px"><button type="button" id="fdkey">Rigenera la chiave</button><span class="hint" style="margin:0">La chiave è la parte k=… dei link: chi la conosce legge notizie e storici. Rigenerandola i link vecchi smettono di funzionare.</span></div>';
+  return h;
+}
+/* want: il controllo su cui rimettere il fuoco (un pulsante disabilitato durante l'attesa lo ha già perso) */
+function fdShow(st,want){
+  if(st)fdLast=st;var x=$("fdbox");if(!x||!fdLast)return;
+  /* il ridisegno mostra «Rigenera la chiave» normale: la conferma a metà si annulla, mai un pulsante armato in incognito */
+  fdArm=false;clearTimeout(fdArmT);
+  /* ridisegno dopo un cambio: il fuoco resta sul campo che si stava usando, o sul primo link se quel campo non c'è più */
+  var a=document.activeElement,fid=want||(a&&x.contains(a)?a.id:"");
+  x.innerHTML=fdHtml(fdLast);
+  if(fid){var f=$(fid)||x.querySelector(".fdurl")||$("fdon");if(f)f.focus()}
+}
+function fdErr(e){if(DESK&&DESK.logError)DESK.logError("feed",String(e&&e.stack||e))}
+function fdRefresh(){var b=$("fdbox");if(!b||!DESK||!DESK.feedGet)return;DESK.feedGet().then(fdShow).catch(function(e){var x=$("fdbox");if(x)x.innerHTML='<p class="cres err">Non riesco a leggere le impostazioni del feed.</p>';fdErr(e)})}
+function fdSet(o,ok,want){DESK.feedSet(o).then(function(st){if(st&&st.bad)toast(st.bad==="port"?"La porta deve essere un numero da 1024 a 65535.":"Valore non valido.");fdShow(st,want);if(st&&!st.bad&&ok)ok(st)}).catch(function(e){toast("Non riesco a salvare le impostazioni del feed.");fdRefresh();fdErr(e)})}
+$("editbox").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||!DESK||!DESK.feedSet||!b.closest("#fdbox"))return;
+  if(b.dataset.fdcopy){var st=fdLast||{},tx=b.dataset.fdcopy==="maitv"?fdMaitv(st):((fdLinks(st)[+b.dataset.fdcopy]||[])[1]||"");if(!tx)return;
+    (navigator.clipboard?navigator.clipboard.writeText(tx):Promise.reject()).then(function(){toast(b.dataset.fdcopy==="maitv"?"Voce per MaiTv copiata: incollala in canale.json.":"Link copiato.")}).catch(function(){toast("Non riesco a copiare: seleziona il testo e premi Ctrl+C.")});return}
+  if(b.id==="fdretry"){b.disabled=true;fdSet({},function(st){if(st.ok)toast("Feed attivo.")},"fdretry");return}
+  if(b.id==="fdkey"){
+    /* due clic: il primo arma per 5 secondi; il timer disarma sempre, anche se nel frattempo la sezione è stata ridisegnata */
+    if(!fdArm){fdArm=true;b.textContent="Conferma: rigenera la chiave";b.classList.add("p");clearTimeout(fdArmT);fdArmT=setTimeout(function(){fdArm=false;var k=$("fdkey");if(k){k.textContent="Rigenera la chiave";k.classList.remove("p")}},5000);return}
+    fdArm=false;clearTimeout(fdArmT);b.disabled=true;DESK.feedRekey().then(function(st){fdShow(st,"fdkey");toast("Chiave nuova: ricopia i link in MaiTv e nelle altre app.")}).catch(function(e){b.disabled=false;b.focus();toast("Non riesco a rigenerare la chiave.");fdErr(e)})}
+});
+$("editbox").addEventListener("change",function(e){
+  var t=e.target;if(!t.id||!/^fd/.test(t.id)||!DESK||!DESK.feedSet)return;
+  if(t.id==="fdon")fdSet({on:t.checked},function(st){toast(!st.on?"Feed spento.":st.ok?"Feed attivo.":"Il feed non è partito: guarda lo stato qui sotto.")});
+  else if(t.id==="fdlan")fdSet({lan:t.value==="1"});
+  else if(t.id==="fdport"){var p=Number(t.value);if(!/^\d+$/.test(String(t.value).trim())||p<1024||p>65535){toast("La porta deve essere un numero da 1024 a 65535.");t.value=fdLast?fdLast.port:"";return}fdSet({port:p})}
+  else if(t.id==="fdaddr"){fdAddr=t.value;fdShow()}
+});
 /* account Discord dei giocatori, nel pannello Partecipanti */
 function renderDcRoster(){
   var box=$("rdcbox");if(!box)return;S.disc=S.disc||{};
@@ -3442,7 +3512,9 @@ function histWrite(){clearTimeout(histT);histT=null;if(later(histWrite))return;
     /* nome solo con lettere semplici, cifre, . _ - (main.js non accetta altro); l'id (senza _) distingue tornei con lo stesso titolo
        e, se il titolo cambia, fa rinominare a main.js il file vecchio dello stesso torneo invece di lasciarne due */
     var id=String((S.ev&&S.ev.id)||"").replace(/[^A-Za-z0-9-]/g,""),b=String(CRONACA.fileName(f)).replace(/\.storico\.md$/i,"").replace(/\.md$/i,"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9._-]+/g,"-").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g,"").slice(0,80)||"torneo";
-    var nm=b+(id?"_"+id:"")+".storico.md",key=id||nm,sig=nm+"|"+JSON.stringify(f)+"|"+!!(window.I18N_DICT||{})[f.lang];if(histLast[key]===sig)return;
+    var nm=b+(id?"_"+id:"")+".storico.md",key=id||nm,sig=nm+"|"+JSON.stringify(f)+"|"+!!(window.I18N_DICT||{})[f.lang];
+    /* file già scritto e uguale: non si riscrive, ma il feed (main.js) deve sapere che è quello del torneo aperto (cambio di torneo) */
+    if(histLast[key]===sig){if(DESK.histCur)DESK.histCur(nm);return}
     /* nessun gioco avviato (azzerato, sorteggio da rifare, in lavorazione): mai un file nuovo, ma quello che c'è già
        si riscrive, così non restano partite che nell'app non esistono più (main.js scrive solo se il file esiste) */
     var h=histDoc(f);if(h)DESK.histSave(nm,h.md,!f.games.length).then(function(){histLast[key]=sig}).catch(histErr)}catch(e){histErr(e)}}

@@ -36,6 +36,8 @@
   select,input,textarea{max-width:100%}
   label.row{flex-wrap:wrap;max-width:100%}
   label.row>select,label.row>input{flex:1 1 140px;min-width:0;max-width:100%}
+  /* una casella da spuntare resta piccola, anche quando l'etichetta occupa tutta la riga */
+  label.row>input[type=checkbox],label.row>input[type=radio]{flex:0 0 auto}
   .fr{gap:5px;padding:3px 4px}
   .fr input{padding:5px 2px}
   .row>button{flex:0 1 auto}

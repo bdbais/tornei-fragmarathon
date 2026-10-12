@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld("desk", {
   discordLookup: (g, a) => ipcRenderer.invoke("discord:lookup", g, a),
   discordClear: (id) => ipcRenderer.invoke("discord:clear", id),
   discordInvite: (g) => ipcRenderer.invoke("discord:invite", g),
+  /* feed per MaiTv e altre app: impostazioni, stato e indirizzi; set accetta { on, lan, port }; rekey crea una chiave nuova */
+  feedGet: () => ipcRenderer.invoke("feed:get"),
+  feedSet: (o) => ipcRenderer.invoke("feed:set", o),
+  feedRekey: () => ipcRenderer.invoke("feed:rekey"),
+  /* storico del torneo aperto già scritto e non cambiato: il feed lo serve come /storico.md */
+  histCur: (name) => ipcRenderer.send("hist:cur", String(name || "")),
   logError: (where, msg) => ipcRenderer.send("log:error", where, msg),
   evRead: (id) => ipcRenderer.invoke("ev:read", id),
   evWrite: (id, data) => ipcRenderer.invoke("ev:write", id, data),

@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, ipcMain, screen, session, nativeTheme } = req
 const path = require("path");
 const fs = require("fs");
 const AI = require("./js/ai.js");
+const I18N = require("./js/i18n-core.js");
 const createBot = require("./bot.js");
 const createDiscord = require("./discord.js");
 const createStreamer = require("./streamer.js");
@@ -197,10 +198,27 @@ ipcMain.handle("hist:save", (_e, name, md, ifExists) => {
     const old = fs.readdirSync(DIRS.storici).find((f) => f !== base && f.endsWith("_" + id[1] + ".storico.md"));
     if (old) try { fs.renameSync(path.join(DIRS.storici, old), file); } catch (e) { logErr("storico (rinomina)", e); }
   }
-  /* torneo senza più giochi avviati: si aggiorna il file che c'è, ma non se ne crea uno nuovo */
-  if (ifExists === true && !fs.existsSync(file)) return { file: base, skipped: true };
+  /* torneo senza più giochi avviati: si aggiorna il file che c'è, ma non se ne crea uno nuovo (il feed ricade sul più recente) */
+  if (ifExists === true && !fs.existsSync(file)) { feedCur = null; return { file: base, skipped: true }; }
   writeAtomic(file, md);
+  /* la pagina scrive solo lo storico del torneo aperto: è quello che il feed serve come /storico.md e /storico.json */
+  feedCur = { id: id ? id[1] : "", md, name: base };
   return { file: base };
+});
+/* storico non cambiato, quindi non riscritto: la pagina dice comunque qual è quello del torneo aperto, così dopo un cambio
+   di torneo il feed segue quello aperto anche se il suo file è già scritto (nome come in hist:save, file solo da "storici") */
+ipcMain.on("hist:cur", (_e, name) => {
+  try {
+    const base = String(name || "");
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.storico\.md$/.test(base) || base.includes("..")) return;
+    if (feedCur && feedCur.name === base) return;
+    const file = path.join(DIRS.storici, base);
+    if (path.relative(DIRS.storici, file) !== base) return;
+    let md = null;
+    try { md = fs.readFileSync(file, "utf8"); } catch {}
+    const id = /_([A-Za-z0-9-]{4,})\.storico\.md$/.exec(base);
+    feedCur = md ? { id: id ? id[1] : "", md, name: base } : null;
+  } catch (e) { logErr("storico (torneo aperto)", e); }
 });
 ipcMain.handle("hist:open", () => { fs.mkdirSync(DIRS.storici, { recursive: true }); return shell.openPath(DIRS.storici); });
 /* Generazione loghi: la richiesta parte da qui, senza i limiti CORS della pagina. */
@@ -592,6 +610,101 @@ ipcMain.handle("discord:sync", (_e, d) => DC().sync(d));
 ipcMain.handle("discord:lookup", (_e, g, a) => DC().lookup(String(g || ""), Array.isArray(a) ? a.slice(0, 500).map(String) : []));
 ipcMain.handle("discord:clear", (_e, id) => DC().clear(String(id || "")));
 ipcMain.handle("discord:invite", (_e, g) => DC().invite(String(g || "")));
+/* Feed per MaiTv e altre app (feedserver.js): piccolo server HTTP, spento di base, con l'RSS delle notizie dei tornei e lo
+   storico completo. Impostazioni in userData/feed.json: { on, lan, port, key }. MaiTv non manda credenziali, quindi la chiave
+   sta negli indirizzi; si crea la prima volta che si aprono le impostazioni. Il modulo si carica dentro try: se manca o ha
+   un errore il programma parte lo stesso e le impostazioni lo dicono. */
+let createFeedServer = null;
+try { createFeedServer = require("./feedserver.js"); }
+catch (e) { if (!(e && e.code === "MODULE_NOT_FOUND" && /'\.\/feedserver\.js'/.test(e.message))) logErr("feed (modulo)", e); }
+const FEED_FILE = path.join(app.getPath("userData"), "feed.json");
+const feedPortOk = (p) => Number.isInteger(p) && p >= 1024 && p <= 65535;
+const feedNewKey = () => require("crypto").randomBytes(12).toString("hex");
+/* file rovinato: si mette da parte (feed.json.rovinato-<data>) e si riparte dai valori predefiniti, feed spento */
+function feedLoad() {
+  let c = {};
+  if (fs.existsSync(FEED_FILE)) {
+    try { c = JSON.parse(fs.readFileSync(FEED_FILE, "utf8")); if (!c || typeof c !== "object" || Array.isArray(c)) throw new Error("non è un oggetto"); }
+    catch (e) {
+      c = {};
+      const bad = FEED_FILE + ".rovinato-" + stamp();
+      try { fs.renameSync(FEED_FILE, bad); } catch {}
+      logErr("feed", "impostazioni illeggibili (" + ((e && e.message) || e) + "): valori predefiniti; il file vecchio è " + path.basename(bad));
+    }
+  }
+  return { on: c.on === true, lan: c.lan === true, port: feedPortOk(c.port) ? c.port : 8810, key: typeof c.key === "string" && /^[0-9a-f]{24}$/.test(c.key) ? c.key : "" };
+}
+let feedC = null;
+function feedCfg() { return feedC || (feedC = feedLoad()); }
+function feedSave(c) { fs.mkdirSync(path.dirname(FEED_FILE), { recursive: true }); writeAtomic(FEED_FILE, JSON.stringify(c, null, 1)); feedC = c; }
+/* testi del feed nella lingua del torneo (data.lang), come il bot: nucleo delle traduzioni e dizionari js/lang */
+const FEED_DICTS = {};
+function feedDict(code) {
+  code = I18N.pick(code); if (!code || code === "it") return null;
+  if (!(code in FEED_DICTS)) { try { FEED_DICTS[code] = require(path.join(__dirname, "js", "lang", code + ".js")); } catch { FEED_DICTS[code] = null; } }
+  return FEED_DICTS[code];
+}
+const feedTr = (s, lang) => { const d = feedDict(lang); return d ? I18N.tr(s, d) : s; };
+/* feedCur: ultimo storico del torneo aperto (hist:save); feedRes: esito dell'ultimo avvio */
+let feedSrv = null, feedCur = null, feedRes = null, feedQ = Promise.resolve();
+function feedServer() {
+  if (!feedSrv && createFeedServer) {
+    try { feedSrv = createFeedServer({ dir: () => DIRS.storici, current: () => feedCur, tr: feedTr, log: logErr }); }
+    catch (e) { logErr("feed", e); createFeedServer = null; }
+  }
+  return feedSrv;
+}
+/* operazioni sul server una dopo l'altra: due cambi ravvicinati (porta, rete, chiave) non si accavallano */
+function feedRun(fn) { const p = feedQ.then(fn); feedQ = p.catch(() => {}); return p; }
+async function feedApply() {
+  const s = feedServer(); if (!s) return;
+  try { await s.stop(); } catch (e) { logErr("feed (arresto)", e); }
+  feedRes = null;
+  const c = feedCfg(); if (!c.on) return;
+  if (!c.key) feedSave(Object.assign({}, c, { key: feedNewKey() }));
+  try { feedRes = await s.start({ port: feedCfg().port, lan: feedCfg().lan, key: feedCfg().key }); }
+  catch (e) { feedRes = { ok: false, err: String((e && e.message) || e) }; }
+  /* porta occupata o vietata: non è un errore del programma, lo dicono le impostazioni (e Riprova non riempie il registro) */
+  if ((!feedRes || !feedRes.ok) && !(feedRes && /^(EADDRINUSE|EACCES)$/.test(String(feedRes.code || "")))) logErr("feed", (feedRes && feedRes.err) || "avvio non riuscito");
+}
+/* indirizzi base (http://host:porta) da quelli che dà il server: URL completi o solo gli IP */
+function feedBases(urls, port) {
+  return (Array.isArray(urls) ? urls : []).map((u) => {
+    u = String(u || "").trim(); if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u.replace(/\/+$/, "");
+    return "http://" + (u.includes(":") && !u.startsWith("[") ? "[" + u + "]" : u) + ":" + port;
+  }).filter(Boolean);
+}
+/* per la pagina: impostazioni, esito dell'avvio (code "EADDRINUSE" = porta occupata) e indirizzi base per i link */
+function feedInfo() {
+  const c = feedCfg(), ok = !!(feedRes && feedRes.ok);
+  return { avail: !!feedServer(), on: c.on, lan: c.lan, port: c.port, key: c.key, ok, err: (feedRes && !ok && String(feedRes.err || "")) || "",
+    code: (feedRes && !ok && String(feedRes.code || "")) || "", urls: ok ? feedBases(feedRes.urls, feedRes.port || c.port) : [] };
+}
+ipcMain.handle("feed:get", () => feedRun(() => { const c = feedCfg(); if (!c.key) feedSave(Object.assign({}, c, { key: feedNewKey() })); return feedInfo(); }));
+/* solo on, lan (booleani) e port (intero 1024-65535); un valore sbagliato non cambia niente e torna in bad ("port" o "value": la frase la scrive la pagina, che la traduce).
+   Senza cambiamenti, con il feed acceso ma non in ascolto (porta occupata) si riprova */
+ipcMain.handle("feed:set", (_e, o) => feedRun(async () => {
+  o = o && typeof o === "object" ? o : {};
+  const c = feedCfg(), n = Object.assign({}, c);
+  for (const k of ["on", "lan"]) if (k in o) { if (typeof o[k] !== "boolean") return Object.assign(feedInfo(), { bad: "value" }); n[k] = o[k]; }
+  if ("port" in o) {
+    const p = typeof o.port === "number" ? o.port : /^\s*\d+\s*$/.test(String(o.port)) ? Number(o.port) : NaN;
+    if (!feedPortOk(p)) return Object.assign(feedInfo(), { bad: "port" });
+    n.port = p;
+  }
+  if (!n.key) n.key = feedNewKey();
+  const same = n.on === c.on && n.lan === c.lan && n.port === c.port && n.key === c.key;
+  if (!same) feedSave(n);
+  if (!same || (n.on && !(feedRes && feedRes.ok))) await feedApply();
+  return feedInfo();
+}));
+/* chiave nuova: i link vecchi (anche quelli in MaiTv) smettono di funzionare */
+ipcMain.handle("feed:rekey", () => feedRun(async () => {
+  feedSave(Object.assign({}, feedCfg(), { key: feedNewKey() }));
+  if (feedCfg().on) await feedApply();
+  return feedInfo();
+}));
 /* Torneo eliminato e programma chiuso prima dei 60 secondi per annullare: la pagina non ha tolto i suoi canali Discord.
    All'avvio si tolgono, solo per i tornei che sono nel cestino (eliminati da qui, non quelli rovinati) e non più in "eventi",
    nemmeno ripresi a mano con la data davanti al nome. Il nome del file dei canali è quello di discord.js (solo a-z 0-9 -). */
@@ -745,6 +858,8 @@ function start() {
   });
   } catch (e) { logErr("diretta", e); }
   try { botsStartAll(); } catch (e) { logErr("bot", e); }
+  /* feed acceso alla chiusura: riparte con il programma (porta occupata: resta acceso e le impostazioni lo dicono) */
+  try { if (feedCfg().on) feedRun(feedApply).catch((e) => logErr("feed", e)); } catch (e) { logErr("feed", e); }
   setTimeout(() => { try { dcSweepTrash(); } catch (e) { logErr("discord pulizia", e); } }, 10000);
 }
 app.whenReady().then(() => {
@@ -758,5 +873,6 @@ app.whenReady().then(() => {
 app.on("before-quit", () => {
   Object.values(bots).forEach((b) => { try { b.stop(); } catch (e) { logErr("chiusura bot", e); } });
   try { if (streamer) streamer.dispose(); } catch (e) { logErr("chiusura diretta", e); }
+  try { if (feedSrv) Promise.resolve(feedSrv.stop()).catch((e) => logErr("chiusura feed", e)); } catch (e) { logErr("chiusura feed", e); }
 });
 app.on("window-all-closed", () => app.quit());

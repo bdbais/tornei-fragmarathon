@@ -370,6 +370,23 @@ html.set-on body{overflow:hidden}
 .dcs.no{color:#e5484d;font-weight:600}
 .dcok{color:#5865F2;font-weight:600}
 .dcguide ol{margin:6px 0;padding-left:20px}
+/* feed per MaiTv: stato con il pallino (come il pulsante Diretta), link da copiare in griglia, voce per canale.json */
+.fdst{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin:12px 0 0;font-size:.92rem;color:var(--mut)}
+.fdst.err{color:#e5484d;font-weight:600}
+.fdst.ok{color:#177A42;font-weight:600}
+.fdst b{font-weight:600;overflow-wrap:anywhere}
+.fdot{flex:0 0 auto;width:10px;height:10px;border-radius:50%;background:currentColor}
+.fdst.ok .fdot{box-shadow:0 0 0 3px color-mix(in srgb,currentColor 25%,transparent)}
+.fdst button{font-weight:400}
+.fdlinks{display:grid;grid-template-columns:max-content minmax(0,1fr) auto;gap:6px 10px;align-items:center;margin-top:12px}
+.fdlab{font-size:.9rem;color:var(--mut)}
+#editbox .fdurl{width:100%;min-width:0;padding:7px 10px;font:12.5px/1.4 Consolas,"Cascadia Mono",monospace;color:var(--ink)}
+.fdsub{margin:16px 0 4px;font-size:.9rem;font-weight:600;color:var(--ink)}
+.fdjson{display:block;width:100%;min-height:118px;margin-bottom:8px;padding:10px;border:2px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font:12.5px/1.5 Consolas,"Cascadia Mono",monospace;resize:vertical;white-space:pre;overflow-x:auto}
+@media (max-width:640px){
+  .fdlinks{grid-template-columns:minmax(0,1fr) auto;gap:2px 8px}
+  .fdlab{grid-column:1/-1;margin-top:6px}
+}
 
 /* archivio delle configurazioni dei server */
 #setup .gcbox{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}

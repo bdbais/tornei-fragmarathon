@@ -43,9 +43,11 @@ function keep(t) {
   /* pezzi di frase in minuscolo con lo spazio ai bordi: " gironi", " partite.", " per " */
   if (t !== tt && /^[a-zà-ù]{2,}( [a-zà-ù]+)*[.,:;!?]?$/.test(tt) && /[aeiouàèéìòù][.,:;!?]?$/.test(tt)) return true;
   if (/^[A-ZÀ-Ù]{3,}$/.test(tt) && !/^(START|PNG|PDF|CSS|JSON|URL|HTML|RTMP|HTTP|HTTPS|OBS|MVP|AI|FFA|NVENC|QSV|AMF|GPU|CPU|ID|IP|OK)$/.test(tt)) return true;
-  if (CODE.test(tt) && !/ /.test(tt)) return false;
+  /* segnaposto di una lettera ({n}, {t}): frasi con modello, non codice */
+  const tp = tt.replace(/{[a-z]}/g, "x");
+  if (CODE.test(tp) && !/ /.test(tp)) return false;
   if (/^(function|return|var|const|let)\b/.test(tt)) return false;
-  if (/[{};]/.test(tt) && !/[.!?]$/.test(tt)) return false;
+  if (/[{};]/.test(tp) && !/[.!?]$/.test(tt)) return false;
   if (/^[\w-]+(\s[\w-]+)*$/.test(tt) && tt === tt.toLowerCase() && !/[àèéìòù]/.test(tt) && tt.split(" ").length < 2) return false;
   return true;
 }
@@ -85,6 +87,8 @@ if (fs.existsSync(path.join(root, "js/cronaca.js"))) literals(rd("js/cronaca.js"
 });
 /* ladder (js/ladder.js): solo le intestazioni del CSV (var HEAD), il resto del file è logica */
 if (fs.existsSync(path.join(root, "js/ladder.js"))) { const m = /\bvar HEAD = \[([^\]]*)\]/.exec(rd("js/ladder.js")); if (m) literals(m[1]).forEach((l) => ui.add(l)); }
+/* feed per MaiTv (js/feed.js, feedserver.js): solo le frasi delle tabelle TXT, modelli interi con i segnaposto {x} */
+for (const f of ["js/feed.js", "feedserver.js"]) if (fs.existsSync(path.join(root, f))) { const m = /\b(?:var|const) TXT = \{([\s\S]*?)\n\s*\};/.exec(rd(f)); if (m) literals(m[1]).forEach((l) => ui.add(l.replace(/\s+/g, " "))); }
 literals(rd("bot.js")).forEach((l) => pieces(l, bot)); ternaries(rd("bot.js"), bot);
 /* frasi composte a pezzi nel codice, scritte intere in tools/i18n/extra.json */
 JSON.parse(rd("tools/i18n/extra.json")).ui.forEach((x) => ui.add(x));

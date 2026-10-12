@@ -30,7 +30,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/formats.test.js tests/version.test.js tests/discord.test.js tests/streamer.test.js tests/bot.test.js tests/cronaca.test.js tests/ladder.test.js",
+    "test": "node --test tests/formats.test.js tests/version.test.js tests/discord.test.js tests/streamer.test.js tests/bot.test.js tests/cronaca.test.js tests/ladder.test.js tests/feed.test.js",
     "dist": "electron-builder --win nsis --publish never",
     "dist:portable": "electron-builder --win portable --publish never"
   },
@@ -52,6 +52,7 @@
       "bot.js",
       "discord.js",
       "streamer.js",
+      "feedserver.js",
       "stream.html",
       "icon.png",
       "js/**",

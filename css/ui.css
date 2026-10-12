@@ -26,6 +26,7 @@ h2 .hb{float:right;margin-left:12px}
 .hbody ol,.hbody ul{padding-left:20px}
 .hbody kbd,.wkeys kbd{display:inline-block;min-width:1.6em;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;font:600 .8rem Inter,system-ui,sans-serif;text-align:center}
 .hbody .note{border-left:4px solid var(--acc);padding:6px 10px;background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.hbody pre{margin:8px 0;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font:12px/1.5 Consolas,"Cascadia Mono",monospace;overflow-x:auto;white-space:pre}
 @media (min-width:1200px){body.helpon main{margin-right:470px}}
 
 /* ---------- avviso aggiornamento ---------- */
