@@ -4,6 +4,13 @@
 (function () {
   "use strict";
   var CHANGELOG = [
+    { v: "3.11.0", d: "2026-10-12", t: "Storico delle partite, teste di serie, ladder fra i tornei e feed per MaiTv", items: [
+      "Storico di ogni torneo con la cronaca da telecronista: ogni partita ha il suo orario e un commento, poi podi e numeri. Si legge in Risultati finali, si scarica con «Scarica lo storico» o dal pulsante Storico della scheda, e l'app per Windows lo tiene aggiornato da sola nella cartella storici. Il file è in Markdown con tutti i dati in JSON in fondo, pensato anche per essere letto da una AI.",
+      "Teste di serie per ogni gioco: le scegli a mano o le prendi dalla ladder, e il sorteggio le tiene lontane (metà opposte del tabellone, gironi e manche diverse, primo turno dello svizzero metà alta contro metà bassa).",
+      "Ladder fra tutti i tornei: tutti partono da 2000 punti, ogni partita sposta i punti come negli scacchi (Elo). Classifica generale e per gioco, «Ricalcola» rifà tutto da capo e mostra chi è salito o sceso. Ogni torneo e ogni gioco ha la casella «Conta per la ladder»; «Unisci giocatori» unisce le grafie diverse dello stesso nome.",
+      "Feed per MaiTv e altri programmi: l'app per Windows può pubblicare in rete locale le notizie dei tornei in RSS (risultati, prossime partite, tabellone, evento) e lo storico completo. È spento di base e i link contengono una chiave.",
+      "Il proiettore usa i colori del tema scelto invece di essere sempre nero."
+    ] },
     { v: "3.10.0", d: "2026-10-11", t: "Revisione completa, squadre cambiate a torneo iniziato, TeamSpeak, sala più comoda", items: [
       "Revisione completa del codice: corretti oltre 170 problemi trovati e verificati (diretta, bot Telegram, Discord, tornei, backup, sala, musica, versione web).",
       "A torneo iniziato puoi aggiungere o togliere squadre e giocatori e cambiare i componenti delle squadre: START riprende senza rifare il sorteggio. Chi non ha ancora giocato esce e libera il posto, chi ha già giocato si ritira e perde a tavolino le partite che gli restano. Per un sorteggio nuovo c'è «Rifai il sorteggio». Le regole sono nella guida.",
