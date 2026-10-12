@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, screen, session } = require("electron");
+const { app, BrowserWindow, shell, ipcMain, screen, session, nativeTheme } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const AI = require("./js/ai.js");
@@ -91,12 +91,14 @@ function hardenNav(w) {
 }
 const webPreferences = { contextIsolation: true, nodeIntegration: false, sandbox: true, preload: path.join(__dirname, "preload.js") };
 
+/* sfondo della finestra prima che la pagina disegni: come il tema chiaro/scuro di Windows, senza lampi */
+function winBg() { return nativeTheme.shouldUseDarkColors ? "#121212" : "#F2F2F2"; }
 function createWindow() {
   const b = loadBounds();
   win = new BrowserWindow({
     width: b?.width || 1360, height: b?.height || 900, x: b?.x, y: b?.y, minWidth: 900, minHeight: 600,
     title: "Tornei Fragmarathon", icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
-    backgroundColor: "#121212", show: false, webPreferences
+    backgroundColor: winBg(), show: false, webPreferences
   });
   if (b?.max) win.maximize();
   win.setMenuBarVisibility(false);
@@ -118,7 +120,7 @@ function openWall() {
   wall = new BrowserWindow({
     x: area.x + 40, y: area.y + 40, width: Math.min(1600, area.width - 80), height: Math.min(900, area.height - 80),
     title: "Tornei Fragmarathon — Proiettore", icon: path.join(__dirname, "icon.png"), autoHideMenuBar: true,
-    backgroundColor: "#000000", fullscreen: !!ext, webPreferences
+    backgroundColor: winBg(), fullscreen: !!ext, webPreferences
   });
   wall.setMenuBarVisibility(false);
   hardenNav(wall);
